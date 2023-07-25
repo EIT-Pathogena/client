@@ -1,0 +1,27 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "gpas-client"
+authors = [{name = "Bede Constantinides", email = "bedeabc@gmail.com"}]
+license = {file = "LICENSE"}
+readme = "README.md"
+dynamic = ["version", "description"]
+requires-python = ">=3.10"
+dependencies = [
+  "defopt>=6.4.0",
+  "httpx>=0.24.1",
+  "platformdirs>=3.5.1",
+  "tqdm>=4.65.0",
+]
+
+[project.scripts]
+gpas-cli = "gpas_client.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.1",
+    "pre-commit>=3.3.2",
+    "flit>=3.9.0"
+]
