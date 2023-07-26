@@ -20,6 +20,7 @@ def parse_upload_csv(upload_csv: Path) -> Batch:
 
 
 def upload(upload_csv: Path) -> None:
+    upload_csv = Path(upload_csv)
     batch = parse_upload_csv(upload_csv)
     for sample in batch.samples:
         clean_paired_fastqs(
