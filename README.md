@@ -1,1 +1,1 @@
-# gpas-cli
+# gpas-client
