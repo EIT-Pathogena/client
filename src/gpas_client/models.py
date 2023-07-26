@@ -39,13 +39,18 @@ class Sample(BaseModel):
     instrument_platform: InstrumentPlatformEnum
 
     @field_validator("reads_1", "reads_2")
-    def file_extension(cls, v: Path):
+    def validate_file_extension(cls, v: Path):
         allowed_extensions = {".fastq", ".fq", ".fastq.gz", ".fq.gz"}
         if v is not None and not v.name.endswith(tuple(allowed_extensions)):
             raise ValueError(
                 f"Invalid file extension {v.suffix} for file {v.name}. Allowed extensions are {allowed_extensions}"
             )
         return v
+
+    # @field_validator("reads_1", "reads_2")
+    # def validate_file_exists(cls, v: Path):
+    #     if v is not None and (not v.exists() or not v.is_file()):
+    #         raise ValueError(f"{v} is not a valid file")
 
 
 class Batch(BaseModel):

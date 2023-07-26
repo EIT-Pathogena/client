@@ -2,7 +2,7 @@ import csv
 
 from pathlib import Path
 
-import hostile
+from hostile.lib import clean_paired_fastqs
 
 from gpas_client.models import Batch, Sample
 
@@ -21,3 +21,10 @@ def parse_upload_csv(upload_csv: Path) -> Batch:
 
 def upload(upload_csv: Path) -> None:
     batch = parse_upload_csv(upload_csv)
+    for sample in batch.samples:
+        clean_paired_fastqs(
+            fastqs=[
+                (upload_csv.parent / sample.reads_1, upload_csv.parent / sample.reads_2)
+            ],
+            force=True,
+        )
