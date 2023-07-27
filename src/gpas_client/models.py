@@ -32,7 +32,7 @@ class UploadSample(BaseModel):
     reads_1: Path = Field(description="Path of first FASTQ file")
     reads_2: Path = Field(description="Path of second FASTQ file")
     control: ControlEnum = Field(
-        default=ControlEsnum.none, description="Control status of sample"
+        default=ControlEnum.none, description="Control status of sample"
     )
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
     country: str = Field(description="ISO 3166-2 alpha-3 country code")
