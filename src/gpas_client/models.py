@@ -20,7 +20,7 @@ class HostOrganismEnum(Enum):
 
 
 class InstrumentPlatformEnum(Enum):
-    illimina = "illumina"
+    illumina = "illumina"
     ont = "ont"
 
 
