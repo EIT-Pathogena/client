@@ -13,3 +13,9 @@ git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
 pip install --editable '.[dev]'
 ```
+
+## Usage
+
+```
+gpas-cli --help
+```

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from hostile.lib import clean_paired_fastqs
 
-from gpas_client.models import Batch, Sample
+from gpas_client.models import UploadBatch
 
 
 def parse_csv(csv_path: Path) -> list[dict]:
@@ -14,9 +14,9 @@ def parse_csv(csv_path: Path) -> list[dict]:
         return list(reader)
 
 
-def parse_upload_csv(upload_csv: Path) -> Batch:
+def parse_upload_csv(upload_csv: Path) -> UploadBatch:
     records = parse_csv(upload_csv)
-    return Batch(**dict(samples=records))
+    return UploadBatch(**dict(samples=records))
 
 
 def upload(upload_csv: Path) -> None:

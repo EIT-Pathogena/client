@@ -1,8 +1,8 @@
 from enum import Enum
 from datetime import date
 from pathlib import Path
-from typing import Optional
-from pydantic import BaseModel, field_validator
+from typing import Optional, Literal
+from pydantic import BaseModel, Field, field_validator
 
 
 class ControlEnum(Enum):
@@ -24,19 +24,29 @@ class InstrumentPlatformEnum(Enum):
     ont = "ont"
 
 
-class Sample(BaseModel):
-    batch_name: Optional[str]
-    sample_name: str
-    reads_1: Path
-    reads_2: Optional[Path]
-    control: ControlEnum = ControlEnum.none
-    collection_date: date
-    country: str
-    subdivision: Optional[str]
-    district: Optional[str]
-    specimen_organism: SpecimenOrganismEnum
-    host_organism: HostOrganismEnum
-    instrument_platform: InstrumentPlatformEnum
+class UploadSample(BaseModel):
+    batch_name: str = Field(
+        default=None, description="Batch name (anonymised prior to upload)"
+    )
+    sample_name: str = Field(description="Sample name (anonymised prior to upload)")
+    reads_1: Path = Field(description="Path of first FASTQ file")
+    reads_2: Path = Field(description="Path of second FASTQ file")
+    control: ControlEnum = Field(
+        default=ControlEsnum.none, description="Control status of sample"
+    )
+    collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
+    country: str = Field(description="ISO 3166-2 alpha-3 country code")
+    subdivision: str = Field(
+        default=None, description="ISO 3166-2 principal subdivision"
+    )
+    district: str = Field(default=None, description="Granular location")
+    specimen_organism: SpecimenOrganismEnum = Field(
+        description="Target specimen organism scientific name"
+    )
+    host_organism: HostOrganismEnum = Field(description="Host organism scientific name")
+    instrument_platform: InstrumentPlatformEnum = Field(
+        description="DNA sequencing instrument platform"
+    )
 
     @field_validator("reads_1", "reads_2")
     def validate_file_extension(cls, v: Path):
@@ -53,5 +63,5 @@ class Sample(BaseModel):
     #         raise ValueError(f"{v} is not a valid file")
 
 
-class Batch(BaseModel):
-    samples: list[Sample]
+class UploadBatch(BaseModel):
+    samples: list[UploadSample]
