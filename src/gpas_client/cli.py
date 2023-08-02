@@ -1,3 +1,4 @@
+import json
 import logging
 
 from pathlib import Path
@@ -17,8 +18,8 @@ def upload(
     upload_csv: Path,
     out_dir: Path = Path(),
     threads: int = 0,
-    debug: bool = False,
     save_reads: bool = False,
+    debug: bool = False,
 ):
     """
     Validate, decontaminate and upload reads to the GPAS platform
@@ -34,20 +35,19 @@ def upload(
     lib.upload(upload_csv)
 
 
-def create_sample(batch_id: int):
-    lib.create_sample(batch_id)
+def batches():
+    """List batches on server"""
+    print(json.dumps(lib.list_batches()))
 
 
-def upload_sample_files(sample_id: int, reads_1: Path, reads_2: Path):
-    lib.upload_sample_files(sample_id=sample_id, reads_1=reads_1, reads_2=reads_2)
-
-
-def patch_sample(sample_id: int):
-    lib.patch_sample(sample_id)
+def samples():
+    """List samples on server"""
+    print(json.dumps(lib.list_samples()))
 
 
 def sample(sample_id: int):
-    lib.sample(sample_id)
+    """Fetch sample data from server"""
+    print(json.dumps(lib.fetch_sample(sample_id)))
 
 
 def main():
@@ -55,11 +55,9 @@ def main():
         {
             "auth": auth,
             "upload": upload,
-            "list": lib.list,
-            "create-sample": create_sample,
-            "upload-sample": upload_sample_files,
-            "patch-sample": patch_sample,
-            "sample": lib.fetch_sample,
+            "batches": batches,
+            "samples": samples,
+            "sample": sample,
         },
         no_negated_flags=True,
         strict_kwonly=False,

@@ -46,7 +46,7 @@ def authenticate(
         json.dump(data, fh)
 
 
-def read_access_token(host="https://dev.portal.gpas.world/api") -> str:
+def get_access_token(host="https://dev.portal.gpas.world/api") -> str:
     """Reads token from ~/.config/gpas/tokens/<host>"""
     host_name = get_host_name(host)
     token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host_name}.json"
@@ -73,11 +73,14 @@ def create_batch(name: str) -> int:
     data = {"name": name, "telemetry_data": {}}
     response = httpx.post(
         "https://dev.portal.gpas.world/api/v1/batches",
-        headers={f"Authorization": f"Bearer {read_access_token()}"},
+        headers={f"Authorization": f"Bearer {get_access_token()}"},
         json=data,
     )
-    response.raise_for_status()
-    logging.info(response.json())
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
     return response.json()["id"]
 
 
@@ -98,6 +101,7 @@ def create_sample(
     specimen: str = "mycobacteria",
     checksum: str = "0123456789abcdef",
 ) -> int:
+    """Create sample on server, return sample id"""
     data = {
         "batch_id": batch_id,
         "status": status,
@@ -115,50 +119,60 @@ def create_sample(
         "specimen": specimen,
         "checksum": checksum,
     }
-    headers = {f"Authorization": f"Bearer {read_access_token()}"}
+    headers = {f"Authorization": f"Bearer {get_access_token()}"}
     response = httpx.post(
         "https://dev.portal.gpas.world/api/v1/samples",
         headers=headers,
         json=data,
     )
-    if response.status_code == 422:  # Unprocessable Entity
-        error_details = response.json()
-        print(json.dumps(error_details, indent=4))
-    response.raise_for_status()
-    logging.info(response.json())
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
     return response.json()["id"]
 
 
-def upload_sample_files(sample_id: int, reads_1: Path, reads_2: Path):
+def upload_sample_files(sample_id: int, reads_1: Path, reads_2: Path) -> None:
+    """Upload paired FASTQ files to server"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
     with open(reads_1, "rb") as fh:
         response1 = httpx.post(
             f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-            headers={f"Authorization": f"Bearer {read_access_token()}"},
+            headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-    response1.raise_for_status()
-    logging.info(response1.json())
+    if response1.status_code == httpx.codes.is_error:
+        try:
+            logging.error(json.dumps(response1.json(), indent=4))
+        finally:
+            response1.raise_for_status()
     with open(reads_2, "rb") as fh:
         response2 = httpx.post(
             f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-            headers={f"Authorization": f"Bearer {read_access_token()}"},
+            headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-    response2.raise_for_status()
-    logging.info(response2.json())
+    if response2.status_code == httpx.codes.is_error:
+        try:
+            logging.error(json.dumps(response2.json(), indent=4))
+        finally:
+            response2.raise_for_status()
 
 
 def patch_sample(sample_id: int):
-    data = {"status": "Ready"}
-    headers = {f"Authorization": f"Bearer {read_access_token()}"}
+    """Patch sample status to Ready"""
+    headers = {f"Authorization": f"Bearer {get_access_token()}"}
     response = httpx.patch(
         f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
         headers=headers,
-        json=data,
+        json={"status": "Ready"},
     )
-    response.raise_for_status()
-    logging.info(response.json())
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
 
 
 def make_dirty_clean_mapping(decontamination_log: list[dict]) -> dict[str, Path]:
@@ -171,7 +185,8 @@ def make_dirty_clean_mapping(decontamination_log: list[dict]) -> dict[str, Path]
     return d
 
 
-def upload(upload_csv: Path) -> None:
+def upload(upload_csv: Path, dry_run: bool = False) -> None:
+    """Upload a batch of one or more samples to the GPAS platform"""
     upload_csv = Path(upload_csv)
     batch = parse_upload_csv(upload_csv)
     fastq_path_tuples = [
@@ -180,32 +195,55 @@ def upload(upload_csv: Path) -> None:
     ]
     decontamination_log = clean_paired_fastqs(fastqs=fastq_path_tuples, force=True)
     dirty_names_to_clean_paths = make_dirty_clean_mapping(decontamination_log)
+    if not dry_run:
+        batch_id = create_batch(generate_random_identifier())
+        for sample in batch.samples:
+            sample_id = create_sample(batch_id)
+            reads_1 = dirty_names_to_clean_paths[sample.reads_1.name]
+            reads_2 = dirty_names_to_clean_paths[sample.reads_2.name]
+            upload_sample_files(sample_id=sample_id, reads_1=reads_1, reads_2=reads_2)
+            patch_sample(sample_id)
 
-    batch_id = create_batch(generate_random_identifier())
-    for sample in batch.samples:
-        sample_id = create_sample(batch_id)
-        reads_1 = dirty_names_to_clean_paths[sample.reads_1.name]
-        reads_2 = dirty_names_to_clean_paths[sample.reads_2.name]
-        upload_sample_files(sample_id=sample_id, reads_1=reads_1, reads_2=reads_2)
-        patch_sample(sample_id)
 
-
-def list():
-    headers = {f"Authorization": f"Bearer {read_access_token()}"}
+def list_batches():
+    """List batches on server"""
+    headers = {f"Authorization": f"Bearer {get_access_token()}"}
     response = httpx.get(
         "https://dev.portal.gpas.world/api/v1/batches", headers=headers
     )
-    response.raise_for_status()
-    from pprint import pprint
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
+    return response.json()
 
-    pprint(response.json())
+
+def list_samples() -> None:
+    """List samples on server"""
+    headers = {f"Authorization": f"Bearer {get_access_token()}"}
+    response = httpx.get(
+        f"https://dev.portal.gpas.world/api/v1/samples",
+        headers=headers,
+    )
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
+    return response.json()
 
 
 def fetch_sample(sample_id: int):
-    headers = {f"Authorization": f"Bearer {read_access_token()}"}
+    """Fetch sample data from server"""
+    headers = {f"Authorization": f"Bearer {get_access_token()}"}
     response = httpx.get(
         f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
         headers=headers,
     )
-    response.raise_for_status()
-    logging.info(response.json())
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
+    return response.json()

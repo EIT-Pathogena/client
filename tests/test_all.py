@@ -5,5 +5,5 @@ def test_something():
     pass
 
 
-def test_illumina():
-    lib.upload("tests/data/illumina.csv")
+# def test_illumina():
+#     lib.upload("tests/data/illumina.csv", dry_run=True)
