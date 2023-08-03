@@ -11,7 +11,7 @@ from pathlib import Path
 import httpx
 from hostile.lib import clean_paired_fastqs
 
-from gpas_client.models import UploadBatch
+from gpas_client.models import UploadBatch, UploadSample
 
 
 def generate_random_identifier(length=8):
@@ -65,7 +65,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
 
 def parse_upload_csv(upload_csv: Path) -> UploadBatch:
     records = parse_csv(upload_csv)
-    return UploadBatch(**dict(samples=records))
+    return UploadBatch(samples=[UploadSample(**r) for r in records])
 
 
 def create_batch(name: str) -> int:
@@ -90,15 +90,13 @@ def create_sample(
     collection_date: str = "2023-08-01",
     control: bool = False,
     country: str = "GBR",
-    decontamination_fraction: int = 0,
-    decontamination_in: int = 2,
-    decontamination_out: int = 1,
-    district: str = "dstct",
+    subdivision: str = "subdivision",
+    district: str = "district",
+    client_decontamination_reads_removed_proportion: float = 0.0,
+    client_decontamination_reads_in: int = 2,
+    client_decontamination_reads_out: int = 1,
     instrument_platform: str = "illumina",
-    pe_reads: dict = {},
-    primer_schema: str = "",
-    region: str = "region",
-    specimen: str = "mycobacteria",
+    specimen_organism: str = "mycobacteria",
     checksum: str = "0123456789abcdef",
 ) -> int:
     """Create sample on server, return sample id"""
@@ -108,15 +106,13 @@ def create_sample(
         "collection_date": collection_date,
         "control": control,
         "country": country,
-        "decontamination_fraction": decontamination_fraction,
-        "decontamination_in": decontamination_in,
-        "decontamination_out": decontamination_out,
+        "subdivision": subdivision,
         "district": district,
+        "client_decontamination_reads_removed_proportion": client_decontamination_reads_removed_proportion,
+        "client_decontamination_reads_in": client_decontamination_reads_in,
+        "client_decontamination_reads_out": client_decontamination_reads_out,
         "instrument_platform": instrument_platform,
-        "pe_reads": pe_reads,
-        "primer_schema": primer_schema,
-        "region": region,
-        "specimen": specimen,
+        "specimen_organism": specimen_organism,
         "checksum": checksum,
     }
     headers = {f"Authorization": f"Bearer {get_access_token()}"}
@@ -179,7 +175,6 @@ def make_dirty_clean_mapping(decontamination_log: list[dict]) -> dict[str, Path]
     """Return a dictionary mapping dirty fastq filenames to clean fastq filenames"""
     d = {}
     for record in decontamination_log:
-        print(record["fastq1_in_name"])
         d[record["fastq1_in_name"]] = Path(record["fastq1_out_name"])
         d[record["fastq2_in_name"]] = Path(record["fastq2_out_name"])
     return d
