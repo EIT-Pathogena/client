@@ -9,12 +9,14 @@ from urllib.parse import urlparse
 from pathlib import Path
 
 import httpx
+
 from hostile.lib import clean_paired_fastqs
 
 from gpas_client.models import UploadBatch, UploadSample
+from gpas_client.util import hash_files
 
 
-def generate_random_identifier(length=8):
+def generate_identifier(length=6):
     letters_and_digits = string.ascii_letters + string.digits
     random_identifier = "".join(
         random.choice(letters_and_digits) for _ in range(length)
@@ -50,7 +52,7 @@ def get_access_token(host="https://dev.portal.gpas.world/api") -> str:
     """Reads token from ~/.config/gpas/tokens/<host>"""
     host_name = get_host_name(host)
     token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host_name}.json"
-    logging.info(f"{token_path=}")
+    logging.debug(f"{token_path=}")
     data = json.loads((token_path).read_text())
     return data["access_token"].strip()
 
@@ -59,7 +61,6 @@ def parse_csv(csv_path: Path) -> list[dict]:
     """Parse CSV returning a list of dictionaries"""
     with open(csv_path, "r") as fh:
         reader = csv.DictReader(fh)
-        print(reader)
         return [row for row in reader]
 
 
@@ -81,6 +82,7 @@ def create_batch(name: str) -> int:
             logging.error(json.dumps(response.json(), indent=4))
         finally:
             response.raise_for_status()
+    logging.debug(f"{response.json()=}")
     return response.json()["id"]
 
 
@@ -88,7 +90,7 @@ def create_sample(
     batch_id: int,
     status: str = "Created",
     collection_date: str = "2023-08-01",
-    control: bool = False,
+    control: bool | None = None,
     country: str = "GBR",
     subdivision: str = "subdivision",
     district: str = "district",
@@ -97,13 +99,14 @@ def create_sample(
     client_decontamination_reads_out: int = 1,
     instrument_platform: str = "illumina",
     specimen_organism: str = "mycobacteria",
+    host_organism: str = "human",
     checksum: str = "0123456789abcdef",
 ) -> int:
     """Create sample on server, return sample id"""
     data = {
         "batch_id": batch_id,
         "status": status,
-        "collection_date": collection_date,
+        "collection_date": str(collection_date),
         "control": control,
         "country": country,
         "subdivision": subdivision,
@@ -113,9 +116,11 @@ def create_sample(
         "client_decontamination_reads_out": client_decontamination_reads_out,
         "instrument_platform": instrument_platform,
         "specimen_organism": specimen_organism,
+        "host_organism": host_organism,
         "checksum": checksum,
     }
     headers = {f"Authorization": f"Bearer {get_access_token()}"}
+    logging.debug(f"Sample {data=}")
     response = httpx.post(
         "https://dev.portal.gpas.world/api/v1/samples",
         headers=headers,
@@ -126,6 +131,7 @@ def create_sample(
             logging.error(json.dumps(response.json(), indent=4))
         finally:
             response.raise_for_status()
+    logging.debug(f"{response.json()=}")
     return response.json()["id"]
 
 
@@ -138,22 +144,22 @@ def upload_sample_files(sample_id: int, reads_1: Path, reads_2: Path) -> None:
             headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-    if response1.status_code == httpx.codes.is_error:
-        try:
-            logging.error(json.dumps(response1.json(), indent=4))
-        finally:
-            response1.raise_for_status()
+        if response1.status_code == httpx.codes.is_error:
+            try:
+                logging.error(json.dumps(response1.json(), indent=4))
+            finally:
+                response1.raise_for_status()
     with open(reads_2, "rb") as fh:
         response2 = httpx.post(
             f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
             headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-    if response2.status_code == httpx.codes.is_error:
-        try:
-            logging.error(json.dumps(response2.json(), indent=4))
-        finally:
-            response2.raise_for_status()
+        if response2.status_code == httpx.codes.is_error:
+            try:
+                logging.error(json.dumps(response2.json(), indent=4))
+            finally:
+                response2.raise_for_status()
 
 
 def patch_sample(sample_id: int):
@@ -171,33 +177,46 @@ def patch_sample(sample_id: int):
             response.raise_for_status()
 
 
-def make_dirty_clean_mapping(decontamination_log: list[dict]) -> dict[str, Path]:
-    """Return a dictionary mapping dirty fastq filenames to clean fastq filenames"""
-    d = {}
-    for record in decontamination_log:
-        d[record["fastq1_in_name"]] = Path(record["fastq1_out_name"])
-        d[record["fastq2_in_name"]] = Path(record["fastq2_out_name"])
-    return d
-
-
 def upload(upload_csv: Path, dry_run: bool = False) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     upload_csv = Path(upload_csv)
     batch = parse_upload_csv(upload_csv)
+
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
+
     decontamination_log = clean_paired_fastqs(fastqs=fastq_path_tuples, force=True)
-    dirty_names_to_clean_paths = make_dirty_clean_mapping(decontamination_log)
+    names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
+    logging.debug(f"{names_logs=}")
+    control_map = {"positive": True, "negative": False, "": None}
     if not dry_run:
-        batch_id = create_batch(generate_random_identifier())
+        batch_id = create_batch(generate_identifier())
         for sample in batch.samples:
-            sample_id = create_sample(batch_id)
-            reads_1 = dirty_names_to_clean_paths[sample.reads_1.name]
-            reads_2 = dirty_names_to_clean_paths[sample.reads_2.name]
+            name = sample.sample_name
+            sample_id = create_sample(
+                batch_id=batch_id,
+                collection_date=str(sample.collection_date),
+                control=control_map[sample.control.value],
+                country=sample.country,
+                subdivision=sample.subdivision,
+                district=sample.district,
+                client_decontamination_reads_removed_proportion=names_logs[name][
+                    "reads_removed_proportion"
+                ],
+                client_decontamination_reads_in=names_logs[name]["reads_in"],
+                client_decontamination_reads_out=names_logs[name]["reads_out"],
+                checksum=hash_files(
+                    upload_csv.parent / sample.reads_1,
+                    upload_csv.parent / sample.reads_2,
+                ),
+            )
+            reads_1 = Path(names_logs[name]["fastq1_out_path"])
+            reads_2 = Path(names_logs[name]["fastq2_out_path"])
             upload_sample_files(sample_id=sample_id, reads_1=reads_1, reads_2=reads_2)
-            patch_sample(sample_id)
+            logging.info(f"Uploaded {name}")
+            # patch_sample(sample_id)
 
 
 def list_batches():

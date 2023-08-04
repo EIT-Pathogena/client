@@ -1,7 +1,6 @@
 from enum import Enum
 from datetime import date
 from pathlib import Path
-from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator
 
 

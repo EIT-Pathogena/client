@@ -19,6 +19,7 @@ def upload(
     out_dir: Path = Path(),
     threads: int = 0,
     save_reads: bool = False,
+    dry_run: bool = False,
     debug: bool = False,
 ):
     """
@@ -29,10 +30,11 @@ def upload(
     :arg save_reads: Save decontaminated reads in out_dir
     :arg threads: Number of threads used in decontamination
     :arg debug: Emit verbose debug messages
+    :arg dry_run: Exit before uploading reads
     """
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
-    lib.upload(upload_csv)
+    lib.upload(upload_csv, dry_run=dry_run)
 
 
 def batches():
