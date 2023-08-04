@@ -21,7 +21,7 @@ def generate_identifier(length=6):
     random_identifier = "".join(
         random.choice(letters_and_digits) for _ in range(length)
     )
-    return random_identifier
+    return random_identifier.lower()
 
 
 def get_host_name(url) -> str:
@@ -62,6 +62,16 @@ def parse_csv(csv_path: Path) -> list[dict]:
     with open(csv_path, "r") as fh:
         reader = csv.DictReader(fh)
         return [row for row in reader]
+
+
+def write_csv(records: list[dict], file_name: Path) -> None:
+    """Write a list of dictionaries to a CSV file"""
+    with open(file_name, "w", newline="") as fh:
+        fieldnames = records[0].keys()
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in records:
+            writer.writerow(r)
 
 
 def parse_upload_csv(upload_csv: Path) -> UploadBatch:
@@ -192,7 +202,9 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
     logging.debug(f"{names_logs=}")
     control_map = {"positive": True, "negative": False, "": None}
     if not dry_run:
-        batch_id = create_batch(generate_identifier())
+        batch_name = generate_identifier()
+        batch_id = create_batch(batch_name)
+        mapping_csv_records = []
         for sample in batch.samples:
             name = sample.sample_name
             reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
@@ -211,11 +223,22 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 client_decontamination_reads_out=names_logs[name]["reads_out"],
                 checksum=hash_files(reads_1_clean, reads_2_clean),
             )
+            mapping_csv_records.append(
+                {
+                    "batch_name": sample.batch_name,
+                    "sample_name": sample.sample_name,
+                    "remote_batch_name": batch_id,
+                    "remote_sample_name": sample_id,
+                }
+            )
             upload_sample_files(
                 sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
             )
+
             logging.info(f"Uploaded {name}")
             # patch_sample(sample_id)
+        write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
+        logging.info(f"Uploaded batch {batch_name}")
 
 
 def list_batches():
