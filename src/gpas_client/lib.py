@@ -195,6 +195,8 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
         batch_id = create_batch(generate_identifier())
         for sample in batch.samples:
             name = sample.sample_name
+            reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
+            reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
             sample_id = create_sample(
                 batch_id=batch_id,
                 collection_date=str(sample.collection_date),
@@ -207,14 +209,11 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 ],
                 client_decontamination_reads_in=names_logs[name]["reads_in"],
                 client_decontamination_reads_out=names_logs[name]["reads_out"],
-                checksum=hash_files(
-                    upload_csv.parent / sample.reads_1,
-                    upload_csv.parent / sample.reads_2,
-                ),
+                checksum=hash_files(reads_1_clean, reads_2_clean),
             )
-            reads_1 = Path(names_logs[name]["fastq1_out_path"])
-            reads_2 = Path(names_logs[name]["fastq2_out_path"])
-            upload_sample_files(sample_id=sample_id, reads_1=reads_1, reads_2=reads_2)
+            upload_sample_files(
+                sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
+            )
             logging.info(f"Uploaded {name}")
             # patch_sample(sample_id)
 
