@@ -143,7 +143,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 ],
                 client_decontamination_reads_in=names_logs[name]["reads_in"],
                 client_decontamination_reads_out=names_logs[name]["reads_out"],
-                checksum=util.hash_files(reads_1_clean, reads_2_clean),
+                checksum=util.hash_file(reads_1_clean),
             )
             mapping_csv_records.append(
                 {
