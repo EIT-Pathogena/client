@@ -48,24 +48,23 @@ def create_batch(name: str) -> int:
 
 def create_sample(
     batch_id: int,
-    status: str = "Created",
-    collection_date: str = "2023-08-01",
-    control: bool | None = None,
-    country: str = "GBR",
-    subdivision: str = "subdivision",
-    district: str = "district",
-    client_decontamination_reads_removed_proportion: float = 0.0,
-    client_decontamination_reads_in: int = 2,
-    client_decontamination_reads_out: int = 1,
+    collection_date: str,
+    control: bool | None,
+    country: str,
+    subdivision: str,
+    district: str,
+    client_decontamination_reads_removed_proportion: float,
+    client_decontamination_reads_in: int,
+    client_decontamination_reads_out: int,
+    checksum: str,
     instrument_platform: str = "illumina",
     specimen_organism: str = "mycobacteria",
-    host_organism: str = "human",
-    checksum: str = "0123456789abcdef",
+    host_organism: str = "homo sapiens",
 ) -> int:
     """Create sample on server, return sample id"""
     data = {
         "batch_id": batch_id,
-        "status": status,
+        "status": "Created",
         "collection_date": str(collection_date),
         "control": control,
         "country": country,
@@ -74,10 +73,10 @@ def create_sample(
         "client_decontamination_reads_removed_proportion": client_decontamination_reads_removed_proportion,
         "client_decontamination_reads_in": client_decontamination_reads_in,
         "client_decontamination_reads_out": client_decontamination_reads_out,
+        "checksum": checksum,
         "instrument_platform": instrument_platform,
         "specimen_organism": specimen_organism,
         "host_organism": host_organism,
-        "checksum": checksum,
     }
     headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
     logging.debug(f"Sample {data=}")
@@ -135,7 +134,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
             sample_id = create_sample(
                 batch_id=batch_id,
                 collection_date=str(sample.collection_date),
-                control=control_map[sample.control.value],
+                control=control_map[sample.control],
                 country=sample.country,
                 subdivision=sample.subdivision,
                 district=sample.district,

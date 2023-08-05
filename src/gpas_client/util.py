@@ -5,10 +5,10 @@ import logging
 import random
 import string
 
-import httpx
-
 from pathlib import Path
 from urllib.parse import urlparse
+
+import httpx
 
 from gpas_client.models import UploadBatch, UploadSample
 
@@ -44,7 +44,9 @@ def parse_csv(csv_path: Path) -> list[dict]:
 
 def parse_upload_csv(upload_csv: Path) -> UploadBatch:
     records = parse_csv(upload_csv)
-    return UploadBatch(samples=[UploadSample(**r) for r in records])
+    return UploadBatch(
+        samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records]
+    )
 
 
 def write_csv(records: list[dict], file_name: Path | str) -> None:
