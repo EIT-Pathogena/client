@@ -44,7 +44,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
 
 def parse_upload_csv(upload_csv: Path) -> UploadBatch:
     records = parse_csv(upload_csv)
-    return UploadBatch(
+    return UploadBatch(  # Include upload_csv to enable relative fastq path validation
         samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records]
     )
 
@@ -76,19 +76,11 @@ def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
             headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-        if response1.status_code == httpx.codes.is_error:
-            try:
-                logging.error(json.dumps(response1.json(), indent=4))
-            finally:
-                response1.raise_for_status()
+    response1.raise_for_status()
     with open(reads_2, "rb") as fh:
         response2 = httpx.post(
             f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
             headers={f"Authorization": f"Bearer {get_access_token()}"},
             files={"file": fh},
         )
-        if response2.status_code == httpx.codes.is_error:
-            try:
-                logging.error(json.dumps(response2.json(), indent=4))
-            finally:
-                response2.raise_for_status()
+    response2.raise_for_status()
