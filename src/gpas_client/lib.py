@@ -156,7 +156,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
             )
             logging.info(f"Uploaded {name}")
-            # patch_sample(sample_id)
+            patch_sample(sample_id)
         util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
         logging.info(f"Uploaded batch {batch_name}")
 
