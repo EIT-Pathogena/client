@@ -15,7 +15,6 @@ def authenticate(
 ) -> None:
     """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
     host_name = util.get_host_name(host)
-    logging.info(f"{username=} {password=}")
     response = httpx.post(
         f"{host}/v1/auth/token",
         json={"username": username, "password": password},
