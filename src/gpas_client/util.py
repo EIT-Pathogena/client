@@ -70,17 +70,18 @@ def hash_file(path: Path) -> str:
 def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
     """Upload paired FASTQ files to server"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-    with open(reads_1, "rb") as fh:
-        response1 = httpx.post(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-            headers={f"Authorization": f"Bearer {get_access_token()}"},
-            files={"file": fh},
-        )
-    response1.raise_for_status()
-    with open(reads_2, "rb") as fh:
-        response2 = httpx.post(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-            headers={f"Authorization": f"Bearer {get_access_token()}"},
-            files={"file": fh},
-        )
-    response2.raise_for_status()
+    with httpx.Client(timeout=600) as client:  # 10 minute timeout
+        with open(reads_1, "rb") as fh:
+            response1 = client.post(
+                f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
+                headers={f"Authorization": f"Bearer {get_access_token()}"},
+                files={"file": fh},
+            )
+        response1.raise_for_status()
+        with open(reads_2, "rb") as fh:
+            response2 = client.post(
+                f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
+                headers={f"Authorization": f"Bearer {get_access_token()}"},
+                files={"file": fh},
+            )
+        response2.raise_for_status()
