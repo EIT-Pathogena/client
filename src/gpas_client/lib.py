@@ -93,11 +93,32 @@ def create_sample(
     return response.json()["id"]
 
 
-def patch_sample(sample_id: int):
-    """Patch sample status to Ready"""
+def trigger_run(sample_id: int):
+    """Patch sample, create run, and patch run to trigger processing"""
     headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
     response = httpx.patch(
         f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
+        headers=headers,
+        json={"status": "Ready"},
+    )
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
+    response = httpx.post(
+        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs",
+        headers=headers,
+        json={"sample_id": sample_id},
+    )
+    run_id = response.json()["id"]
+    if response.is_error:
+        try:
+            logging.error(json.dumps(response.json(), indent=4))
+        finally:
+            response.raise_for_status()
+    response = httpx.patch(
+        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}",
         headers=headers,
         json={"status": "Ready"},
     )
@@ -156,7 +177,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
             )
             logging.info(f"Uploaded {name}")
-            patch_sample(sample_id)
+            trigger_run(sample_id)
         util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
         logging.info(f"Uploaded batch {batch_name}")
 
