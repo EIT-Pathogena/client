@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 
@@ -153,10 +152,8 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                     "remote_sample_name": sample_id,
                 }
             )
-            asyncio.run(
-                util.upload_paired_fastqs(
-                    sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
-                )
+            util.upload_paired_fastqs(
+                sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
             )
             logging.info(f"Uploaded {name}")
             patch_sample(sample_id)
