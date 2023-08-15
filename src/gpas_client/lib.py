@@ -1,10 +1,8 @@
 import json
 import logging
-
 from pathlib import Path
 
 import httpx
-
 from hostile.lib import clean_paired_fastqs
 
 from gpas_client import util
@@ -24,7 +22,7 @@ def authenticate(
     conf_dir = Path.home() / ".config" / "gpas"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
-    with open(token_dir / f"{host_name}.json", "w") as fh:
+    with token_dir.joinpath(f"{host_name}.json").open(mode="w") as fh:
         json.dump(data, fh)
 
 
@@ -33,7 +31,7 @@ def create_batch(name: str) -> int:
     data = {"name": name, "telemetry_data": {}}
     response = httpx.post(
         "https://dev.portal.gpas.world/api/v1/batches",
-        headers={f"Authorization": f"Bearer {util.get_access_token()}"},
+        headers={"Authorization": f"Bearer {util.get_access_token()}"},
         json=data,
     )
     if response.is_error:
@@ -77,7 +75,7 @@ def create_sample(
         "specimen_organism": specimen_organism,
         "host_organism": host_organism,
     }
-    headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     logging.debug(f"Sample {data=}")
     response = httpx.post(
         "https://dev.portal.gpas.world/api/v1/samples",
@@ -95,7 +93,7 @@ def create_sample(
 
 def trigger_run(sample_id: int):
     """Patch sample, create run, and patch run to trigger processing"""
-    headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     response = httpx.patch(
         f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
         headers=headers,
@@ -184,7 +182,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
 
 def list_batches():
     """List batches on server"""
-    headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     response = httpx.get(
         "https://dev.portal.gpas.world/api/v1/batches", headers=headers
     )
@@ -198,9 +196,9 @@ def list_batches():
 
 def list_samples() -> None:
     """List samples on server"""
-    headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     response = httpx.get(
-        f"https://dev.portal.gpas.world/api/v1/samples",
+        "https://dev.portal.gpas.world/api/v1/samples",
         headers=headers,
     )
     if response.is_error:
@@ -213,7 +211,7 @@ def list_samples() -> None:
 
 def fetch_sample(sample_id: int):
     """Fetch sample data from server"""
-    headers = {f"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     response = httpx.get(
         f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
         headers=headers,
