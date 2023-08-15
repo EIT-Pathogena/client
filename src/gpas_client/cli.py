@@ -1,6 +1,6 @@
 import json
 import logging
-
+from getpass import getpass
 from pathlib import Path
 
 import defopt
@@ -10,7 +10,7 @@ from gpas_client import lib
 
 def auth():
     username = input("Enter your username: ")
-    password = input("Enter your password: ")
+    password = getpass(prompt="Enter your password: ")
     lib.authenticate(username, password)
 
 
