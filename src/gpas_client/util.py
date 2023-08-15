@@ -68,50 +68,6 @@ def hash_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-# def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
-#     """Upload paired FASTQ files to server"""
-#     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-#     with httpx.Client(timeout=600) as client:  # 10 minute timeout
-#         with open(reads_1, "rb") as fh:
-#             response1 = client.post(
-#                 f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-#                 headers={f"Authorization": f"Bearer {get_access_token()}"},
-#                 files={"file": fh},
-#             )
-#         response1.raise_for_status()
-#         with open(reads_2, "rb") as fh:
-#             response2 = client.post(
-#                 f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-#                 headers={f"Authorization": f"Bearer {get_access_token()}"},
-#                 files={"file": fh},
-#             )
-#         response2.raise_for_status()
-
-
-# async def upload_file(client, file_path, sample_id, token):
-#     with file_path.open("rb") as fh:
-#         response = await client.post(
-#             f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-#             headers={f"Authorization": f"Bearer {token}"},
-#             files={"file": fh},
-#         )
-#         response.raise_for_status()
-#     return response
-
-
-# async def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
-#     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-#     token = get_access_token()
-#     async with httpx.AsyncClient(timeout=600) as client:
-#         tasks = [
-#             upload_file(client, reads_1, sample_id, token),
-#             upload_file(client, reads_2, sample_id, token),
-#         ]
-#         responses = await asyncio.gather(*tasks)
-
-#     return responses
-
-
 def upload_file(sample_id: int, file_path: Path) -> None:
     with httpx.Client(timeout=600) as client:  # 10 minute timeout
         with open(file_path, "rb") as fh:

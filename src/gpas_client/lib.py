@@ -222,3 +222,47 @@ def fetch_sample(sample_id: int):
         finally:
             response.raise_for_status()
     return response.json()
+
+
+def list_files(sample_id: int):
+    """List output files for a sample"""
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    response = httpx.get(
+        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/latest/files",
+        headers=headers,
+    )
+    return response.json().get("files", [])
+
+
+def download(sample_id: int, out_dir: Path = Path(".")) -> None:
+    """Download output files for a sample"""
+    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    output_files = list_files(sample_id)
+    with httpx.Client(timeout=600) as client:
+        for item in output_files:
+            run_id, filename = item["run_id"], item["filename"]
+            url = f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
+            if filename.startswith("fastp"):
+                # print(filename, url)
+                download_single(
+                    client=client,
+                    filename=filename,
+                    url=url,
+                    headers=headers,
+                    out_dir=out_dir,
+                )
+
+
+def download_single(
+    client: httpx.Client,
+    filename: str,
+    url: str,
+    headers: dict[str, str],
+    out_dir: Path,
+):
+    logging.info(f"Downloading {filename}")
+    with httpx.stream("GET", url=url, headers=headers) as r:
+        for data in r.iter_bytes():
+            with Path(out_dir).joinpath(filename).open("wb") as fh:
+                fh.write(data)
+    logging.info(f"Downloaded {filename}")

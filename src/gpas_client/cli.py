@@ -44,22 +44,34 @@ def batches():
 
 def samples():
     """List samples on server"""
-    print(json.dumps(lib.list_samples()))
+    print(json.dumps(lib.list_samples(), indent=4))
 
 
 def sample(sample_id: int):
-    """Fetch sample data from server"""
-    print(json.dumps(lib.fetch_sample(sample_id)))
+    """Fetch sample information"""
+    print(json.dumps(lib.fetch_sample(sample_id), indent=4))
+
+
+def files(sample_id: int) -> None:
+    """Show latest outputs associated with a sample"""
+    print(json.dumps(lib.list_files(sample_id), indent=4))
+
+
+def download(sample_id: int) -> None:
+    """Download latest outputs associated with a sample"""
+    lib.download(sample_id)
 
 
 def main():
     defopt.run(
         {
             "auth": auth,
-            "upload": upload,
             "batches": batches,
             "samples": samples,
             "sample": sample,
+            "files": files,
+            "upload": upload,
+            "download": download,
         },
         no_negated_flags=True,
         strict_kwonly=False,
