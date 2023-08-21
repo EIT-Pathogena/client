@@ -163,6 +163,12 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 client_decontamination_reads_out=names_logs[name]["reads_out"],
                 checksum=util.hash_file(reads_1_clean),
             )
+            reads_1_clean_renamed = reads_1_clean.rename(
+                reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
+            )
+            reads_2_clean_renamed = reads_2_clean.rename(
+                reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
+            )
             mapping_csv_records.append(
                 {
                     "batch_name": sample.batch_name,
@@ -172,7 +178,9 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
                 }
             )
             util.upload_paired_fastqs(
-                sample_id=sample_id, reads_1=reads_1_clean, reads_2=reads_2_clean
+                sample_id=sample_id,
+                reads_1=reads_1_clean_renamed,
+                reads_2=reads_2_clean_renamed,
             )
             logging.info(f"Uploaded {name}")
             trigger_run(sample_id)

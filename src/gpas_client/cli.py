@@ -34,17 +34,9 @@ def upload(
     """
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
     lib.upload(upload_csv, dry_run=dry_run)
-
-
-def batches():
-    """List batches on server"""
-    print(json.dumps(lib.list_batches()))
-
-
-def samples():
-    """List samples on server"""
-    print(json.dumps(lib.list_samples(), indent=4))
 
 
 def sample(sample_id: int):
@@ -60,6 +52,16 @@ def files(sample_id: int) -> None:
 def download(sample_id: int) -> None:
     """Download latest outputs associated with a sample"""
     lib.download(sample_id)
+
+
+def batches():
+    """List batches on server"""
+    print(json.dumps(lib.list_batches()))
+
+
+def samples():
+    """List samples on server"""
+    print(json.dumps(lib.list_samples(), indent=4))
 
 
 def main():

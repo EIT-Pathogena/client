@@ -1,10 +1,12 @@
-# gpas-client
+# GPAS CLI
 
 Under construction. Currently named `gpas-client` to avoid collisions with `gpas` (gpas-tb backend) and `gpas-cli` (gpas-sars2 CLI).
 
 ## Install
 
 **Conda/mamba**
+
+Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)).
 
 ```bash
 conda create -n gpas-cli -c conda-forge -c bioconda hostile  # Mamba is faster
@@ -21,7 +23,7 @@ pip install --editable '.[dev]'
 Saves token to `~/.config/gpas/tokens/$HOSTNAME.json`
 
 ```
-$ gpas-cli auth
+$ gpas auth
 Enter your username: bede.constantinides@ndm.ox.ac.uk
 Enter your password: ***************
 09:22:08 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/auth/token "HTTP/1.1 200 OK"
