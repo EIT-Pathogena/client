@@ -3,7 +3,7 @@ import subprocess
 
 from pathlib import Path
 
-from gpas_client import lib
+from gpas import lib
 
 
 def run(cmd: str, cwd: Path = Path()):
@@ -13,7 +13,7 @@ def run(cmd: str, cwd: Path = Path()):
 
 
 def test_cli_version():
-    run("gpas-cli --version")
+    run("gpas --version")
 
 
 def test_illumina_2():

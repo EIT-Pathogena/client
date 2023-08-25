@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 from hostile.lib import clean_paired_fastqs
 
-from gpas_client import util
+from gpas import util
 
 
 def authenticate(

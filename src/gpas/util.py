@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from gpas_client.models import UploadBatch, UploadSample
+from gpas.models import UploadBatch, UploadSample
 
 
 def generate_identifier(length=6):

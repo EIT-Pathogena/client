@@ -1,10 +1,12 @@
 # GPAS CLI
 
-Under construction. Currently named `gpas-client` to avoid collisions with `gpas` (gpas-tb backend) and `gpas-cli` (gpas-sars2 CLI).
+The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload, progress monitoring, and retrieval of analytical outputs.
+
+
 
 ## Install
 
-**Conda/mamba**
+**Development install**
 
 Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)).
 
@@ -14,40 +16,89 @@ conda activate gpas-cli
 git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
 pip install --editable '.[dev]'
+
+# Updating
+cd cli
+git pull origin master
+gpas --version
 ```
 
-## CLI Usage
 
-**Authentication**
 
-Saves token to `~/.config/gpas/tokens/$HOSTNAME.json`
+## Usage
+
+#### Authentication (`gpas auth`) ✅
+
+The first time you use the CLI, you will need to generate a token by running `gpas auth` and entering your username and password. Your token will be saved inside  `~/.config/gpas/tokens/` and used automatically  for subsequent commands.
 
 ```
 $ gpas auth
 Enter your username: bede.constantinides@ndm.ox.ac.uk
 Enter your password: ***************
-09:22:08 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/auth/token "HTTP/1.1 200 OK"
 ```
 
-**Upload**
 
-Uses existing token for hostname
+
+#### Uploading samples (`gpas upload`) ✅
+Used to submit samples for analysis. Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS cloud platform.
 
 ```
-$ gpas-cli upload tests/data/illumina-2.csv
+$ gpas upload tests/data/illumina-2.csv
 09:26:12 INFO: Using Bowtie2 (paired reads)
 09:26:12 INFO: Found cached index (/Users/bede/Library/Application Support/hostile/human-t2t-hla)
 09:26:12 INFO: Cleaning…
+09:26:12 INFO: Complete
 Cleaning: 100%|███████████████████████████████████| 2/2 [00:00<00:00,  2.51it/s]
 09:26:13 INFO: Complete
-09:26:13 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/batches "HTTP/1.1 201 Created"
-09:26:13 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples "HTTP/1.1 201 Created"
-09:26:14 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples/658/files "HTTP/1.1 201 Created"
-09:26:14 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples/658/files "HTTP/1.1 201 Created"
-09:26:14 INFO: Uploaded sample1
-09:26:15 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples "HTTP/1.1 201 Created"
-09:26:15 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples/659/files "HTTP/1.1 201 Created"
-09:26:16 INFO: HTTP Request: POST https://dev.portal.gpas.world/api/v1/samples/659/files "HTTP/1.1 201 Created"
 09:26:16 INFO: Uploaded sample2
 09:26:16 INFO: Uploaded batch fynh56
 ```
+
+
+
+#### Querying existing samples (`gpas query`) 🚧
+
+Used to fetch status, metadata, and output file information for one or many samples, or a batch thereof. Optionally restricted to include only status or output file information with respective flags `--status` and `--files`.
+
+```bash
+gpas query --samples 103,674  # Show info for samples 103 and 674
+gpas query --batch 684  # Show info for each sample in batch 584
+gpas query --batch abcde.mapping.csv  # As above, using local sample names
+gpas query --batch abcde.mapping.csv --status  # Only show status info
+gpas query --batch abcde.mapping.csv --files  # Only show output status
+```
+
+
+
+#### Downloading output files (`gpas query`) 🚧
+
+Used to download output files associated with a one or many samples, or a batch thereof.
+
+```bash
+# Download final.fasta for samples 103 and 674
+gpas download --samples 103,674 --filenames final.fasta
+# Download final.fasta and fastp_report.json for samples in batch 684
+gpas download --batch 684 --filenames final.fasta,fastp_report.json
+# As above, using local sample identifiers
+gpas download --batch abcde.mapping.csv --filenames final.fasta,fastp_report.json
+# Download all files
+gpas download --batch abcde.mapping.csv --all
+```
+
+
+
+#### Reanalysing existing samples  (`gpas run`) 🚧
+
+Triggers reanalysis of one or many existing samples or a batch thereof.
+
+```bash
+gpas run --samples 103,674
+gpas run --batch 684
+gpas run --batch abcde.mapping.csv
+```
+
+
+
+## Support
+
+For technical support, please open an issue or contact `support@gpas.global`

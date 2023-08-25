@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "gpas-client"
+name = "gpas"
 authors = [{name = "Bede Constantinides", email = "bedeabc@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gpas-cli = "gpas_client.cli:main"
+gpas = "gpas.cli:main"
 
 [project.optional-dependencies]
 dev = [
