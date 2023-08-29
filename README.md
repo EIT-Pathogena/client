@@ -70,7 +70,7 @@ gpas query --batch abcde.mapping.csv --files  # Only show output status
 
 
 
-#### Downloading output files (`gpas query`) 🚧
+#### Downloading output files (`gpas download`) 🚧
 
 Used to download output files associated with a one or many samples, or a batch thereof.
 
