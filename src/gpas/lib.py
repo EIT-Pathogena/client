@@ -242,19 +242,19 @@ def list_files(sample_id: int):
     return response.json().get("files", [])
 
 
-def download(sample_id: int, out_dir: Path = Path(".")) -> None:
+def download(sample_id: int, filename: Path, out_dir: Path = Path(".")) -> None:
     """Download output files for a sample"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     output_files = list_files(sample_id)
     with httpx.Client(timeout=600) as client:
         for item in output_files:
-            run_id, filename = item["run_id"], item["filename"]
+            run_id, _filename = item["run_id"], item["filename"]
             url = f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
-            if filename.startswith("fastp"):
-                # print(filename, url)
+            if _filename == filename.name:
+                print(True)
                 download_single(
                     client=client,
-                    filename=filename,
+                    filename=_filename,
                     url=url,
                     headers=headers,
                     out_dir=out_dir,

@@ -49,9 +49,15 @@ def files(sample_id: int) -> None:
     print(json.dumps(lib.list_files(sample_id), indent=4))
 
 
-def download(sample_id: int) -> None:
-    """Download latest outputs associated with a sample"""
-    lib.download(sample_id)
+def download(sample_id: int, filename: Path, out_dir: Path = Path()) -> None:
+    """
+    Download latest outputs associated with a sample
+
+    :arg sample_id: Sample ID
+    :arg filename: Name of file to download
+    :arg out_dir: Output directory
+    """
+    lib.download(sample_id, filename)
 
 
 def batches():
