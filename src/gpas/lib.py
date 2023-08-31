@@ -141,51 +141,59 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     control_map = {"positive": True, "negative": False, "": None}
-    if not dry_run:
-        batch_name = util.generate_identifier()
-        batch_id = create_batch(batch_name)
-        mapping_csv_records = []
-        for sample in batch.samples:
-            name = sample.sample_name
-            reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
-            reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
-            sample_id = create_sample(
-                batch_id=batch_id,
-                collection_date=str(sample.collection_date),
-                control=control_map[sample.control],
-                country=sample.country,
-                subdivision=sample.subdivision,
-                district=sample.district,
-                client_decontamination_reads_removed_proportion=names_logs[name][
-                    "reads_removed_proportion"
-                ],
-                client_decontamination_reads_in=names_logs[name]["reads_in"],
-                client_decontamination_reads_out=names_logs[name]["reads_out"],
-                checksum=util.hash_file(reads_1_clean),
-            )
-            reads_1_clean_renamed = reads_1_clean.rename(
-                reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
-            )
-            reads_2_clean_renamed = reads_2_clean.rename(
-                reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
-            )
-            mapping_csv_records.append(
-                {
-                    "batch_name": sample.batch_name,
-                    "sample_name": sample.sample_name,
-                    "remote_batch_name": batch_id,
-                    "remote_sample_name": sample_id,
-                }
-            )
-            util.upload_paired_fastqs(
-                sample_id=sample_id,
-                reads_1=reads_1_clean_renamed,
-                reads_2=reads_2_clean_renamed,
-            )
-            logging.info(f"Uploaded {name}")
-            trigger_run(sample_id)
-        util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
-        logging.info(f"Uploaded batch {batch_name}")
+    if dry_run:
+        return
+    batch_name = util.generate_identifier()
+    batch_id = create_batch(batch_name)
+    mapping_csv_records = []
+
+    # Create sample metadata
+    for sample in batch.samples:
+        name = sample.sample_name
+        reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
+        reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
+        checksum = util.hash_file(reads_1_clean)
+        sample_id = create_sample(
+            batch_id=batch_id,
+            collection_date=str(sample.collection_date),
+            control=control_map[sample.control],
+            country=sample.country,
+            subdivision=sample.subdivision,
+            district=sample.district,
+            client_decontamination_reads_removed_proportion=names_logs[name][
+                "reads_removed_proportion"
+            ],
+            client_decontamination_reads_in=names_logs[name]["reads_in"],
+            client_decontamination_reads_out=names_logs[name]["reads_out"],
+            checksum=checksum,
+        )
+        reads_1_clean_renamed = reads_1_clean.rename(
+            reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
+        )
+        reads_2_clean_renamed = reads_2_clean.rename(
+            reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
+        )
+        mapping_csv_records.append(
+            {
+                "batch_name": sample.batch_name,
+                "sample_name": sample.sample_name,
+                "remote_sample_name": checksum,
+                "remote_batch_id": batch_id,
+                "remote_sample_id": sample_id,
+            }
+        )
+    util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
+
+    # Upload reads
+    for sample in batch.samples:
+        util.upload_paired_fastqs(
+            sample_id=sample_id,
+            reads_1=reads_1_clean_renamed,
+            reads_2=reads_2_clean_renamed,
+        )
+        logging.info(f"Uploaded {name}")
+        trigger_run(sample_id)
+    logging.info(f"Uploaded batch {batch_name}")
 
 
 def list_batches():

@@ -76,16 +76,20 @@ def upload_file(sample_id: int, file_path: Path) -> None:
                 headers={f"Authorization": f"Bearer {get_access_token()}"},
                 files={"file": fh},
             )
+        if response.is_error:
+            logging.error(response.json())
         response.raise_for_status()
 
 
 def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
     """Upload paired FASTQ files to server in parallel"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
-        futures = [
-            x.submit(upload_file, sample_id, reads_1),
-            x.submit(upload_file, sample_id, reads_2),
-        ]
-        for future in concurrent.futures.as_completed(futures):
-            future.result()
+    upload_file(sample_id, reads_1)
+    upload_file(sample_id, reads_2)
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
+    #     futures = [
+    #         x.submit(upload_file, sample_id, reads_1),
+    #         x.submit(upload_file, sample_id, reads_2),
+    #     ]
+    #     for future in concurrent.futures.as_completed(futures):
+    #         future.result()

@@ -39,19 +39,12 @@ Enter your password: ***************
 
 
 
-#### Uploading samples (`gpas upload`) ✅
+#### Uploading samples (`gpas upload`)
 Used to submit samples for analysis. Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS cloud platform.
 
-```
-$ gpas upload tests/data/illumina-2.csv
-09:26:12 INFO: Using Bowtie2 (paired reads)
-09:26:12 INFO: Found cached index (/Users/bede/Library/Application Support/hostile/human-t2t-hla)
-09:26:12 INFO: Cleaning…
-09:26:12 INFO: Complete
-Cleaning: 100%|███████████████████████████████████| 2/2 [00:00<00:00,  2.51it/s]
-09:26:13 INFO: Complete
-09:26:16 INFO: Uploaded sample2
-09:26:16 INFO: Uploaded batch fynh56
+```bash
+gpas upload tests/data/illumina.csv
+gpas upload --resume tests/data/illumina.csv  # Resume a previously interrupted upload
 ```
 
 
