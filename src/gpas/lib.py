@@ -8,16 +8,19 @@ from hostile.lib import clean_paired_fastqs
 from gpas import util
 
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
 def authenticate(
     username: str, password: str, host="https://dev.portal.gpas.world/api"
 ) -> None:
     """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
     host_name = util.get_host_name(host)
-    response = httpx.post(
-        f"{host}/v1/auth/token",
-        json={"username": username, "password": password},
-    )
-    response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.post(
+            f"{host}/v1/auth/token",
+            json={"username": username, "password": password},
+        )
     data = response.json()
     conf_dir = Path.home() / ".config" / "gpas"
     token_dir = conf_dir / "tokens"
@@ -26,20 +29,23 @@ def authenticate(
         json.dump(data, fh)
 
 
+def check_authentication(host="https://dev.portal.gpas.world/api") -> None:
+    response = httpx.get(
+        f"{host}/v1/batches",
+        headers={"Authorization": f"Bearer {util.get_access_token()}"},
+    )
+    response.raise_for_status()
+
+
 def create_batch(name: str) -> int:
     """Create batch on server, return batch id"""
     data = {"name": name, "telemetry_data": {}}
-    response = httpx.post(
-        "https://dev.portal.gpas.world/api/v1/batches",
-        headers={"Authorization": f"Bearer {util.get_access_token()}"},
-        json=data,
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
-    logging.debug(f"{response.json()=}")
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.post(
+            "https://dev.portal.gpas.world/api/v1/batches",
+            headers={"Authorization": f"Bearer {util.get_access_token()}"},
+            json=data,
+        )
     return response.json()["id"]
 
 
@@ -77,58 +83,41 @@ def create_sample(
     }
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     logging.debug(f"Sample {data=}")
-    response = httpx.post(
-        "https://dev.portal.gpas.world/api/v1/samples",
-        headers=headers,
-        json=data,
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
-    logging.debug(f"{response.json()=}")
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.post(
+            "https://dev.portal.gpas.world/api/v1/samples",
+            headers=headers,
+            json=data,
+        )
     return response.json()["id"]
 
 
 def trigger_run(sample_id: int):
     """Patch sample, create run, and patch run to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    response = httpx.patch(
-        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
-        headers=headers,
-        json={"status": "Ready"},
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
-    response = httpx.post(
-        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs",
-        headers=headers,
-        json={"sample_id": sample_id},
-    )
-    run_id = response.json()["id"]
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
-    response = httpx.patch(
-        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}",
-        headers=headers,
-        json={"status": "Ready"},
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        patch_sample_response = client.patch(
+            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
+            headers=headers,
+            json={"status": "Ready"},
+        )
+        post_run_response = client.post(
+            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs",
+            headers=headers,
+            json={"sample_id": sample_id},
+        )
+        run_id = post_run_response.json()["id"]
+        patch_run_response = client.patch(
+            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}",
+            headers=headers,
+            json={"status": "Ready"},
+        )
 
 
 def upload(upload_csv: Path, dry_run: bool = False) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
+    if not dry_run:
+        check_authentication()
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
 
@@ -199,54 +188,43 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
 def list_batches():
     """List batches on server"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    response = httpx.get(
-        "https://dev.portal.gpas.world/api/v1/batches", headers=headers
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            "https://dev.portal.gpas.world/api/v1/batches", headers=headers
+        )
     return response.json()
 
 
 def list_samples() -> None:
     """List samples on server"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    response = httpx.get(
-        "https://dev.portal.gpas.world/api/v1/samples",
-        headers=headers,
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            "https://dev.portal.gpas.world/api/v1/samples",
+            headers=headers,
+        )
     return response.json()
 
 
 def fetch_sample(sample_id: int):
     """Fetch sample data from server"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    response = httpx.get(
-        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
-        headers=headers,
-    )
-    if response.is_error:
-        try:
-            logging.error(json.dumps(response.json(), indent=4))
-        finally:
-            response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
+            headers=headers,
+        )
     return response.json()
 
 
 def list_files(sample_id: int):
     """List output files for a sample"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    response = httpx.get(
-        f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/latest/files",
-        headers=headers,
-    )
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/latest/files",
+            headers=headers,
+        )
     return response.json().get("files", [])
 
 
@@ -254,7 +232,7 @@ def download(sample_id: int, filename: Path, out_dir: Path = Path(".")) -> None:
     """Download output files for a sample"""
     headers = {"Authorization": f"Bearer {util.get_access_token()}"}
     output_files = list_files(sample_id)
-    with httpx.Client(timeout=600) as client:
+    with httpx.Client(timeout=600, event_hooks=util.httpx_hooks) as client:
         for item in output_files:
             run_id, _filename = item["run_id"], item["filename"]
             url = f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"

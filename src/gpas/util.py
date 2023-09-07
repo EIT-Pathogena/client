@@ -1,4 +1,3 @@
-import concurrent.futures
 import csv
 import hashlib
 import json
@@ -12,6 +11,23 @@ from urllib.parse import urlparse
 import httpx
 
 from gpas.models import UploadBatch, UploadSample
+
+
+def log_request(request):
+    logging.debug(f"Request: {request.method} {request.url}")
+
+
+def log_response(response):
+    request = response.request
+    logging.debug(f"Response: {request.method} {request.url} ({response.status_code})")
+    logging.debug(f"Response: {request.method} {request.url} ({response.status_code})")
+
+
+def raise_for_status(response):
+    response.raise_for_status()
+
+
+httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
 
 
 def generate_identifier(length=6):
@@ -69,20 +85,20 @@ def hash_file(path: Path) -> str:
 
 
 def upload_file(sample_id: int, file_path: Path) -> None:
-    with httpx.Client(timeout=600) as client:  # 10 minute timeout
+    with httpx.Client(
+        timeout=600, event_hooks=httpx_hooks
+    ) as client:  # 10 minute timeout
         with open(file_path, "rb") as fh:
-            response = client.post(
+            client.post(
                 f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
                 headers={f"Authorization": f"Bearer {get_access_token()}"},
                 files={"file": fh},
             )
-        if response.is_error:
-            logging.error(response.json())
-        response.raise_for_status()
 
 
 def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
     """Upload paired FASTQ files to server in parallel"""
+
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
     upload_file(sample_id, reads_1)
     upload_file(sample_id, reads_2)
