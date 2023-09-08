@@ -32,14 +32,14 @@ gpas --version
 The first time you use the CLI, you will need to generate a token by running `gpas auth` and entering your username and password. Your token will be saved inside  `~/.config/gpas/tokens/` and used automatically  for subsequent commands.
 
 ```
-$ gpas auth
+gpas auth
 Enter your username: bede.constantinides@ndm.ox.ac.uk
 Enter your password: ***************
 ```
 
 
 
-#### Uploading samples (`gpas upload`)
+#### Uploading samples (`gpas upload`) 🚧
 Used to submit samples for analysis. Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS cloud platform.
 
 ```bash

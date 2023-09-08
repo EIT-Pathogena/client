@@ -18,9 +18,12 @@ def log_request(request):
 
 
 def log_response(response):
-    request = response.request
-    logging.debug(f"Response: {request.method} {request.url} ({response.status_code})")
-    logging.debug(f"Response: {request.method} {request.url} ({response.status_code})")
+    if response.is_error:
+        request = response.request
+        response.read()
+        logging.error(
+            f"{request.method} {request.url} ({response.status_code}) {response.json()=}"
+        )
 
 
 def raise_for_status(response):
