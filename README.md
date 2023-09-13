@@ -1,4 +1,4 @@
-# GPAS CLI
+# gpas-client
 
 The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload, progress monitoring, and retrieval of analytical outputs.
 
@@ -88,6 +88,16 @@ Triggers reanalysis of one or many existing samples or a batch thereof.
 gpas run --samples 103,674
 gpas run --batch 684
 gpas run --batch abcde.mapping.csv
+```
+
+
+
+## Using custom hosts
+
+```bash
+export GPAS_HOST="localhost:1234"
+
+unset GPAS_HOST  # To undo
 ```
 
 

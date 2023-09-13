@@ -41,17 +41,20 @@ def generate_identifier(length=6):
     return random_identifier.lower()
 
 
-def get_host_name(url) -> str:
-    parsed_uri = urlparse(url)
-    return parsed_uri.hostname
+def format_host(host) -> str:
+    return f"https://{host}"
 
 
-def get_access_token(host="https://dev.portal.gpas.world/api") -> str:
+def get_access_token(host: str) -> str:
     """Reads token from ~/.config/gpas/tokens/<host>"""
-    host_name = get_host_name(host)
-    token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host_name}.json"
+    token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host}.json"
     logging.debug(f"{token_path=}")
-    data = json.loads((token_path).read_text())
+    try:
+        data = json.loads((token_path).read_text())
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Token not found at {token_path}, have you authenticated?"
+        )
     return data["access_token"].strip()
 
 
@@ -87,24 +90,26 @@ def hash_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def upload_file(sample_id: int, file_path: Path) -> None:
+def upload_file(sample_id: int, file_path: Path, host: str) -> None:
     with httpx.Client(
         timeout=600, event_hooks=httpx_hooks
     ) as client:  # 10 minute timeout
         with open(file_path, "rb") as fh:
             client.post(
-                f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/files",
-                headers={f"Authorization": f"Bearer {get_access_token()}"},
+                f"https://{host}/api/v1/samples/{sample_id}/files",
+                headers={f"Authorization": f"Bearer {get_access_token(host)}"},
                 files={"file": fh},
             )
 
 
-def upload_paired_fastqs(sample_id: int, reads_1: Path, reads_2: Path) -> None:
+def upload_paired_fastqs(
+    sample_id: int, reads_1: Path, reads_2: Path, host: str
+) -> None:
     """Upload paired FASTQ files to server in parallel"""
 
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-    upload_file(sample_id, reads_1)
-    upload_file(sample_id, reads_2)
+    upload_file(sample_id, reads_1, host=host)
+    upload_file(sample_id, reads_2, host=host)
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
     #     futures = [
     #         x.submit(upload_file, sample_id, reads_1),

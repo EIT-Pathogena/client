@@ -1,55 +1,72 @@
 import json
 import logging
+import os
+
 from pathlib import Path
 
 import httpx
 from hostile.lib import clean_paired_fastqs
 
+import gpas
 from gpas import util
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.info(f"gpas-client version {gpas.__version__}")
 
 
-def authenticate(
-    username: str, password: str, host="https://dev.portal.gpas.world/api"
-) -> None:
+DEFAULT_HOST = "dev.portal.gpas.world"
+
+
+def get_host(cli_host: str | None) -> str:
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
+    if cli_host:
+        logging.info(f"Using host {cli_host}")
+        return cli_host
+    elif "GPAS_HOST" in os.environ:
+        logging.info(f"Using host {os.environ['GPAS_HOST']}")
+        return os.environ["GPAS_HOST"]
+    else:
+        return DEFAULT_HOST
+
+
+def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None:
     """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
-    host_name = util.get_host_name(host)
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            f"{host}/v1/auth/token",
+            f"https://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
         )
     data = response.json()
     conf_dir = Path.home() / ".config" / "gpas"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
-    with token_dir.joinpath(f"{host_name}.json").open(mode="w") as fh:
+    with token_dir.joinpath(f"{host}.json").open(mode="w") as fh:
         json.dump(data, fh)
 
 
-def check_authentication(host="https://dev.portal.gpas.world/api") -> None:
+def check_authentication(host: str) -> None:
     response = httpx.get(
-        f"{host}/v1/batches",
-        headers={"Authorization": f"Bearer {util.get_access_token()}"},
+        f"https://{host}/api/v1/batches",
+        headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
     )
     response.raise_for_status()
 
 
-def create_batch(name: str) -> int:
+def create_batch(name: str, host: str) -> int:
     """Create batch on server, return batch id"""
     data = {"name": name, "telemetry_data": {}}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            "https://dev.portal.gpas.world/api/v1/batches",
-            headers={"Authorization": f"Bearer {util.get_access_token()}"},
+            f"https://{host}/api/v1/batches",
+            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
     return response.json()["id"]
 
 
 def create_sample(
+    host: str,
     batch_id: int,
     collection_date: str,
     control: bool | None,
@@ -81,43 +98,43 @@ def create_sample(
         "specimen_organism": specimen_organism,
         "host_organism": host_organism,
     }
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            "https://dev.portal.gpas.world/api/v1/samples",
+            f"https://{host}/api/v1/samples",
             headers=headers,
             json=data,
         )
     return response.json()["id"]
 
 
-def trigger_run(sample_id: int):
+def trigger_run(sample_id: int, host: str):
     """Patch sample, create run, and patch run to trigger processing"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        patch_sample_response = client.patch(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
+        client.patch(
+            f"https://{host}/api/v1/samples/{sample_id}",
             headers=headers,
             json={"status": "Ready"},
         )
         post_run_response = client.post(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs",
+            f"https://{host}/api/v1/samples/{sample_id}/runs",
             headers=headers,
             json={"sample_id": sample_id},
         )
         run_id = post_run_response.json()["id"]
-        patch_run_response = client.patch(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}",
+        client.patch(
+            f"https://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
             headers=headers,
             json={"status": "Ready"},
         )
 
 
-def upload(upload_csv: Path, dry_run: bool = False) -> None:
+def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     if not dry_run:
-        check_authentication()
+        check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
 
@@ -133,7 +150,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
     if dry_run:
         return
     batch_name = util.generate_identifier()
-    batch_id = create_batch(batch_name)
+    batch_id = create_batch(name=batch_name, host=host)
     mapping_csv_records = []
 
     # Create sample metadata
@@ -143,6 +160,7 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
         reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
         checksum = util.hash_file(reads_1_clean)
         sample_id = create_sample(
+            host=host,
             batch_id=batch_id,
             collection_date=str(sample.collection_date),
             control=control_map[sample.control],
@@ -179,63 +197,64 @@ def upload(upload_csv: Path, dry_run: bool = False) -> None:
             sample_id=sample_id,
             reads_1=reads_1_clean_renamed,
             reads_2=reads_2_clean_renamed,
+            host=host,
         )
         logging.info(f"Uploaded {name}")
-        trigger_run(sample_id)
+        trigger_run(sample_id=sample_id, host=host)
     logging.info(f"Uploaded batch {batch_name}")
 
 
-def list_batches():
+def list_batches(host: str):
     """List batches on server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        response = client.get(
-            "https://dev.portal.gpas.world/api/v1/batches", headers=headers
-        )
+        response = client.get("https://{host}/api/v1/batches", headers=headers)
     return response.json()
 
 
-def list_samples() -> None:
+def list_samples(host: str) -> None:
     """List samples on server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            "https://dev.portal.gpas.world/api/v1/samples",
+            "https://{host}/api/v1/samples",
             headers=headers,
         )
     return response.json()
 
 
-def fetch_sample(sample_id: int):
+def fetch_sample(sample_id: int, host: str):
     """Fetch sample data from server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}",
+            f"https://{host}/api/v1/samples/{sample_id}",
             headers=headers,
         )
     return response.json()
 
 
-def list_files(sample_id: int):
+def list_files(sample_id: int, host: str):
     """List output files for a sample"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/latest/files",
+            f"https://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
         )
     return response.json().get("files", [])
 
 
-def download(sample_id: int, filename: Path, out_dir: Path = Path(".")) -> None:
+def download(
+    sample_id: int, filename: Path, out_dir: Path = Path("."), host: str = DEFAULT_HOST
+) -> None:
     """Download output files for a sample"""
-    headers = {"Authorization": f"Bearer {util.get_access_token()}"}
-    output_files = list_files(sample_id)
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    output_files = list_files(sample_id=sample_id, host=host)
     with httpx.Client(timeout=600, event_hooks=util.httpx_hooks) as client:
         for item in output_files:
             run_id, _filename = item["run_id"], item["filename"]
-            url = f"https://dev.portal.gpas.world/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
+            url = f"https://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
             if _filename == filename.name:
                 print(True)
                 download_single(

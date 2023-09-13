@@ -8,10 +8,19 @@ import defopt
 from gpas import lib
 
 
-def auth():
+def auth(
+    *,
+    host: str | None = None,
+) -> None:
+    """
+    Authenticate with GPAS
+
+    :arg host: API hostname (for development)
+    """
+    host = lib.get_host(host)
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password: ")
-    lib.authenticate(username, password)
+    lib.authenticate(username=username, password=password, host=host)
 
 
 def upload(
@@ -20,6 +29,7 @@ def upload(
     threads: int = 0,
     save_reads: bool = False,
     dry_run: bool = False,
+    host: str | None = None,
     debug: bool = False,
 ):
     """
@@ -30,18 +40,21 @@ def upload(
     :arg save_reads: Save decontaminated reads in out_dir
     :arg threads: Number of threads used in decontamination
     :arg debug: Emit verbose debug messages
+    :arg host: API hostname (for development)
     :arg dry_run: Exit before uploading reads
     """
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)
-    lib.upload(upload_csv, dry_run=dry_run)
+    host = lib.get_host(host)
+    lib.upload(upload_csv, dry_run=dry_run, host=host)
 
 
-def sample(sample_id: int):
+def sample(sample_id: int, host: str | None = None):
     """Fetch sample information"""
-    print(json.dumps(lib.fetch_sample(sample_id), indent=4))
+    host = lib.get_host(host)
+    print(json.dumps(lib.fetch_sample(sample_id, host), indent=4))
 
 
 def files(sample_id: int) -> None:
@@ -49,20 +62,25 @@ def files(sample_id: int) -> None:
     print(json.dumps(lib.list_files(sample_id), indent=4))
 
 
-def download(sample_id: int, filename: Path, out_dir: Path = Path()) -> None:
+def download(
+    sample_id: int, filename: Path, out_dir: Path = Path(), host: str | None = None
+) -> None:
     """
     Download latest outputs associated with a sample
 
     :arg sample_id: Sample ID
     :arg filename: Name of file to download
     :arg out_dir: Output directory
+    :arg host: API hostname (for development)
     """
-    lib.download(sample_id, filename)
+    host = lib.get_host(host)
+    lib.download(sample_id=sample_id, filename=filename, host=host)
 
 
-def batches():
+def batches(host: str | None = None):
     """List batches on server"""
-    print(json.dumps(lib.list_batches()))
+    host = lib.get_host(host)
+    print(json.dumps(lib.list_batches(host)))
 
 
 def samples():
