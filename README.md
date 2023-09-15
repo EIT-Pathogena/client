@@ -19,7 +19,7 @@ pip install --editable '.[dev]'
 
 # Updating
 cd cli
-git pull origin master
+git pull origin main
 gpas --version
 ```
 
@@ -39,12 +39,12 @@ Enter your password: ***************
 
 
 
-#### Uploading samples (`gpas upload`) 🚧
+#### Uploading samples (`gpas upload`) ✅
 Used to submit samples for analysis. Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS cloud platform.
 
 ```bash
 gpas upload tests/data/illumina.csv
-gpas upload --resume tests/data/illumina.csv  # Resume a previously interrupted upload
+gpas upload --resume tests/data/illumina.csv  # Not yet implemented
 ```
 
 
@@ -80,13 +80,13 @@ gpas download --batch abcde.mapping.csv --all
 
 
 
-#### Reanalysing existing samples  (`gpas run`) 🚧
+#### Reanalysing existing samples  (`gpas run`) ✅
 
 Triggers reanalysis of one or many existing samples or a batch thereof.
 
 ```bash
 gpas run --samples 103,674
-gpas run --batch 684
+gpas run --batch 684  # Not yet implemented
 gpas run --batch abcde.mapping.csv
 ```
 

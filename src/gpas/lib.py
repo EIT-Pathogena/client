@@ -109,8 +109,8 @@ def create_sample(
     return response.json()["id"]
 
 
-def trigger_run(sample_id: int, host: str):
-    """Patch sample, create run, and patch run to trigger processing"""
+def run_sample(sample_id: int, host: str) -> int:
+    """Patch sample status, create run, and patch run status to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         client.patch(
@@ -129,6 +129,7 @@ def trigger_run(sample_id: int, host: str):
             headers=headers,
             json={"status": "Ready"},
         )
+        return run_id
 
 
 def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) -> None:
@@ -203,12 +204,12 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         reads_2_clean_renamed = sample[3]
         util.upload_paired_fastqs(
             sample_id=sample_id,
+            sample_name=name,
             reads_1=reads_1_clean_renamed,
             reads_2=reads_2_clean_renamed,
             host=host,
         )
-        logging.info(f"Uploaded {name}")
-        trigger_run(sample_id=sample_id, host=host)
+        run_sample(sample_id=sample_id, host=host)
     logging.info(f"Uploaded batch {batch_name}")
 
 

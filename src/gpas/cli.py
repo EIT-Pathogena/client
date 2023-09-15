@@ -89,6 +89,32 @@ def samples():
     print(json.dumps(lib.list_samples(), indent=4))
 
 
+def run(
+    *, samples: str | None = None, batch: str | None = None, host: str | None = None
+):
+    """
+    Reanalyse of one or more uploaded samples
+
+    :arg samples: Comma-separated list of sample IDs
+    :arg batch: Batch ID
+    :arg host: API hostname (for development)
+    """
+    host = lib.get_host(host)
+    if not bool(samples) ^ bool(batch):
+        raise ValueError("Specify either samples or batch, not both")
+    if samples:
+        samples = samples.strip().split(",")
+        for sample in samples:
+            run_id = lib.run_sample(int(sample), host=host)
+            logging.info(f"Created run_id {run_id} for sample_id {sample}")
+    elif batch:
+        NotImplementedError(
+            "GPAS API does not yet support returning samples by batch_id"
+        )
+    else:
+        raise ValueError("Specify either samples or batch")
+
+
 def main():
     defopt.run(
         {
@@ -99,6 +125,7 @@ def main():
             "files": files,
             "upload": upload,
             "download": download,
+            "run": run,
         },
         no_negated_flags=True,
         strict_kwonly=False,

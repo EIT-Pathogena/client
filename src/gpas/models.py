@@ -72,3 +72,19 @@ class UploadSample(BaseModel):
 
 class UploadBatch(BaseModel):
     samples: list[UploadSample]
+
+    @model_validator(mode="after")
+    def validate_unique_sample_names(self):
+        names = [sample.sample_name for sample in self.samples]
+        if len(names) != len(set(names)):
+            raise ValueError("Found duplicate sample names")
+        return self
+
+    @model_validator(mode="after")
+    def validate_unique_file_names(self):
+        reads_1_filenames = [str(sample.reads_1.name) for sample in self.samples]
+        reads_2_filenames = [str(sample.reads_2.name) for sample in self.samples]
+        for filenames in [reads_1_filenames, reads_2_filenames]:
+            if len(filenames) != len(set(filenames)):
+                raise ValueError("Found duplicate FASTQ filenames")
+        return self
