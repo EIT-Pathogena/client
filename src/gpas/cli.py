@@ -57,9 +57,10 @@ def sample(sample_id: int, host: str | None = None):
     print(json.dumps(lib.fetch_sample(sample_id, host), indent=4))
 
 
-def files(sample_id: int) -> None:
+def files(sample_id: int, host: str | None = None) -> None:
     """Show latest outputs associated with a sample"""
-    print(json.dumps(lib.list_files(sample_id), indent=4))
+    host = lib.get_host(host)
+    print(json.dumps(lib.list_files(sample_id=sample_id, host=host), indent=4))
 
 
 def download(

@@ -154,6 +154,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
     mapping_csv_records = []
 
     # Create sample metadata
+    upload_meta = []
     for sample in batch.samples:
         name = sample.sample_name
         reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
@@ -180,6 +181,9 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         reads_2_clean_renamed = reads_2_clean.rename(
             reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
         )
+        upload_meta.append(
+            (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed)
+        )
         mapping_csv_records.append(
             {
                 "batch_name": sample.batch_name,
@@ -192,7 +196,11 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
 
     # Upload reads
-    for sample in batch.samples:
+    for sample in upload_meta:
+        name = sample[0]
+        sample_id = sample[1]
+        reads_1_clean_renamed = sample[2]
+        reads_2_clean_renamed = sample[3]
         util.upload_paired_fastqs(
             sample_id=sample_id,
             reads_1=reads_1_clean_renamed,

@@ -106,9 +106,10 @@ def upload_paired_fastqs(
     sample_id: int, reads_1: Path, reads_2: Path, host: str
 ) -> None:
     """Upload paired FASTQ files to server in parallel"""
-
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
+    logging.info(f"Uploading {reads_1.name}")
     upload_file(sample_id, reads_1, host=host)
+    logging.info(f"Uploading {reads_2.name}")
     upload_file(sample_id, reads_2, host=host)
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
     #     futures = [
