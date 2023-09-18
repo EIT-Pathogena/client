@@ -213,20 +213,23 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
     logging.info(f"Uploaded batch {batch_name}")
 
 
-def list_batches(host: str):
+def list_batches(host: str, limit: int = 1000):
     """List batches on server"""
+    print(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        response = client.get("https://{host}/api/v1/batches", headers=headers)
+        response = client.get(
+            f"https://{host}/api/v1/batches?limit={limit}", headers=headers
+        )
     return response.json()
 
 
-def list_samples(host: str) -> None:
+def list_samples(batch: str, host: str, limit: int = 1000) -> None:
     """List samples on server"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            "https://{host}/api/v1/samples",
+            f"https://{host}/api/v1/samples?batch={batch}&limit={limit}",
             headers=headers,
         )
     return response.json()
@@ -265,7 +268,6 @@ def download(
             run_id, _filename = item["run_id"], item["filename"]
             url = f"https://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
             if _filename == filename.name:
-                print(True)
                 download_single(
                     client=client,
                     filename=_filename,

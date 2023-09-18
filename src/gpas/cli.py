@@ -78,15 +78,27 @@ def download(
     lib.download(sample_id=sample_id, filename=filename, host=host)
 
 
-def batches(host: str | None = None):
-    """List batches on server"""
+def batches(limit: int = 1000, host: str | None = None):
+    """
+    List batches on server
+
+    :arg limit: Number of samples to return
+    :arg host: API hostname (for development)
+    """
     host = lib.get_host(host)
-    print(json.dumps(lib.list_batches(host)))
+    print(json.dumps(lib.list_batches(host=host, limit=limit), indent=4))
 
 
-def samples():
-    """List samples on server"""
-    print(json.dumps(lib.list_samples(), indent=4))
+def samples(batch: str, limit: int = 1000, host: str | None = None):
+    """
+    List samples associated with a batch
+
+    :arg batch_id: Batch ID
+    :arg limit: Number of samples to return
+    :arg host: API hostname (for development)
+    """
+    host = lib.get_host(host)
+    print(json.dumps(lib.list_samples(batch=batch, host=host, limit=limit), indent=4))
 
 
 def run(
