@@ -8,12 +8,12 @@ The command line interface and Python API for the Global Pathogen Analysis Servi
 
 **Development install**
 
-Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)). Note that because the `cli` is at present Private, one must both (i) be granted access to the repository and (ii) add an `ssh` public key to [your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) for authentication. 
+Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)).
 
 ```bash
 conda create -n gpas -c conda-forge -c bioconda hostile  # Mamba is faster
 conda activate gpas
-git clone git@github.com:GlobalPathogenAnalysisService/cli.git
+git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
 pip install --editable '.[dev]'
 
