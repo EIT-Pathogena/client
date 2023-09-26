@@ -23,7 +23,9 @@ git pull origin main
 gpas --version
 ```
 
+**Macs with Apple Silicon (M1, M2) processors**
 
+The easiest way to install on an M1 or M2 Mac is to use Rosetta, otherwise all the components have to be compiled for the ARM architecture. To do this open a Finder window and naviagate to `Applications | Utilities`, then right-click on `Terminal` and choose `Get Info`. In the portrait window that appears there is a checkbox in the `General` section entitled `Open using Rosetta`. Make sure this is ticked and close the window. If `Terminal` was open, close it and open it again. Now you can follow the above instructions i.e. install Miniconda etc. 
 
 ## Usage
 
