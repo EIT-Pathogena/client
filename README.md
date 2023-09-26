@@ -8,12 +8,12 @@ The command line interface and Python API for the Global Pathogen Analysis Servi
 
 **Development install**
 
-Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)).
+Miniconda is recommended ([Miniconda installation guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)). Note that because the `cli` is at present Private, one must both (i) be granted access to the repository and (ii) add an `ssh` public key to [your GitHub account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) for authentication. 
 
 ```bash
 conda create -n gpas -c conda-forge -c bioconda hostile  # Mamba is faster
 conda activate gpas
-git clone https://github.com/GlobalPathogenAnalysisService/cli.git
+git clone git@github.com:GlobalPathogenAnalysisService/cli.git
 cd cli
 pip install --editable '.[dev]'
 
@@ -23,7 +23,9 @@ git pull origin main
 gpas --version
 ```
 
+**Macs with Apple Silicon (M1, M2) processors**
 
+The easiest way to install on an M1 or M2 Mac is to use Rosetta, otherwise all the components have to be compiled for the ARM architecture. To do this open a Finder window and naviagate to `Applications | Utilities`, then right-click on `Terminal` and choose `Get Info`. In the portrait window that appears there is a checkbox in the `General` section entitled `Open using Rosetta`. Make sure this is ticked and close the window. If `Terminal` was open, close it and open it again. Now you can follow the above instructions i.e. install Miniconda etc. 
 
 ## Usage
 
