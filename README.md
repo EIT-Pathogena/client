@@ -6,7 +6,26 @@ The command line interface and Python API for the Global Pathogen Analysis Servi
 
 ## Install
 
-Run the following commands inside a Linux or MacOS terminal. Conda/Minconda is required.
+### Installing Miniconda
+
+If the conda package manager is already installed, skip this step, otherwise:
+
+**Linux**
+
+- Install Miniconda,  following instructions and accepting default options
+  ```bash
+  curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh | bash
+  ```
+
+**MacOS**
+
+- If your Mac has an Apple processor (M1/M2), first [create and open a Rosetta Terminal](#creating-a-rosetta-terminal-on-macos)
+- Install Miniconda,  following instructions and accepting default options
+  ```bash
+  curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh | bash
+  ```
+
+### Installing the GPAS CLI
 
 
 ```bash
@@ -17,36 +36,7 @@ unzip cli-main.zip
 pip install cli-main
 ```
 
-### Installing Miniconda
 
-use `curl` to download the right Miniconda installer for your system, and `bash`
-
-**Linux**
-
-```bash
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
-```
-
-**MacOS**
-
-```bash
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-bash Miniconda3-latest-MacOSX-x86_64.sh
-```
-
-**Notes**
-
-Follow the onscreen installation instructions for, accepting the default options. For M1/M2 Macs, use a Rosetta Terminal to install and run the GPAS CLI. To create a Rosetta Terminal:
-
-1. Using Finder, locate the Terminal application within the Utilities folder (Finder → `Go` → `Utilities`)
-2. Right-click on the Terminal icon, and choose `Duplicate`
-3. Right-click on the duplicated Terminal icon, choose `Rename`, and rename it to e.g. 'Rosetta Terminal'
-4. Right-click on the 'Rosetta Terminal' icon and choose `Get Info` (or hit Command+i)
-5. Check the box for `Open using Rosetta`, and close the `Get Info` window
-6. Open the `Rosetta Terminal` application, type `uname -m`, and press Enter, which should print `x86_64`
-
-Once you have installed Miniconda, install the GPAS CLI using the above.
 
 ## Usage
 
@@ -114,6 +104,17 @@ gpas run --samples 103,674
 gpas run --batch 684  # Not yet implemented
 gpas run --batch abcde.mapping.csv
 ```
+
+
+
+## Creating a Rosetta Terminal on MacOS
+
+1. Using Finder, locate the Terminal application within the Utilities folder (Finder → `Go` → `Utilities`)
+2. Right-click on the Terminal icon, and choose `Duplicate`
+3. Right-click on the duplicated Terminal icon, choose `Rename`, and rename it to e.g. 'Rosetta Terminal'
+4. Right-click on the 'Rosetta Terminal' icon and choose `Get Info` (or hit Command+i)
+5. Check the box for `Open using Rosetta`, and close the `Get Info` window
+6. Open the `Rosetta Terminal` application, type `uname -m`, and press Enter, which should print `x86_64`
 
 
 
