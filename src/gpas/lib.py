@@ -41,8 +41,10 @@ def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None
     conf_dir = Path.home() / ".config" / "gpas"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
-    with token_dir.joinpath(f"{host}.json").open(mode="w") as fh:
+    token_path = token_dir / f"{host}.json"
+    with token_path.open(mode="w") as fh:
         json.dump(data, fh)
+    logging.info(f"Authenticated ({token_path})")
 
 
 def check_authentication(host: str) -> None:
