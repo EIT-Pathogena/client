@@ -88,6 +88,7 @@ def create_sample(
     client_decontamination_reads_removed_proportion: float,
     client_decontamination_reads_in: int,
     client_decontamination_reads_out: int,
+    checksum: str,
     instrument_platform: str = "illumina",
     specimen_organism: str = "mycobacteria",
     host_organism: str = "homo sapiens",
@@ -104,6 +105,7 @@ def create_sample(
         "client_decontamination_reads_removed_proportion": client_decontamination_reads_removed_proportion,
         "client_decontamination_reads_in": client_decontamination_reads_in,
         "client_decontamination_reads_out": client_decontamination_reads_out,
+        "checksum": checksum,
         "instrument_platform": instrument_platform,
         "specimen_organism": specimen_organism,
         "host_organism": host_organism,
@@ -170,6 +172,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         name = sample.sample_name
         reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
         reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
+        checksum = util.hash_file(reads_1_clean)
         sample_id = create_sample(
             host=host,
             batch_id=batch_id,
@@ -183,6 +186,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             ],
             client_decontamination_reads_in=names_logs[name]["reads_in"],
             client_decontamination_reads_out=names_logs[name]["reads_out"],
+            checksum=checksum,
         )
         reads_1_clean_renamed = reads_1_clean.rename(
             reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
@@ -197,6 +201,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             {
                 "batch_name": sample.batch_name,
                 "sample_name": sample.sample_name,
+                "remote_sample_name": checksum,
                 "remote_batch_id": batch_id,
                 "remote_sample_id": sample_id,
             }
