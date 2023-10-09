@@ -1,6 +1,6 @@
 # gpas-client
 
-The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload, progress monitoring, and retrieval of analytical outputs.
+The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload with client-side human read removal, progress monitoring, and retrieval of analytical outputs.
 
 
 
@@ -12,20 +12,32 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 **Linux**
 
-- Install Miniconda,  following instructions and accepting default options
+- In a terminal console, install Miniconda, following instructions and accepting default options:
   ```bash
   curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh | bash
   ```
 
 **MacOS**
 
-- If your Mac has an Apple processor (M1/M2), first [create and open a Rosetta Terminal](#creating-a-rosetta-terminal-on-macos)
-- Install Miniconda,  following instructions and accepting default options
+- If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
+  ```bash
+  arch -x86_64 zsh
+  ```
+- Install Miniconda using Terminal, following instructions and accepting default options:
   ```bash
   curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh | bash
   ```
 
+
+
 ### Installing the GPAS CLI
+
+If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
+```bash
+arch -x86_64 zsh
+```
+
+Then proceed with installing the GPAS CLI:
 
 
 ```bash
@@ -40,7 +52,7 @@ pip install cli-main
 
 ## Usage
 
-Ensure the conda environment is active by running `conda activate gpas`
+Ensure the conda environment is active by running `conda activate gpas`. If using a Mac with an Apple processor, be sure to run `arch -x86_64 zsh` after opening a new Terminal window.
 
 #### Authentication (`gpas auth`)
 
