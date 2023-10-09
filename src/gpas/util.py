@@ -86,7 +86,9 @@ def hash_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def upload_file(sample_id: int, file_path: Path, host: str, protocol: str) -> None:
+def upload_file(
+    sample_id: int, file_path: Path, host: str, protocol: str, checksum: str
+) -> None:
     with httpx.Client(
         timeout=600, event_hooks=httpx_hooks
     ) as client:  # 10 minute timeout
@@ -95,6 +97,7 @@ def upload_file(sample_id: int, file_path: Path, host: str, protocol: str) -> No
                 f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
                 headers={f"Authorization": f"Bearer {get_access_token(host)}"},
                 files={"file": fh},
+                data={"checksum": checksum},
             )
 
 
@@ -109,9 +112,11 @@ def upload_paired_fastqs(
     """Upload paired FASTQ files to server in parallel"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
     logging.info(f"Uploading {sample_name}")
-    upload_file(sample_id, reads_1, host=host, protocol=protocol)
+    checksum1 = hash_file(reads_1)
+    checksum2 = hash_file(reads_2)
+    upload_file(sample_id, reads_1, host=host, protocol=protocol, checksum=checksum1)
     logging.info(f"  Uploaded {reads_1.name}")
-    upload_file(sample_id, reads_2, host=host, protocol=protocol)
+    upload_file(sample_id, reads_2, host=host, protocol=protocol, checksum=checksum2)
     logging.info(f"  Uploaded {reads_2.name}")
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
