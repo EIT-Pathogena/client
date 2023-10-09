@@ -158,10 +158,14 @@ gpas --version
 
 
 
-### Custom API hostnames
+### Using a local development server
 
 ```bash
-export GPAS_HOST="localhost:1234"
-
-unset GPAS_HOST  # To undo
+export GPAS_HOST="localhost:8000"
+export GPAS_PROTOCOL="http"
+```
+To unset:
+```bash
+unset GPAS_HOST
+unset GPAS_PROTOCOL
 ```

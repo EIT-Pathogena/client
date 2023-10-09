@@ -5,7 +5,7 @@ from pathlib import Path
 
 import defopt
 
-from gpas import lib
+from gpas import lib, util
 
 
 def auth(

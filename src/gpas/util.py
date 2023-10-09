@@ -41,10 +41,6 @@ def generate_identifier(length=6):
     return random_identifier.lower()
 
 
-def format_host(host) -> str:
-    return f"https://{host}"
-
-
 def get_access_token(host: str) -> str:
     """Reads token from ~/.config/gpas/tokens/<host>"""
     token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host}.json"
@@ -90,27 +86,32 @@ def hash_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def upload_file(sample_id: int, file_path: Path, host: str) -> None:
+def upload_file(sample_id: int, file_path: Path, host: str, protocol: str) -> None:
     with httpx.Client(
         timeout=600, event_hooks=httpx_hooks
     ) as client:  # 10 minute timeout
         with open(file_path, "rb") as fh:
             client.post(
-                f"https://{host}/api/v1/samples/{sample_id}/files",
+                f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
                 headers={f"Authorization": f"Bearer {get_access_token(host)}"},
                 files={"file": fh},
             )
 
 
 def upload_paired_fastqs(
-    sample_id: int, sample_name: str, reads_1: Path, reads_2: Path, host: str
+    sample_id: int,
+    sample_name: str,
+    reads_1: Path,
+    reads_2: Path,
+    host: str,
+    protocol: str,
 ) -> None:
     """Upload paired FASTQ files to server in parallel"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
     logging.info(f"Uploading {sample_name}")
-    upload_file(sample_id, reads_1, host=host)
+    upload_file(sample_id, reads_1, host=host, protocol=protocol)
     logging.info(f"  Uploaded {reads_1.name}")
-    upload_file(sample_id, reads_2, host=host)
+    upload_file(sample_id, reads_2, host=host, protocol=protocol)
     logging.info(f"  Uploaded {reads_2.name}")
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:

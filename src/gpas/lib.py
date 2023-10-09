@@ -16,6 +16,7 @@ logging.info(f"gpas-client version {gpas.__version__}")
 
 
 DEFAULT_HOST = "dev.portal.gpas.world"
+DEFAULT_PROTOCOL = "https"
 
 
 def get_host(cli_host: str | None) -> str:
@@ -24,17 +25,26 @@ def get_host(cli_host: str | None) -> str:
         logging.info(f"Using host {cli_host}")
         return cli_host
     elif "GPAS_HOST" in os.environ:
-        logging.info(f"Using host {os.environ['GPAS_HOST']}")
-        return os.environ["GPAS_HOST"]
+        env_host = os.environ["GPAS_HOST"]
+        logging.info(f"Using host {env_host}")
+        return env_host
     else:
         return DEFAULT_HOST
+
+
+def get_protocol() -> str:
+    if "GPAS_PROTOCOL" in os.environ:
+        protocol = os.environ["GPAS_PROTOCOL"]
+        return protocol
+    else:
+        return DEFAULT_PROTOCOL
 
 
 def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None:
     """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            f"https://{host}/api/v1/auth/token",
+            f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
         )
     data = response.json()
@@ -48,11 +58,11 @@ def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None
 
 
 def check_authentication(host: str) -> None:
-    response = httpx.get(
-        f"https://{host}/api/v1/batches",
-        headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
-    )
-    response.raise_for_status()
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = httpx.get(
+            f"{get_protocol()}://{host}/api/v1/batches",
+            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+        )
 
 
 def create_batch(name: str, host: str) -> int:
@@ -60,7 +70,7 @@ def create_batch(name: str, host: str) -> int:
     data = {"name": name, "telemetry_data": {}}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            f"https://{host}/api/v1/batches",
+            f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
@@ -104,7 +114,7 @@ def create_sample(
     logging.debug(f"Sample {data=}")
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
-            f"https://{host}/api/v1/samples",
+            f"{get_protocol()}://{host}/api/v1/samples",
             headers=headers,
             json=data,
         )
@@ -116,18 +126,18 @@ def run_sample(sample_id: int, host: str) -> int:
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         client.patch(
-            f"https://{host}/api/v1/samples/{sample_id}",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
             json={"status": "Ready"},
         )
         post_run_response = client.post(
-            f"https://{host}/api/v1/samples/{sample_id}/runs",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs",
             headers=headers,
             json={"sample_id": sample_id},
         )
         run_id = post_run_response.json()["id"]
         client.patch(
-            f"https://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
             headers=headers,
             json={"status": "Ready"},
         )
@@ -210,6 +220,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             reads_1=reads_1_clean_renamed,
             reads_2=reads_2_clean_renamed,
             host=host,
+            protocol=get_protocol(),
         )
         run_sample(sample_id=sample_id, host=host)
     logging.info(f"Uploaded batch {batch_name}")
@@ -221,7 +232,7 @@ def list_batches(host: str, limit: int = 1000):
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://{host}/api/v1/batches?limit={limit}", headers=headers
+            f"{get_protocol()}://{host}/api/v1/batches?limit={limit}", headers=headers
         )
     return response.json()
 
@@ -231,7 +242,7 @@ def list_samples(batch: str, host: str, limit: int = 1000) -> None:
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://{host}/api/v1/samples?batch={batch}&limit={limit}",
+            f"{get_protocol()}://{host}/api/v1/samples?batch={batch}&limit={limit}",
             headers=headers,
         )
     return response.json()
@@ -242,7 +253,7 @@ def fetch_sample(sample_id: int, host: str):
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://{host}/api/v1/samples/{sample_id}",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
         )
     return response.json()
@@ -253,7 +264,7 @@ def list_files(sample_id: int, host: str):
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"https://{host}/api/v1/samples/{sample_id}/latest/files",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
         )
     return response.json().get("files", [])
@@ -268,7 +279,7 @@ def download(
     with httpx.Client(timeout=600, event_hooks=util.httpx_hooks) as client:
         for item in output_files:
             run_id, _filename = item["run_id"], item["filename"]
-            url = f"https://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
+            url = f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
             if _filename == filename.name:
                 download_single(
                     client=client,
