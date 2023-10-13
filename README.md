@@ -1,4 +1,4 @@
-# gpas-client
+# gpas-client (myco)
 
 The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload with client-side human read removal, progress monitoring, and retrieval of analytical outputs.
 
@@ -32,21 +32,21 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 ### Installing the GPAS CLI
 
-If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
-```bash
-arch -x86_64 zsh
-```
+- If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
 
-Then proceed with installing the GPAS CLI:
+  ```bash
+  arch -x86_64 zsh
+  ```
 
+- Download [cli-main.zip](https://github.com/GlobalPathogenAnalysisService/cli/archive/refs/heads/main.zip), and move or copy it into your terminal's current working directory.
 
-```bash
-conda create -n gpas -c conda-forge -c bioconda hostile
-conda activate gpas
-curl -O https://github.com/GlobalPathogenAnalysisService/cli/archive/refs/heads/main.zip
-unzip cli-main.zip
-pip install cli-main
-```
+- Complete the installation:
+  ```bash
+  unzip cli-main.zip
+  conda create -n gpas -c conda-forge -c bioconda hostile
+  conda activate gpas
+  pip install ./cli-main
+  ```
 
 
 
