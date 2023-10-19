@@ -14,7 +14,8 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 - In a terminal console, install Miniconda, following instructions and accepting default options:
   ```bash
-  curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh | bash
+  curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  bash Miniconda3-latest-Linux-x86_64.sh
   ```
 
 **MacOS**
@@ -25,7 +26,8 @@ If the conda package manager is already installed, skip this step, otherwise:
   ```
 - Install Miniconda using Terminal, following instructions and accepting default options:
   ```bash
-  curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh | bash
+  curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+  bash Miniconda3-latest-MacOSX-x86_64.sh
   ```
 
 
@@ -38,7 +40,7 @@ If the conda package manager is already installed, skip this step, otherwise:
   arch -x86_64 zsh
   ```
 
-- Download [cli-main.zip](https://github.com/GlobalPathogenAnalysisService/cli/archive/refs/heads/main.zip), and move or copy it into your terminal's current working directory.
+- Download [cli-main.zip](https://github.com/GlobalPathogenAnalysisService/cli/archive/refs/heads/main.zip), and move it into your terminal's current working directory.
 
 - Complete the installation:
   ```bash
