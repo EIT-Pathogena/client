@@ -54,7 +54,11 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 ## Usage
 
-Ensure the conda environment is active by running `conda activate gpas`
+Ensure that the conda environment is active:
+
+```bash
+conda activate gpas
+```
 
 #### Authentication (`gpas auth`)
 
@@ -70,7 +74,7 @@ Enter your password: ***************
 
 #### Uploading samples (`gpas upload`)
 
-Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS platform.
+Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS platform. Generates a 'mapping CSV' for the uploaded batch of samples in the current working directory, linking local and remote sample names while preserving privacy.
 
 ```bash
 gpas upload tests/data/illumina.csv
@@ -78,7 +82,9 @@ gpas upload tests/data/illumina.csv
 
 
 
-#### Querying existing samples (`gpas query`) 🚧
+#### Querying existing samples (`gpas query`)
+
+*not yet implemented*
 
 Fetch status, metadata, and output file information for one or more samples, or a batch thereof. Optionally restricted to include only status or output file information with respective flags `--status` and `--files`.
 
@@ -92,9 +98,11 @@ gpas query --batch abcde.mapping.csv --files  # Only show output status
 
 
 
-#### Downloading output files (`gpas download`) 🚧
+#### Downloading output files (`gpas download`)
 
-Used to download output files associated with a one or many samples, or a batch thereof.
+*not yet implemented*
+
+Download output files associated with a one or more sample guids, or a batch defined by a mapping CSV generate during upload.
 
 ```bash
 # Download final.fasta for samples 103 and 674
@@ -109,7 +117,9 @@ gpas download --batch abcde.mapping.csv --all
 
 
 
-#### Reanalysing existing samples  (`gpas run`) ✅
+#### Reanalysing existing samples  (`gpas run`)
+
+*not yet implemented*
 
 Triggers reanalysis of one or many existing samples or a batch thereof.
 
@@ -118,17 +128,6 @@ gpas run --samples 103,674
 gpas run --batch 684  # Not yet implemented
 gpas run --batch abcde.mapping.csv
 ```
-
-
-
-## Creating a Rosetta Terminal on MacOS
-
-1. Using Finder, locate the Terminal application within the Utilities folder (Finder → `Go` → `Utilities`)
-2. Right-click on the Terminal icon, and choose `Duplicate`
-3. Right-click on the duplicated Terminal icon, choose `Rename`, and rename it to e.g. 'Rosetta Terminal'
-4. Right-click on the 'Rosetta Terminal' icon and choose `Get Info` (or hit Command+i)
-5. Check the box for `Open using Rosetta`, and close the `Get Info` window
-6. Open the `Rosetta Terminal` application, type `uname -m`, and press Enter, which should print `x86_64`
 
 
 
@@ -152,7 +151,7 @@ pip install --editable '.[dev]'
 
 **Updating**
 
-```
+```bash
 cd cli
 git pull origin main
 gpas --version
