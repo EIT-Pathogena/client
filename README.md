@@ -54,7 +54,7 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 ## Usage
 
-Ensure the conda environment is active by running `conda activate gpas`. If using a Mac with an Apple processor, be sure to run `arch -x86_64 zsh` after opening a new Terminal window.
+Ensure the conda environment is active by running `conda activate gpas`
 
 #### Authentication (`gpas auth`)
 
