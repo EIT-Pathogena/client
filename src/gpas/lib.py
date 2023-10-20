@@ -5,7 +5,9 @@ import os
 from pathlib import Path
 
 import httpx
+
 from hostile.lib import clean_paired_fastqs
+from tqdm import tqdm
 
 import gpas
 from gpas import util
@@ -249,7 +251,7 @@ def list_samples(batch: str, host: str, limit: int = 1000) -> None:
     return response.json()
 
 
-def fetch_sample(sample_id: int, host: str):
+def fetch_sample(sample_id: str, host: str):
     """Fetch sample data from server"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
@@ -260,7 +262,7 @@ def fetch_sample(sample_id: int, host: str):
     return response.json()
 
 
-def list_files(sample_id: int, host: str):
+def list_files(sample_id: str, host: str):
     """List output files for a sample"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
@@ -272,12 +274,17 @@ def list_files(sample_id: int, host: str):
 
 
 def download(
-    sample_id: int, filename: Path, out_dir: Path = Path("."), host: str = DEFAULT_HOST
+    sample_id: str, filename: Path, out_dir: Path = Path("."), host: str = DEFAULT_HOST
 ) -> None:
     """Download output files for a sample"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     output_files = list_files(sample_id=sample_id, host=host)
-    with httpx.Client(timeout=600, event_hooks=util.httpx_hooks) as client:
+    logging.info(f"{output_files=}")
+    with httpx.Client(
+        timeout=3600,  # 1 hour
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=4),
+    ) as client:
         for item in output_files:
             run_id, _filename = item["run_id"], item["filename"]
             url = f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
@@ -293,14 +300,27 @@ def download(
 
 def download_single(
     client: httpx.Client,
-    filename: str,
     url: str,
+    filename: str,
     headers: dict[str, str],
     out_dir: Path,
 ):
     logging.info(f"Downloading {filename}")
-    with httpx.stream("GET", url=url, headers=headers) as r:
-        for data in r.iter_bytes():
-            with Path(out_dir).joinpath(filename).open("wb") as fh:
+    with client.stream("GET", url=url, headers=headers) as r:
+        file_size = int(r.headers.get("content-length", 0))
+        progress = tqdm(
+            total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
+        )
+        chunk_size = 65_536
+        with Path(out_dir).joinpath(filename).open("wb") as fh, tqdm(
+            total=file_size,
+            unit="B",
+            unit_scale=True,
+            desc=filename,
+            leave=False,  # Works only if using a context manager
+            position=0,  # Avoids leaving line break with leave=False
+        ) as progress:
+            for data in r.iter_bytes(chunk_size):
                 fh.write(data)
+                progress.update(len(data))
     logging.info(f"Downloaded {filename}")
