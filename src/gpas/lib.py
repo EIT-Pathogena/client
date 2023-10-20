@@ -141,6 +141,7 @@ def run_sample(sample_id: str, host: str) -> int:
             headers=headers,
             json={"status": "Ready"},
         )
+        logging.debug(f"{run_id=}")
         return run_id
 
 
@@ -202,6 +203,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             {
                 "batch_name": sample.batch_name,
                 "sample_name": sample.sample_name,
+                "remote_sample_name": checksum,
                 "remote_batch_id": batch_id,
                 "remote_sample_id": sample_id,
             }

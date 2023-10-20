@@ -64,7 +64,7 @@ def files(sample_id: int, host: str | None = None) -> None:
 
 
 def download(
-    sample_id: int, filename: Path, out_dir: Path = Path(), host: str | None = None
+    sample_id: str, filename: Path, out_dir: Path = Path(), host: str | None = None
 ) -> None:
     """
     Download latest outputs associated with a sample
@@ -117,7 +117,7 @@ def run(
     if samples:
         samples = samples.strip().split(",")
         for sample in samples:
-            run_id = lib.run_sample(int(sample), host=host)
+            run_id = lib.run_sample(sample, host=host)
             logging.info(f"Created run_id {run_id} for sample_id {sample}")
     elif batch:
         NotImplementedError(
