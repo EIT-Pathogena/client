@@ -92,7 +92,7 @@ def create_sample(
     instrument_platform: str = "illumina",
     specimen_organism: str = "mycobacteria",
     host_organism: str = "homo sapiens",
-) -> int:
+) -> str:
     """Create sample on server, return sample id"""
     data = {
         "batch_id": batch_id,
@@ -121,7 +121,7 @@ def create_sample(
     return response.json()["id"]
 
 
-def run_sample(sample_id: int, host: str) -> int:
+def run_sample(sample_id: str, host: str) -> int:
     """Patch sample status, create run, and patch run status to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
@@ -188,6 +188,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
         )
+        logging.debug(f"{sample_id=}")
         reads_1_clean_renamed = reads_1_clean.rename(
             reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
         )
@@ -201,7 +202,6 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             {
                 "batch_name": sample.batch_name,
                 "sample_name": sample.sample_name,
-                "remote_sample_name": checksum,
                 "remote_batch_id": batch_id,
                 "remote_sample_id": sample_id,
             }
@@ -228,7 +228,6 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
 
 def list_batches(host: str, limit: int = 1000):
     """List batches on server"""
-    print(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
