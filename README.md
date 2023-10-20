@@ -60,6 +60,14 @@ Ensure that the conda environment is active:
 conda activate gpas
 ```
 
+
+
+#### Help
+
+Run `gpas --help` for an overview of CLI subcommands. For help with a specific subcommand, use e.g. `gpas auth --help`
+
+
+
 #### Authentication (`gpas auth`)
 
 The first time you use the CLI, you will need to authenticate by running `gpas auth` and entering your username and password. This token will be used automatically for subsequent commands.
