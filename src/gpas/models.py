@@ -27,7 +27,7 @@ class UploadSample(BaseModel):
         Literal["mycobacteria"], description="Target specimen organism scientific name"
     )
     host_organism: str = Field(
-        Literal["homo sapiens"], description="Host organism scientific name"
+        default=None, description="Host organism scientific name"
     )
     instrument_platform: str = Field(
         Literal["illumina", "ont"], description="DNA sequencing instrument platform"
