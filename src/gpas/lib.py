@@ -283,7 +283,7 @@ def parse_csv(path: Path):
 
 
 def check_cli_version(host: str) -> None:
-    """Check that CLI version matches server version"""
+    """Check that CLI version exceeds the server version"""
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
             f"{get_protocol()}://{host}/cli-version",
@@ -294,26 +294,27 @@ def check_cli_version(host: str) -> None:
 
 
 def download(
-    samples: str,
-    filenames: str,
+    samples: str | None = None,
+    mapping_csv: Path | None = None,
+    filenames: str = "main_report.json",
     out_dir: Path = Path("."),
     host: str = DEFAULT_HOST,
 ) -> None:
     """Download output files for a sample"""
     check_cli_version(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    using_mapping_csv = False
-    if Path(samples).exists():
-        using_mapping_csv = True
-        mapping_csv = parse_csv(samples)
-        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in mapping_csv}
+    if mapping_csv:
+        csv_records = parse_csv(Path(mapping_csv))
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
         logging.info(f"Using samples {list(guids_samples.values())}")
         logging.debug(guids_samples)
-    else:
-        guids = samples.strip(",").split(",")
+    elif samples:
+        guids = util.parse_comma_separated_string(samples)
         guids_samples = {guid: None for guid in guids}
         logging.info(f"Using guids {guids}")
-    filenames = set(filenames.strip(",").split(","))
+    else:
+        raise RuntimeError("Specify either a list of samples or a mapping CSV")
+    filenames = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
         output_files = list_files(sample_id=guid, host=host)
         with httpx.Client(
@@ -328,10 +329,10 @@ def download(
                     download_single(
                         client=client,
                         filename=_filename,
-                        prefix=sample if using_mapping_csv else guid,
+                        prefix=sample if mapping_csv else guid,
                         url=url,
                         headers=headers,
-                        out_dir=out_dir,
+                        out_dir=Path(out_dir),
                     )
 
 

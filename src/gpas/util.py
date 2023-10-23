@@ -4,6 +4,7 @@ import json
 import logging
 import random
 import string
+import uuid
 
 from pathlib import Path
 from urllib.parse import urlparse
@@ -126,3 +127,16 @@ def upload_paired_fastqs(
     #     ]
     #     for future in concurrent.futures.as_completed(futures):
     #         future.result()
+
+
+def parse_comma_separated_string(string) -> set[str]:
+    return set(string.strip(",").split(","))
+
+
+def validate_guids(guids: list[str]) -> bool:
+    for guid in guids:
+        try:
+            uuid.UUID(str(guid))
+            return True
+        except ValueError:
+            return False

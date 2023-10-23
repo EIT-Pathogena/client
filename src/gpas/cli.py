@@ -51,13 +51,13 @@ def upload(
     lib.upload(upload_csv, dry_run=dry_run, host=host)
 
 
-def sample(sample_id: int, host: str | None = None):
+def sample(sample_id: str, host: str | None = None):
     """Fetch sample information"""
     host = lib.get_host(host)
     print(json.dumps(lib.fetch_sample(sample_id, host), indent=4))
 
 
-def files(sample_id: int, host: str | None = None) -> None:
+def files(sample_id: str, host: str | None = None) -> None:
     """Show latest outputs associated with a sample"""
     host = lib.get_host(host)
     print(json.dumps(lib.list_files(sample_id=sample_id, host=host), indent=4))
@@ -79,7 +79,16 @@ def download(
     :arg host: API hostname (for development)
     """
     host = lib.get_host(host)
-    lib.download(samples=samples, filenames=filenames, out_dir=out_dir, host=host)
+    if util.validate_guids(util.parse_comma_separated_string(samples)):
+        lib.download(samples=samples, filenames=filenames, out_dir=out_dir, host=host)
+    elif Path(samples).is_file():
+        lib.download(
+            mapping_csv=samples, filenames=filenames, out_dir=out_dir, host=host
+        )
+    else:
+        raise ValueError(
+            f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
+        )
 
 
 def batches(limit: int = 1000, host: str | None = None):
@@ -123,10 +132,7 @@ def run(
         for sample in samples:
             run_id = lib.run_sample(sample, host=host)
             logging.info(f"Created run_id {run_id} for sample_id {sample}")
-    elif batch:
-        NotImplementedError(
-            "GPAS API does not yet support returning samples by batch_id"
-        )
+
     else:
         raise ValueError("Specify either samples or batch")
 
