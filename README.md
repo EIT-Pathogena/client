@@ -82,10 +82,32 @@ Enter your password: ***************
 
 #### Uploading samples (`gpas upload`)
 
-Performs metadata validation and client-side removal of human reads before uploading sequences to the GPAS platform. Generates a 'mapping CSV' for the uploaded batch of samples in the current working directory, linking local and remote sample names while preserving privacy.
+Performs metadata validation and client-side removal of human reads in each of your samples before uploading sequences to the GPAS platform.
 
 ```bash
 gpas upload tests/data/illumina.csv
+```
+
+This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote identifiers (GUIDs). Keep this file safe as it's useful for linking results later.
+
+
+
+#### Downloading output files (`gpas download`)
+
+Download output files associated with a one or more sample GUIDs, or a batch defined by the mapping CSV generated during upload. When a mapping CSV is used, files are prefixed with the sample names provided at upload, otherwise files are prefixed with the sample GUID.
+
+```bash
+# Download the report for sample 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+
+# Download the report for all samples in a5w2e8.mapping.csv
+gpas download a5w2e8.mapping.csv
+
+# Dowload the main and speciation reports for samples in a5w2e8.mapping.csv
+gpas download a5w2e8.mapping.csv --filenames speciation_report.json,main_report.json
+
+# Save downloaded files to a specific directory
+gpas download a5w2e8.mapping.csv --out-dir results
 ```
 
 
@@ -105,23 +127,6 @@ gpas query --batch abcde.mapping.csv --files  # Only show output status
 ```
 
 
-
-#### Downloading output files (`gpas download`)
-
-*not yet implemented*
-
-Download output files associated with a one or more sample guids, or a batch defined by a mapping CSV generate during upload.
-
-```bash
-# Download final.fasta for samples 103 and 674
-gpas download --samples 103,674 --filenames final.fasta
-# Download final.fasta and fastp_report.json for samples in batch 684
-gpas download --batch 684 --filenames final.fasta,fastp_report.json
-# As above, using local sample identifiers
-gpas download --batch abcde.mapping.csv --filenames final.fasta,fastp_report.json
-# Download all files
-gpas download --batch abcde.mapping.csv --all
-```
 
 
 

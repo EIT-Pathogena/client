@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -150,6 +151,7 @@ def run_sample(sample_id: str, host: str) -> int:
 def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     if not dry_run:
+        check_cli_version(host)
         check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
@@ -159,7 +161,9 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         for s in batch.samples
     ]
 
-    decontamination_log = clean_paired_fastqs(fastqs=fastq_path_tuples, force=True)
+    decontamination_log = clean_paired_fastqs(
+        fastqs=fastq_path_tuples, rename=False, force=True
+    )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     control_map = {"positive": True, "negative": False, "": None}
@@ -205,9 +209,8 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             {
                 "batch_name": sample.batch_name,
                 "sample_name": sample.sample_name,
-                "remote_sample_name": checksum,
+                "remote_sample_name": sample_id,
                 "remote_batch_id": batch_id,
-                "remote_sample_id": sample_id,
             }
         )
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
@@ -273,46 +276,81 @@ def list_files(sample_id: str, host: str):
     return response.json().get("files", [])
 
 
+def parse_csv(path: Path):
+    with open(path, "r") as fh:
+        reader = csv.DictReader(fh)
+        return [row for row in reader]
+
+
+def check_cli_version(host: str) -> None:
+    """Check that CLI version matches server version"""
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            f"{get_protocol()}://{host}/cli-version",
+        )
+    server_version = response.json()["version"]
+    if server_version > gpas.__version__:
+        logging.warning(f"A newer version of the CLI is available, please update")
+
+
 def download(
-    sample_id: str, filename: Path, out_dir: Path = Path("."), host: str = DEFAULT_HOST
+    samples: str,
+    filenames: str,
+    out_dir: Path = Path("."),
+    host: str = DEFAULT_HOST,
 ) -> None:
     """Download output files for a sample"""
+    check_cli_version(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    output_files = list_files(sample_id=sample_id, host=host)
-    logging.info(f"{output_files=}")
-    with httpx.Client(
-        timeout=3600,  # 1 hour
-        event_hooks=util.httpx_hooks,
-        transport=httpx.HTTPTransport(retries=4),
-    ) as client:
-        for item in output_files:
-            run_id, _filename = item["run_id"], item["filename"]
-            url = f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}/files/{filename}"
-            if _filename == filename.name:
-                download_single(
-                    client=client,
-                    filename=_filename,
-                    url=url,
-                    headers=headers,
-                    out_dir=out_dir,
-                )
+    using_mapping_csv = False
+    if Path(samples).exists():
+        using_mapping_csv = True
+        mapping_csv = parse_csv(samples)
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in mapping_csv}
+        logging.info(f"Using samples {list(guids_samples.values())}")
+        logging.debug(guids_samples)
+    else:
+        guids = samples.strip(",").split(",")
+        guids_samples = {guid: None for guid in guids}
+        logging.info(f"Using guids {guids}")
+    filenames = set(filenames.strip(",").split(","))
+    for guid, sample in guids_samples.items():
+        output_files = list_files(sample_id=guid, host=host)
+        with httpx.Client(
+            timeout=3600,  # 1 hour
+            event_hooks=util.httpx_hooks,
+            transport=httpx.HTTPTransport(retries=4),
+        ) as client:
+            for item in output_files:
+                run_id, _filename = item["run_id"], item["filename"]
+                url = f"{get_protocol()}://{host}/api/v1/samples/{guid}/runs/{run_id}/files/{_filename}"
+                if _filename in filenames:
+                    download_single(
+                        client=client,
+                        filename=_filename,
+                        prefix=sample if using_mapping_csv else guid,
+                        url=url,
+                        headers=headers,
+                        out_dir=out_dir,
+                    )
 
 
 def download_single(
     client: httpx.Client,
     url: str,
     filename: str,
+    prefix: str,
     headers: dict[str, str],
     out_dir: Path,
 ):
-    logging.info(f"Downloading {filename}")
+    logging.info(f"Downloading {filename} ({prefix})")
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
         progress = tqdm(
             total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
         )
         chunk_size = 65_536
-        with Path(out_dir).joinpath(filename).open("wb") as fh, tqdm(
+        with Path(out_dir).joinpath(f"{prefix}.{filename}").open("wb") as fh, tqdm(
             total=file_size,
             unit="B",
             unit_scale=True,
@@ -323,4 +361,4 @@ def download_single(
             for data in r.iter_bytes(chunk_size):
                 fh.write(data)
                 progress.update(len(data))
-    logging.info(f"Downloaded {filename}")
+    logging.debug(f"Downloaded {filename}")

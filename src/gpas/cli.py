@@ -64,18 +64,22 @@ def files(sample_id: int, host: str | None = None) -> None:
 
 
 def download(
-    sample_id: str, filename: Path, out_dir: Path = Path(), host: str | None = None
+    samples: str,
+    *,
+    filenames: str = "main_report.json",
+    out_dir: Path = Path(),
+    host: str | None = None,
 ) -> None:
     """
     Download latest outputs associated with a sample
 
-    :arg sample_id: Sample ID
-    :arg filename: Name of file to download
+    :arg samples: Comma-separated list of sample IDs, or path of mapping CSV
+    :arg filenames: Comma-separated list of filenames to download
     :arg out_dir: Output directory
     :arg host: API hostname (for development)
     """
     host = lib.get_host(host)
-    lib.download(sample_id=sample_id, filename=filename, host=host)
+    lib.download(samples=samples, filenames=filenames, out_dir=out_dir, host=host)
 
 
 def batches(limit: int = 1000, host: str | None = None):
@@ -140,6 +144,6 @@ def main():
             "run": run,
         },
         no_negated_flags=True,
-        strict_kwonly=False,
+        strict_kwonly=True,
         short={},
     )
