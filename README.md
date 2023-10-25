@@ -97,14 +97,14 @@ This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local samp
 Download output files associated with a one or more sample GUIDs, or a batch defined by the mapping CSV generated during upload. When a mapping CSV is used, files are prefixed with the sample names provided at upload, otherwise files are prefixed with the sample GUID.
 
 ```bash
-# Download the report for sample 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+# Download the main report for sample 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 
-# Download the report for all samples in a5w2e8.mapping.csv
+# Download the main reports for all samples in a5w2e8.mapping.csv
 gpas download a5w2e8.mapping.csv
 
-# Dowload the main and speciation reports for samples in a5w2e8.mapping.csv
-gpas download a5w2e8.mapping.csv --filenames speciation_report.json,main_report.json
+# Download the main and speciation reports for samples in a5w2e8.mapping.csv
+gpas download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
 
 # Save downloaded files to a specific directory
 gpas download a5w2e8.mapping.csv --out-dir results
