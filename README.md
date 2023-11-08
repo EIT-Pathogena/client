@@ -34,7 +34,7 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 ### Installing the GPAS CLI
 
-- If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
+- Only if using a Mac with an Apple processor (M1/M2), run the following command using Terminal:
 
   ```bash
   arch -x86_64 zsh
