@@ -1,0 +1,16 @@
+name: gpas-dev
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - hostile
+  - pytest
+  - pytest-cov
+  - black
+  - pre-commit
+  - mypy
+  - pip:
+    - git+https://github.com/GlobalPathogenAnalysisService/cli.git#egg=gpas
