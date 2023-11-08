@@ -1,6 +1,6 @@
-# gpas-client (myco)
+# gpas-client
 
-The command line interface and Python API for the Global Pathogen Analysis Service. Enables secure sample upload with client-side human read removal, progress monitoring, and retrieval of analytical outputs.
+The command line and Python API client for the Global Pathogen Analysis Service. Enables secure sample upload with client-side human read removal and retrieval of analytical outputs.
 
 
 
@@ -40,14 +40,16 @@ If the conda package manager is already installed, skip this step, otherwise:
   arch -x86_64 zsh
   ```
 
-- Download [cli-main.zip](https://github.com/GlobalPathogenAnalysisService/cli/archive/refs/heads/main.zip), and move it into your terminal's current working directory.
-
-- Complete the installation:
+- Perform the installation:
   ```bash
-  unzip cli-main.zip
   conda create -n gpas -c conda-forge -c bioconda hostile
   conda activate gpas
-  pip install ./cli-main
+  pip install gpas
+  ```
+
+- Test the installation:
+  ```
+  gpas --version
   ```
 
 
@@ -112,38 +114,6 @@ gpas download a5w2e8.mapping.csv --out-dir results
 
 
 
-#### Querying existing samples (`gpas query`)
-
-*not yet implemented*
-
-Fetch status, metadata, and output file information for one or more samples, or a batch thereof. Optionally restricted to include only status or output file information with respective flags `--status` and `--files`.
-
-```bash
-gpas query --samples 103,674  # Show info for samples 103 and 674
-gpas query --batch 684  # Show info for each sample in batch 584
-gpas query --batch abcde.mapping.csv  # As above, using local sample names
-gpas query --batch abcde.mapping.csv --status  # Only show status info
-gpas query --batch abcde.mapping.csv --files  # Only show output status
-```
-
-
-
-
-
-#### Reanalysing existing samples  (`gpas run`)
-
-*not yet implemented*
-
-Triggers reanalysis of one or many existing samples or a batch thereof.
-
-```bash
-gpas run --samples 103,674
-gpas run --batch 684  # Not yet implemented
-gpas run --batch abcde.mapping.csv
-```
-
-
-
 ## Support
 
 For technical support, please open an issue or contact `support@gpas.global`
@@ -155,17 +125,15 @@ For technical support, please open an issue or contact `support@gpas.global`
 **Development install**
 
 ```bash
-conda create -n gpas -c conda-forge -c bioconda hostile
-conda activate gpas
 git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
-pip install --editable '.[dev]'
+conda env create -f environment-dev.yml
+pip install --editable .
 ```
 
 **Updating**
 
 ```bash
-cd cli
 git pull origin main
 gpas --version
 ```
