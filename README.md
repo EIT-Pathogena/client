@@ -42,7 +42,7 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 - Perform the installation:
   ```bash
-  conda create -n gpas -c conda-forge -c bioconda hostile
+  conda create --yes -n gpas -c conda-forge -c bioconda hostile
   conda activate gpas
   pip install gpas
   ```
