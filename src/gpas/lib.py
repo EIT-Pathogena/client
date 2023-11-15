@@ -11,7 +11,9 @@ from hostile.lib import clean_paired_fastqs
 from tqdm import tqdm
 
 import gpas
+
 from gpas import util
+from gpas.models import OutputFile
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -155,6 +157,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
+    logging.info(batch)
 
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
@@ -265,15 +268,28 @@ def fetch_sample(sample_id: str, host: str):
     return response.json()
 
 
-def list_files(sample_id: str, host: str):
-    """List output files for a sample"""
+def fetch_output_files(
+    sample_id: str, host: str, latest: bool = True
+) -> dict[str, OutputFile]:
+    """Return OutputFile instances for a sample, optionally including only latest run"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
         )
-    return response.json().get("files", [])
+    data = response.json().get("files", [])
+    output_files = {
+        d["filename"]: OutputFile(
+            filename=d["filename"], sample_id=d["sample_id"], run_id=d["run_id"]
+        )
+        for d in data
+    }
+    logging.debug(f"{output_files=}")
+    if latest:
+        max_run_id = max(output_file.run_id for output_file in output_files.values())
+        output_files = {k: v for k, v in output_files.items() if v.run_id == max_run_id}
+    return output_files
 
 
 def parse_csv(path: Path):
@@ -299,8 +315,9 @@ def download(
     filenames: str = "main_report.json",
     out_dir: Path = Path("."),
     host: str = DEFAULT_HOST,
+    debug: bool = False,
 ) -> None:
-    """Download output files for a sample"""
+    """Download latest output files for a sample"""
     check_cli_version(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
@@ -316,24 +333,31 @@ def download(
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
     filenames = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
-        output_files = list_files(sample_id=guid, host=host)
+        output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         with httpx.Client(
             timeout=3600,  # 1 hour
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=4),
         ) as client:
-            for item in output_files:
-                run_id, _filename = item["run_id"], item["filename"]
-                url = f"{get_protocol()}://{host}/api/v1/samples/{guid}/runs/{run_id}/files/{_filename}"
-                if _filename in filenames:
+            for filename in filenames:
+                if filename in output_files:
+                    output_file = output_files[filename]
+                    url = (
+                        f"{get_protocol()}://{host}/api/v1/"
+                        f"samples/{output_file.sample_id}/"
+                        f"runs/{output_file.run_id}/"
+                        f"files/{output_file.filename}"
+                    )
                     download_single(
                         client=client,
-                        filename=_filename,
+                        filename=output_file.filename,
                         prefix=sample if mapping_csv else guid,
                         url=url,
                         headers=headers,
                         out_dir=Path(out_dir),
                     )
+                else:
+                    logging.warning(f"Skipped {filename}" f" ({guid})")
 
 
 def download_single(

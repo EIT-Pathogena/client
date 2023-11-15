@@ -1,0 +1,2 @@
+batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform
+,,../reads/tuberculosis_1_1.fastq,../reads/tuberculosis_1_2.fastq,,2023-07-26,GBR,,,mycobacteria,homo sapiens,illumina

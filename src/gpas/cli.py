@@ -70,12 +70,13 @@ def download(
     filenames: str = "main_report.json",
     out_dir: Path = Path(),
     host: str | None = None,
+    debug: bool = False,
 ) -> None:
     """
     Download latest outputs associated with a sample
 
-    :arg samples: Comma-separated list of sample IDs, or path of mapping CSV
-    :arg filenames: Comma-separated list of filenames to download
+    :arg samples: Comma-separated list of one or more sample IDs, or path of mapping CSV
+    :arg filenames: Comma-separated list of one or more filenames to download
     :arg out_dir: Output directory
     :arg host: API hostname (for development)
     """
@@ -84,7 +85,11 @@ def download(
         lib.download(samples=samples, filenames=filenames, out_dir=out_dir, host=host)
     elif Path(samples).is_file():
         lib.download(
-            mapping_csv=samples, filenames=filenames, out_dir=out_dir, host=host
+            mapping_csv=samples,
+            filenames=filenames,
+            out_dir=out_dir,
+            host=host,
+            debug=debug,
         )
     else:
         raise ValueError(

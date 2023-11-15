@@ -10,7 +10,9 @@ class UploadSample(BaseModel):
     batch_name: str = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
-    sample_name: str = Field(description="Sample name (anonymised prior to upload)")
+    sample_name: str = Field(
+        min_length=1, description="Sample name (anonymised prior to upload)"
+    )
     upload_csv: Path = Field(description="Absolute path of upload CSV file")
     reads_1: Path = Field(description="Relative path of first FASTQ file")
     reads_2: Path = Field(description="Relative path of second FASTQ file")
@@ -18,7 +20,7 @@ class UploadSample(BaseModel):
         Literal["positive", "negative", ""], description="Control status of sample"
     )
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
-    country: str = Field(description="ISO 3166-2 alpha-3 country code")
+    country: str = Field(min_length=1, description="ISO 3166-2 alpha-3 country code")
     subdivision: str = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
@@ -88,3 +90,9 @@ class UploadBatch(BaseModel):
             if len(filenames) != len(set(filenames)):
                 raise ValueError("Found duplicate FASTQ filenames")
         return self
+
+
+class OutputFile(BaseModel):
+    filename: str
+    run_id: int
+    sample_id: str
