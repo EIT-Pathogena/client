@@ -40,7 +40,7 @@ def upload(
     :arg out_dir: Path of directory in which to save mapping CSV
     :arg save_reads: Save decontaminated reads in out_dir
     :arg threads: Number of threads used in decontamination
-    :arg debug: Emit verbose debug messages
+    :arg debug: Enable verbose debug messages
     :arg host: API hostname (for development)
     :arg dry_run: Exit before uploading reads
     """
@@ -79,6 +79,7 @@ def download(
     :arg filenames: Comma-separated list of one or more filenames to download
     :arg out_dir: Output directory
     :arg host: API hostname (for development)
+    :arg debug: Enable verbose debug messages
     """
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):

@@ -165,7 +165,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
     ]
 
     decontamination_log = clean_paired_fastqs(
-        fastqs=fastq_path_tuples, rename=False, force=True
+        fastqs=fastq_path_tuples, rename=True, force=True
     )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
