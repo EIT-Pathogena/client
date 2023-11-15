@@ -25,6 +25,7 @@ def auth(
 
 def upload(
     upload_csv: Path,
+    *,
     out_dir: Path = Path(),
     threads: int = 0,
     save_reads: bool = False,
