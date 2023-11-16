@@ -157,7 +157,6 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
-    logging.info(batch)
 
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)

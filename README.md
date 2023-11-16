@@ -8,7 +8,7 @@ The command line and Python API client for the Global Pathogen Analysis Service.
 
 ### Installing Miniconda
 
-If the conda package manager is already installed, skip this step, otherwise:
+If a conda package manager is already installed, skip to [Installing the GPAS CLI](#installing-the-gpas-cli), otherwise:
 
 **Linux**
 
@@ -20,7 +20,9 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 **MacOS**
 
-- If your Mac has an Apple processor (M1/M2), first run the following command using Terminal:
+An `x86_64` Miniconda installation is required in order to install the GPAS CLI.
+
+- If using a Mac with an Intel processor, skip this step. Otherwise, using Terminal, run:
   ```bash
   arch -x86_64 zsh
   ```
@@ -34,7 +36,7 @@ If the conda package manager is already installed, skip this step, otherwise:
 
 ### Installing the GPAS CLI
 
-- Only if using a Mac with an Apple processor (M1/M2), run the following command using Terminal:
+- If using a Mac with an Intel processor, skip this step. Otherwise, using Terminal, run:
 
   ```bash
   arch -x86_64 zsh

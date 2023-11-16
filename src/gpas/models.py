@@ -20,7 +20,9 @@ class UploadSample(BaseModel):
         Literal["positive", "negative", ""], description="Control status of sample"
     )
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
-    country: str = Field(min_length=1, description="ISO 3166-2 alpha-3 country code")
+    country: str = Field(
+        min_length=3, max_length=3, description="ISO 3166-2 alpha-3 country code"
+    )
     subdivision: str = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
