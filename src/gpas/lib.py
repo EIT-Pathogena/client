@@ -315,6 +315,7 @@ def download(
     mapping_csv: Path | None = None,
     filenames: str = "main_report.json",
     out_dir: Path = Path("."),
+    rename: bool = True,
     host: str = DEFAULT_HOST,
     debug: bool = False,
 ) -> None:
@@ -324,7 +325,7 @@ def download(
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
-        logging.info(f"Using sample names from {mapping_csv}")
+        logging.info(f"Using samples in {mapping_csv}")
         logging.debug(guids_samples)
     elif samples:
         guids = util.parse_comma_separated_string(samples)
@@ -351,7 +352,7 @@ def download(
                         f"runs/{output_file.run_id}/"
                         f"files/{prefixed_filename}"
                     )
-                    if mapping_csv:
+                    if rename and mapping_csv:
                         filename_fmt = f"{sample}.{prefixed_filename.partition('_')[2]}"
                     else:
                         filename_fmt = output_file.filename
@@ -363,7 +364,9 @@ def download(
                         out_dir=Path(out_dir),
                     )
                 else:
-                    logging.warning(f"Skipped {sample if sample else guid}.{filename}")
+                    logging.warning(
+                        f"Skipped {sample if sample and rename else guid}.{filename}"
+                    )
 
 
 def download_single(

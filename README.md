@@ -1,6 +1,6 @@
-# gpas-client
+# GPAS CLI
 
-The command line and Python API client for the Global Pathogen Analysis Service. Enables secure sample upload with client-side human read removal and retrieval of analytical outputs.
+The command line and Python API client for the GPAS mycobacterial platform. Enables secure sample upload with client-side human read removal and retrieval of analytical outputs.
 
 
 
@@ -20,9 +20,9 @@ If a conda package manager is already installed, skip to [Installing the GPAS CL
 
 **MacOS**
 
-The GPAS CLI requires an `x86_64` Miniconda installation, compatible with both Intel and Apple Macs. If your Mac has an Apple processor, you should therefore deactivate or remove existing conda installations before proceeding.
+The GPAS CLI requires an `x86_64` conda installation. If your Mac has an Apple processor, you must disable or delete any existing `arm64` conda installations before continuing.
 
-- If your Mac has an Apple processor, using Terminal, first run:
+- If your Mac has an Apple processor, using Terminal, firstly run:
   ```bash
   arch -x86_64 zsh
   ```
@@ -36,7 +36,7 @@ The GPAS CLI requires an `x86_64` Miniconda installation, compatible with both I
 
 ### Installing or updating the GPAS CLI
 
-- If using a Mac with an Apple processor, using Terminal, first run:
+- If using a Mac with an Apple processor, using Terminal, firstly run:
 
   ```bash
   arch -x86_64 zsh
@@ -98,7 +98,7 @@ This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local samp
 
 #### Downloading output files (`gpas download`)
 
-Download output files associated with a one or more sample GUIDs, or a batch defined by the mapping CSV generated during upload. When a mapping CSV is used, files are prefixed with the sample names provided at upload, otherwise files are prefixed with the sample GUID.
+Download output files associated with an uploaded batch of samples, given a mapping CSV generated during upload, or one or more comma-separated sample GUIDs. When a mapping CSV is used, files are prefixed with the sample names provided at upload, otherwise files are prefixed with the sample GUID.
 
 ```bash
 # Download the main report for sample 3bf7d6f9-c883-4273-adc0-93bb96a499f6

@@ -69,6 +69,7 @@ def download(
     *,
     filenames: str = "main_report.json",
     out_dir: Path = Path(),
+    rename: bool = True,
     host: str | None = None,
     debug: bool = False,
 ) -> None:
@@ -78,6 +79,7 @@ def download(
     :arg samples: Comma-separated list of one or more sample IDs, or path of mapping CSV
     :arg filenames: Comma-separated list of one or more filenames to download
     :arg out_dir: Output directory
+    :arg rename: Rename downloaded files using original sample names when given a mapping CSV
     :arg host: API hostname (for development)
     :arg debug: Enable verbose debug messages
     """
@@ -89,6 +91,7 @@ def download(
             mapping_csv=samples,
             filenames=filenames,
             out_dir=out_dir,
+            rename=rename,
             host=host,
             debug=debug,
         )
