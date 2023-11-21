@@ -334,7 +334,7 @@ def download(
     for guid, sample in guids_samples.items():
         output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         with httpx.Client(
-            timeout=3600,  # 1 hour
+            timeout=7200,  # 2 hour
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=4),
         ) as client:
