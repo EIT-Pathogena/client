@@ -20,9 +20,9 @@ If a conda package manager is already installed, skip to [Installing the GPAS CL
 
 **MacOS**
 
-An `x86_64` Miniconda installation is required in order to install the GPAS CLI.
+The GPAS CLI requires an `x86_64` Miniconda installation, compatible with both Intel and Apple Macs. If your Mac has an Apple processor, you should therefore deactivate or remove existing conda installations before proceeding.
 
-- If using a Mac with an Intel processor, skip this step. Otherwise, using Terminal, run:
+- If your Mac has an Apple processor, using Terminal, first run:
   ```bash
   arch -x86_64 zsh
   ```
@@ -34,22 +34,22 @@ An `x86_64` Miniconda installation is required in order to install the GPAS CLI.
 
 
 
-### Installing the GPAS CLI
+### Installing or updating the GPAS CLI
 
-- If using a Mac with an Intel processor, skip this step. Otherwise, using Terminal, run:
+- If using a Mac with an Apple processor, using Terminal, first run:
 
   ```bash
   arch -x86_64 zsh
   ```
 
-- Perform the installation:
+- Perform the installation/upgrade:
   ```bash
   conda create --yes -n gpas -c conda-forge -c bioconda hostile
   conda activate gpas
   pip install gpas
   ```
 
-- Test the installation:
+- Test:
   ```
   gpas --version
   ```

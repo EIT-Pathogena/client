@@ -84,7 +84,7 @@ def create_batch(name: str, host: str) -> int:
 
 def create_sample(
     host: str,
-    batch_id: int,
+    batch_id: str,
     collection_date: str,
     control: bool | None,
     country: str,
@@ -280,7 +280,9 @@ def fetch_output_files(
     data = response.json().get("files", [])
     output_files = {
         d["filename"]: OutputFile(
-            filename=d["filename"], sample_id=d["sample_id"], run_id=d["run_id"]
+            filename=d["filename"].replace("_", ".", 1),
+            sample_id=d["sample_id"],
+            run_id=d["run_id"],
         )
         for d in data
     }
@@ -322,7 +324,7 @@ def download(
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
-        logging.info(f"Using samples {list(guids_samples.values())}")
+        logging.info(f"Using sample names from {mapping_csv}")
         logging.debug(guids_samples)
     elif samples:
         guids = util.parse_comma_separated_string(samples)
@@ -339,42 +341,46 @@ def download(
             transport=httpx.HTTPTransport(retries=4),
         ) as client:
             for filename in filenames:
-                if filename in output_files:
-                    output_file = output_files[filename]
+                prefixed_filename = f"{guid}_{filename}"
+                prefixed_filename_fmt = f"{guid}.{filename}"
+                if prefixed_filename in output_files:
+                    output_file = output_files[prefixed_filename]
                     url = (
                         f"{get_protocol()}://{host}/api/v1/"
                         f"samples/{output_file.sample_id}/"
                         f"runs/{output_file.run_id}/"
-                        f"files/{output_file.filename}"
+                        f"files/{prefixed_filename}"
                     )
+                    if mapping_csv:
+                        filename_fmt = f"{sample}.{prefixed_filename.partition('_')[2]}"
+                    else:
+                        filename_fmt = output_file.filename
                     download_single(
                         client=client,
-                        filename=output_file.filename,
-                        prefix=sample if mapping_csv else guid,
+                        filename=filename_fmt,
                         url=url,
                         headers=headers,
                         out_dir=Path(out_dir),
                     )
                 else:
-                    logging.warning(f"Skipped {filename}" f" ({guid})")
+                    logging.warning(f"Skipped {sample if sample else guid}.{filename}")
 
 
 def download_single(
     client: httpx.Client,
     url: str,
     filename: str,
-    prefix: str,
     headers: dict[str, str],
     out_dir: Path,
 ):
-    logging.info(f"Downloading {filename} ({prefix})")
+    logging.info(f"Downloading {filename}")
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
         progress = tqdm(
             total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
         )
-        chunk_size = 65_536
-        with Path(out_dir).joinpath(f"{prefix}.{filename}").open("wb") as fh, tqdm(
+        chunk_size = 262_144
+        with Path(out_dir).joinpath(f"{filename}").open("wb") as fh, tqdm(
             total=file_size,
             unit="B",
             unit_scale=True,
