@@ -6,6 +6,6 @@ channels:
 dependencies:
   - python=3.10
   - pip
-  - hostile
+  - hostile>=0.3.0
   - pip:
     - gpas>=0.13.0

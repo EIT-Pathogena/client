@@ -129,7 +129,7 @@ For technical support, please open an issue or contact `support@gpas.global`
 ```bash
 git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
-conda env create -f environment-dev.yml
+conda env create -y -f environment-dev.yml
 pip install --editable .
 ```
 

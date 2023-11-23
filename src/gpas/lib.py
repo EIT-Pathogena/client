@@ -164,7 +164,7 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
     ]
 
     decontamination_log = clean_paired_fastqs(
-        fastqs=fastq_path_tuples, rename=True, force=True
+        fastqs=fastq_path_tuples, rename=True, sort_by_name=True, force=True
     )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
@@ -232,6 +232,11 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
             protocol=get_protocol(),
         )
         run_sample(sample_id=sample_id, host=host)
+        try:
+            reads_1_clean_renamed.unlink()
+            reads_2_clean_renamed.unlink()
+        except:
+            pass  # A failure here doesn't matter since upload is complete
     logging.info(f"Uploaded batch {batch_name}")
 
 
@@ -307,7 +312,9 @@ def check_cli_version(host: str) -> None:
         )
     server_version = response.json()["version"]
     if server_version > gpas.__version__:
-        logging.warning(f"A newer version of the CLI is available, please update")
+        logging.warning(
+            f"A newer version of GPAS CLI ({server_version}) is available, please update"
+        )
 
 
 def download(
@@ -337,7 +344,7 @@ def download(
     for guid, sample in guids_samples.items():
         output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         with httpx.Client(
-            timeout=7200,  # 2 hour
+            timeout=7200,  # 2 hours
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=4),
         ) as client:
