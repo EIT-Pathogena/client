@@ -153,3 +153,18 @@ To unset:
 unset GPAS_HOST
 unset GPAS_PROTOCOL
 ```
+
+
+
+### Releasing a new version
+
+```bash
+pytest
+# Increment version string inside src/gpas/__init__.py
+git tag 0.xx.0  # Tag new version
+git push origin main --tags  # Push including tags
+flit build
+flit publish  # Uploads to PyPI given appropriate permission
+# Announce in Slack CLI channel
+# PR gpas/gpas/settings.py with new version
+```
