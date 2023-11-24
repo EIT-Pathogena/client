@@ -26,9 +26,9 @@ def auth(
 def upload(
     upload_csv: Path,
     *,
-    out_dir: Path = Path(),
-    threads: int = 0,
-    save_reads: bool = False,
+    # out_dir: Path = Path(),
+    threads: int | None = None,
+    # save_reads: bool = False,
     dry_run: bool = False,
     host: str | None = None,
     debug: bool = False,
@@ -37,19 +37,19 @@ def upload(
     Validate, decontaminate and upload reads to the GPAS platform
 
     :arg upload_csv: Path of upload csv
-    :arg out_dir: Path of directory in which to save mapping CSV
-    :arg save_reads: Save decontaminated reads in out_dir
-    :arg threads: Number of threads used in decontamination
+    :arg threads: Number of alignment threads used during decontamination
     :arg debug: Enable verbose debug messages
     :arg host: API hostname (for development)
     :arg dry_run: Exit before uploading reads
     """
+    # :arg out_dir: Path of directory in which to save mapping CSV
+    # :arg save_reads: Save decontaminated reads in out_dir
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)
     host = lib.get_host(host)
-    lib.upload(upload_csv, dry_run=dry_run, host=host)
+    lib.upload(upload_csv, threads=threads, dry_run=dry_run, host=host)
 
 
 def sample(sample_id: str, host: str | None = None):
@@ -83,6 +83,10 @@ def download(
     :arg host: API hostname (for development)
     :arg debug: Enable verbose debug messages
     """
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         lib.download(samples=samples, filenames=filenames, out_dir=out_dir, host=host)

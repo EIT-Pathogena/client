@@ -150,7 +150,12 @@ def run_sample(sample_id: str, host: str) -> int:
         return run_id
 
 
-def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) -> None:
+def upload(
+    upload_csv: Path,
+    threads: int | None = None,
+    host: str = DEFAULT_HOST,
+    dry_run: bool = False,
+) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     if not dry_run:
         check_cli_version(host)
@@ -162,10 +167,19 @@ def upload(upload_csv: Path, host: str = DEFAULT_HOST, dry_run: bool = False) ->
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
-
-    decontamination_log = clean_paired_fastqs(
-        fastqs=fastq_path_tuples, rename=True, sort_by_name=True, force=True
-    )
+    logging.debug(f"upload() {threads=}")
+    if threads:
+        decontamination_log = clean_paired_fastqs(
+            fastqs=fastq_path_tuples,
+            rename=True,
+            reorder=True,
+            threads=threads,
+            force=True,
+        )
+    else:
+        decontamination_log = clean_paired_fastqs(
+            fastqs=fastq_path_tuples, rename=True, reorder=True, force=True
+        )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     control_map = {"positive": True, "negative": False, "": None}
@@ -350,7 +364,6 @@ def download(
         ) as client:
             for filename in filenames:
                 prefixed_filename = f"{guid}_{filename}"
-                prefixed_filename_fmt = f"{guid}.{filename}"
                 if prefixed_filename in output_files:
                     output_file = output_files[prefixed_filename]
                     url = (

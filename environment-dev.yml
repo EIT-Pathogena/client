@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python=3.10
   - pip
-  - hostile>=0.3.0
+  - hostile>=0.4.0
   - flit
   - pytest
   - pytest-cov

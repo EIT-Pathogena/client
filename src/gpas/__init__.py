@@ -1,2 +1,2 @@
 """The command line interface for GPAS"""
-__version__ = "0.16.0"
+__version__ = "0.17.0"

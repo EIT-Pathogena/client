@@ -8,7 +8,7 @@ The command line and Python API client for the GPAS mycobacterial platform. Enab
 
 ### Installing Miniconda
 
-If a conda package manager is already installed, skip to [Installing the GPAS CLI](#installing-the-gpas-cli), otherwise:
+If a conda package manager is already installed, skip to [Installing the GPAS CLI](#installing-or-updating-the-gpas-cli), otherwise:
 
 **Linux**
 
@@ -92,7 +92,7 @@ Performs metadata validation and client-side removal of human reads in each of y
 gpas upload tests/data/illumina.csv
 ```
 
-This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote identifiers (GUIDs). Keep this file safe as it's useful for linking results later.
+This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote identifiers (GUIDs). Keep this file safe as it's useful for downloading and relinking results later.
 
 
 
@@ -107,8 +107,11 @@ gpas download a5w2e8.mapping.csv
 # Download the main and speciation reports for samples in a5w2e8.mapping.csv
 gpas download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
 
-# Download the main report for sample 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+# Download the main report for one sample
 gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+
+# Download the main report for two samples
+gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
 
 # Save downloaded files to a specific directory
 gpas download a5w2e8.mapping.csv --out-dir results
