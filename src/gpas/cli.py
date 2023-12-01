@@ -13,7 +13,7 @@ def auth(
     host: str | None = None,
 ) -> None:
     """
-    Authenticate with GPAS
+    Authenticate with the GPAS platform. Caches token for future use.
 
     :arg host: API hostname (for development)
     """
@@ -35,7 +35,7 @@ def upload(
 ):
     """
     Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
-    file which can be used to download outputs later.
+    file which can be used to download output files later.
 
     :arg upload_csv: Path of upload csv
     :arg threads: Number of alignment threads used during decontamination

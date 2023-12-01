@@ -21,7 +21,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.info(f"gpas-client version {gpas.__version__}")
 
 
-DEFAULT_HOST = "dev.portal.gpas.world"
+# DEFAULT_HOST = "dev.portal.gpas.world"
+DEFAULT_HOST = "staging.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
 
 
