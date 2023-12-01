@@ -11,6 +11,7 @@ from hostile.lib import clean_paired_fastqs
 from tqdm import tqdm
 
 import gpas
+import hostile
 
 from gpas import util
 from gpas.models import OutputFile
@@ -72,7 +73,17 @@ def check_authentication(host: str) -> None:
 
 def create_batch(name: str, host: str) -> int:
     """Create batch on server, return batch id"""
-    data = {"name": name, "telemetry_data": {}}
+    telemetry_data = {
+        "client": {
+            "name": "cli",
+            "version": gpas.__version__,
+        },
+        "decontamination": {
+            "name": "hostile",
+            "version": hostile.__version__,
+        },
+    }
+    data = {"name": name, "telemetry_data": telemetry_data}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/batches",
