@@ -34,7 +34,8 @@ def upload(
     debug: bool = False,
 ):
     """
-    Validate, decontaminate and upload reads to the GPAS platform
+    Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
+    file which can be used to download outputs later.
 
     :arg upload_csv: Path of upload csv
     :arg threads: Number of alignment threads used during decontamination
@@ -52,16 +53,16 @@ def upload(
     lib.upload(upload_csv, threads=threads, dry_run=dry_run, host=host)
 
 
-def sample(sample_id: str, host: str | None = None):
-    """Fetch sample information"""
-    host = lib.get_host(host)
-    print(json.dumps(lib.fetch_sample(sample_id, host), indent=4))
+# def sample(sample_id: str, host: str | None = None):
+#     """Fetch sample information"""
+#     host = lib.get_host(host)
+#     print(json.dumps(lib.fetch_sample(sample_id, host), indent=4))
 
 
-def files(sample_id: str, host: str | None = None) -> None:
-    """Show latest outputs associated with a sample"""
-    host = lib.get_host(host)
-    print(json.dumps(lib.list_files(sample_id=sample_id, host=host), indent=4))
+# def files(sample_id: str, host: str | None = None) -> None:
+#     """Show latest outputs associated with a sample"""
+#     host = lib.get_host(host)
+#     print(json.dumps(lib.list_files(sample_id=sample_id, host=host), indent=4))
 
 
 def download(
@@ -74,12 +75,13 @@ def download(
     debug: bool = False,
 ) -> None:
     """
-    Download latest outputs associated with a sample
+    Download output files associated with one or more samples using either sample IDs
+    or a mapping CSV file created during upload.
 
-    :arg samples: Comma-separated list of one or more sample IDs, or path of mapping CSV
-    :arg filenames: Comma-separated list of one or more filenames to download
+    :arg samples: Comma-separated list of sample IDs or the path of a mapping CSV
+    :arg filenames: Comma-separated list of output filenames to download
     :arg out_dir: Output directory
-    :arg rename: Rename downloaded files using original sample names when given a mapping CSV
+    :arg rename: Rename downloaded files with original sample names when given a mapping CSV
     :arg host: API hostname (for development)
     :arg debug: Enable verbose debug messages
     """
@@ -105,63 +107,63 @@ def download(
         )
 
 
-def batches(limit: int = 1000, host: str | None = None):
-    """
-    List batches on server
+# def batches(limit: int = 1000, host: str | None = None):
+#     """
+#     List batches on server
 
-    :arg limit: Number of samples to return
-    :arg host: API hostname (for development)
-    """
-    host = lib.get_host(host)
-    print(json.dumps(lib.list_batches(host=host, limit=limit), indent=4))
-
-
-def samples(batch: str, limit: int = 1000, host: str | None = None):
-    """
-    List samples associated with a batch
-
-    :arg batch_id: Batch ID
-    :arg limit: Number of samples to return
-    :arg host: API hostname (for development)
-    """
-    host = lib.get_host(host)
-    print(json.dumps(lib.list_samples(batch=batch, host=host, limit=limit), indent=4))
+#     :arg limit: Number of samples to return
+#     :arg host: API hostname (for development)
+#     """
+#     host = lib.get_host(host)
+#     print(json.dumps(lib.list_batches(host=host, limit=limit), indent=4))
 
 
-def run(
-    *, samples: str | None = None, batch: str | None = None, host: str | None = None
-):
-    """
-    Reanalyse of one or more uploaded samples
+# def samples(batch: str, limit: int = 1000, host: str | None = None):
+#     """
+#     List samples associated with a batch
 
-    :arg samples: Comma-separated list of sample IDs
-    :arg batch: Batch ID
-    :arg host: API hostname (for development)
-    """
-    host = lib.get_host(host)
-    if not bool(samples) ^ bool(batch):
-        raise ValueError("Specify either samples or batch, not both")
-    if samples:
-        samples = samples.strip().split(",")
-        for sample in samples:
-            run_id = lib.run_sample(sample, host=host)
-            logging.info(f"Created run_id {run_id} for sample_id {sample}")
+#     :arg batch_id: Batch ID
+#     :arg limit: Number of samples to return
+#     :arg host: API hostname (for development)
+#     """
+#     host = lib.get_host(host)
+#     print(json.dumps(lib.list_samples(batch=batch, host=host, limit=limit), indent=4))
 
-    else:
-        raise ValueError("Specify either samples or batch")
+
+# def run(
+#     *, samples: str | None = None, batch: str | None = None, host: str | None = None
+# ):
+#     """
+#     Reanalyse of one or more uploaded samples
+
+#     :arg samples: Comma-separated list of sample IDs
+#     :arg batch: Batch ID
+#     :arg host: API hostname (for development)
+#     """
+#     host = lib.get_host(host)
+#     if not bool(samples) ^ bool(batch):
+#         raise ValueError("Specify either samples or batch, not both")
+#     if samples:
+#         samples = samples.strip().split(",")
+#         for sample in samples:
+#             run_id = lib.run_sample(sample, host=host)
+#             logging.info(f"Created run_id {run_id} for sample_id {sample}")
+
+#     else:
+#         raise ValueError("Specify either samples or batch")
 
 
 def main():
     defopt.run(
         {
             "auth": auth,
-            "batches": batches,
-            "samples": samples,
-            "sample": sample,
-            "files": files,
+            # "batches": batches,
+            # "samples": samples,
+            # "sample": sample,
+            # "files": files,
             "upload": upload,
             "download": download,
-            "run": run,
+            # "run": run,
         },
         no_negated_flags=True,
         strict_kwonly=True,
