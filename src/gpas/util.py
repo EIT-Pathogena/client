@@ -95,7 +95,7 @@ def upload_file(
         with open(file_path, "rb") as fh:
             client.post(
                 f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
-                headers={f"Authorization": f"Bearer {get_access_token(host)}"},
+                headers={"Authorization": f"Bearer {get_access_token(host)}"},
                 files={"file": fh},
                 data={"checksum": checksum},
             )

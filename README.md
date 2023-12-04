@@ -115,6 +115,9 @@ gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e0
 
 # Save downloaded files to a specific directory
 gpas download a5w2e8.mapping.csv --out-dir results
+
+# Download input files
+gpas download --inputs a5w2e8.mapping.csv --filenames ""
 ```
 
 

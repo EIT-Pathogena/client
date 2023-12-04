@@ -1,9 +1,8 @@
-from enum import Enum
 from datetime import date
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator, computed_field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class UploadSample(BaseModel):
@@ -94,7 +93,7 @@ class UploadBatch(BaseModel):
         return self
 
 
-class OutputFile(BaseModel):
+class RemoteFile(BaseModel):
     filename: str
     run_id: int
     sample_id: str

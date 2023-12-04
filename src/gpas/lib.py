@@ -14,11 +14,10 @@ import gpas
 import hostile
 
 from gpas import util
-from gpas.models import OutputFile
+from gpas.models import RemoteFile
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.info(f"gpas-client version {gpas.__version__}")
 
 
 # DEFAULT_HOST = "dev.portal.gpas.world"
@@ -29,11 +28,9 @@ DEFAULT_PROTOCOL = "https"
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
     if cli_host:
-        logging.info(f"Using host {cli_host}")
         return cli_host
     elif "GPAS_HOST" in os.environ:
         env_host = os.environ["GPAS_HOST"]
-        logging.info(f"Using host {env_host}")
         return env_host
     else:
         return DEFAULT_HOST
@@ -65,8 +62,8 @@ def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None
 
 
 def check_authentication(host: str) -> None:
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        response = httpx.get(
+    with httpx.Client(event_hooks=util.httpx_hooks):
+        httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
         )
@@ -76,7 +73,7 @@ def create_batch(name: str, host: str) -> int:
     """Create batch on server, return batch id"""
     telemetry_data = {
         "client": {
-            "name": "cli",
+            "name": "gpas-client",
             "version": gpas.__version__,
         },
         "decontamination": {
@@ -169,8 +166,9 @@ def upload(
     dry_run: bool = False,
 ) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     if not dry_run:
-        check_cli_version(host)
+        check_client_version(host)
         check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
@@ -261,47 +259,68 @@ def upload(
         try:
             reads_1_clean_renamed.unlink()
             reads_2_clean_renamed.unlink()
-        except:
+        except Exception:
             pass  # A failure here doesn't matter since upload is complete
     logging.info(f"Uploaded batch {batch_name}")
 
 
-def list_batches(host: str, limit: int = 1000):
-    """List batches on server"""
+# def list_batches(host: str, limit: int = 1000):
+#     """List batches on server"""
+#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
+#         response = client.get(
+#             f"{get_protocol()}://{host}/api/v1/batches?limit={limit}", headers=headers
+#         )
+#     return response.json()
+
+
+# def list_samples(batch: str, host: str, limit: int = 1000) -> None:
+#     """List samples on server"""
+#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
+#         response = client.get(
+#             f"{get_protocol()}://{host}/api/v1/samples?batch={batch}&limit={limit}",
+#             headers=headers,
+#         )
+#     return response.json()
+
+
+# def fetch_sample(sample_id: str, host: str):
+#     """Fetch sample data from server"""
+#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
+#         response = client.get(
+#             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
+#             headers=headers,
+#         )
+#     return response.json()
+
+
+def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]:
+    """Return RemoteFile instances for a sample input files"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/api/v1/batches?limit={limit}", headers=headers
-        )
-    return response.json()
-
-
-def list_samples(batch: str, host: str, limit: int = 1000) -> None:
-    """List samples on server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        response = client.get(
-            f"{get_protocol()}://{host}/api/v1/samples?batch={batch}&limit={limit}",
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
         )
-    return response.json()
-
-
-def fetch_sample(sample_id: str, host: str):
-    """Fetch sample data from server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
-        response = client.get(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
-            headers=headers,
+    data = response.json().get("files", [])
+    output_files = {
+        d["filename"]: RemoteFile(
+            filename=d["filename"].replace("_", ".", 1),
+            sample_id=d["sample_id"],
+            run_id=d["run_id"],
         )
-    return response.json()
+        for d in data
+    }
+    logging.debug(f"{output_files=}")
+    return output_files
 
 
 def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
-) -> dict[str, OutputFile]:
-    """Return OutputFile instances for a sample, optionally including only latest run"""
+) -> dict[str, RemoteFile]:
+    """Return RemoteFile instances for a sample, optionally including only latest run"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
@@ -310,7 +329,7 @@ def fetch_output_files(
         )
     data = response.json().get("files", [])
     output_files = {
-        d["filename"]: OutputFile(
+        d["filename"]: RemoteFile(
             filename=d["filename"].replace("_", ".", 1),
             sample_id=d["sample_id"],
             run_id=d["run_id"],
@@ -330,8 +349,8 @@ def parse_csv(path: Path):
         return [row for row in reader]
 
 
-def check_cli_version(host: str) -> None:
-    """Check that CLI version exceeds the server version"""
+def check_client_version(host: str) -> None:
+    """Check that client version exceeds the server version"""
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
             f"{get_protocol()}://{host}/cli-version",
@@ -339,7 +358,7 @@ def check_cli_version(host: str) -> None:
     server_version = response.json()["version"]
     if server_version > gpas.__version__:
         logging.warning(
-            f"A newer version of GPAS CLI ({server_version}) is available, please update"
+            f"A newer version of GPAS client ({server_version}) is available, please update"
         )
 
 
@@ -347,13 +366,15 @@ def download(
     samples: str | None = None,
     mapping_csv: Path | None = None,
     filenames: str = "main_report.json",
+    inputs: bool = False,
     out_dir: Path = Path("."),
     rename: bool = True,
     host: str = DEFAULT_HOST,
     debug: bool = False,
 ) -> None:
     """Download latest output files for a sample"""
-    check_cli_version(host)
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    check_client_version(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
@@ -395,9 +416,28 @@ def download(
                         headers=headers,
                         out_dir=Path(out_dir),
                     )
-                else:
+                elif set(
+                    filter(None, filenames)
+                ):  # Skip case where filenames = set("")
                     logging.warning(
                         f"Skipped {sample if sample and rename else guid}.{filename}"
+                    )
+            if inputs:
+                input_files = fetch_latest_input_files(sample_id=guid, host=host)
+                for input_file in input_files.values():
+                    url = (
+                        f"{get_protocol()}://{host}/api/v1/"
+                        f"samples/{input_file.sample_id}/"
+                        f"runs/{input_file.run_id}/"
+                        f"input-files/{input_file.filename}"
+                    )
+                    filename_fmt = input_file.filename
+                    download_single(
+                        client=client,
+                        filename=input_file.filename,
+                        url=url,
+                        headers=headers,
+                        out_dir=Path(out_dir),
                     )
 
 
