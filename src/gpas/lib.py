@@ -264,36 +264,69 @@ def upload(
     logging.info(f"Uploaded batch {batch_name}")
 
 
-# def list_batches(host: str, limit: int = 1000):
-#     """List batches on server"""
-#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-#         response = client.get(
-#             f"{get_protocol()}://{host}/api/v1/batches?limit={limit}", headers=headers
-#         )
-#     return response.json()
+def fetch_sample(sample_id: str, host: str) -> dict:
+    """Fetch sample data from server"""
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+        response = client.get(
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
+            headers=headers,
+        )
+    return response.json()
 
 
-# def list_samples(batch: str, host: str, limit: int = 1000) -> None:
-#     """List samples on server"""
-#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-#         response = client.get(
-#             f"{get_protocol()}://{host}/api/v1/samples?batch={batch}&limit={limit}",
-#             headers=headers,
-#         )
-#     return response.json()
+def query(
+    samples: str | None = None,
+    mapping_csv: Path | None = None,
+    host: str = DEFAULT_HOST,
+) -> dict[str, dict]:
+    """Query sample metadata returning a dict of metadata keyed by sample ID"""
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    check_client_version(host)
+    if samples:
+        guids = util.parse_comma_separated_string(samples)
+        guids_samples = {guid: None for guid in guids}
+        logging.info(f"Using guids {guids}")
+    elif mapping_csv:
+        csv_records = parse_csv(Path(mapping_csv))
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
+        logging.info(f"Using samples in {mapping_csv}")
+        logging.debug(guids_samples)
+    else:
+        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
+    samples_metadata = {}
+    for guid, sample in guids_samples.items():
+        name = sample if mapping_csv else guid
+        samples_metadata[name] = fetch_sample(sample_id=guid, host=host)
+    return samples_metadata
 
 
-# def fetch_sample(sample_id: str, host: str):
-#     """Fetch sample data from server"""
-#     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-#     with httpx.Client(event_hooks=util.httpx_hooks) as client:
-#         response = client.get(
-#             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
-#             headers=headers,
-#         )
-#     return response.json()
+def status(
+    samples: str | None = None,
+    mapping_csv: Path | None = None,
+    host: str = DEFAULT_HOST,
+) -> dict[str, str]:
+    """Query sample metadata returning a dict of metadata keyed by sample ID"""
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    check_client_version(host)
+    if samples:
+        guids = util.parse_comma_separated_string(samples)
+        guids_samples = {guid: None for guid in guids}
+        logging.info(f"Using guids {guids}")
+    elif mapping_csv:
+        csv_records = parse_csv(Path(mapping_csv))
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
+        logging.info(f"Using samples in {mapping_csv}")
+        logging.debug(guids_samples)
+    else:
+        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
+    samples_status = {}
+    for guid, sample in tqdm(
+        guids_samples.items(), desc="Fetching samples", leave=False
+    ):
+        name = sample if mapping_csv else guid
+        samples_status[name] = fetch_sample(sample_id=guid, host=host).get("status")
+    return samples_status
 
 
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]:

@@ -96,9 +96,9 @@ This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local samp
 
 
 
-#### Downloading output files (`gpas download`)
+#### Downloading files (`gpas download`)
 
-Download the output files associated with a batch of samples given the mapping CSV generated during upload, or one or more sample GUIDs. When a mapping CSV is used, downloaded file names are prefixed with the sample names provided at upload by default. Otherwise downloaded files are prefixed with the sample GUID.
+Downloads the output (and/or input) files associated with a batch of samples given a mapping CSV generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are prefixed with the sample names provided at upload. Otherwise downloaded files are prefixed with the sample GUID.
 
 ```bash
 # Download the main reports for all samples in a5w2e8.mapping.csv
@@ -118,6 +118,23 @@ gpas download a5w2e8.mapping.csv --out-dir results
 
 # Download input files
 gpas download --inputs a5w2e8.mapping.csv --filenames ""
+```
+
+
+
+#### Querying sample metadata (`gpas query`)
+
+Fetches either the processing status (`gpas query status`) or raw metadata (`gpas query raw`) of one more samples given a mapping CSV generated during upload, or one or more sample GUIDs.
+
+```bash
+# Query the processing status of all samples in a5w2e8.mapping.csv
+gpas query status a5w2e8.mapping.csv
+
+# Query the processing status of a single sample
+gpas query status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+
+# Query all available metadata in JSON format
+gpas query raw a5w2e8.mapping.csv
 ```
 
 

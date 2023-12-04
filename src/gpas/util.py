@@ -13,6 +13,13 @@ import httpx
 from gpas.models import UploadBatch, UploadSample
 
 
+def configure_debug_logging(debug: bool):
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
+
+
 def log_request(request):
     logging.debug(f"Request: {request.method} {request.url}")
 
