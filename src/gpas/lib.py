@@ -460,16 +460,20 @@ def download(
             if inputs:
                 input_files = fetch_latest_input_files(sample_id=guid, host=host)
                 for input_file in input_files.values():
+                    if rename and mapping_csv:
+                        suffix = input_file.filename.partition(".")[2]
+                        filename_fmt = f"{sample}.{suffix}"
+                    else:
+                        filename_fmt = input_file.filename
                     url = (
                         f"{get_protocol()}://{host}/api/v1/"
                         f"samples/{input_file.sample_id}/"
                         f"runs/{input_file.run_id}/"
                         f"input-files/{input_file.filename}"
                     )
-                    filename_fmt = input_file.filename
                     download_single(
                         client=client,
-                        filename=input_file.filename,
+                        filename=filename_fmt,
                         url=url,
                         headers=headers,
                         out_dir=Path(out_dir),
