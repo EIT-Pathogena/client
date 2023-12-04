@@ -165,13 +165,13 @@ gpas --version
 
 
 
-### Using alternate API servers
+### Using an alternate API server
 
 ```bash
 export GPAS_HOST="dev.portal.gpas.world"
 ```
 
-To unset
+To unset:
 
 ```bash
 unset GPAS_HOST

@@ -295,7 +295,9 @@ def query(
     else:
         raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
     samples_metadata = {}
-    for guid, sample in guids_samples.items():
+    for guid, sample in tqdm(
+        guids_samples.items(), desc="Querying samples", leave=False
+    ):
         name = sample if mapping_csv else guid
         samples_metadata[name] = fetch_sample(sample_id=guid, host=host)
     return samples_metadata
@@ -306,7 +308,7 @@ def status(
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
-    """Query sample metadata returning a dict of metadata keyed by sample ID"""
+    """Query sample status"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
     check_client_version(host)
     if samples:
@@ -322,7 +324,7 @@ def status(
         raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
     samples_status = {}
     for guid, sample in tqdm(
-        guids_samples.items(), desc="Fetching samples", leave=False
+        guids_samples.items(), desc="Querying samples", leave=False
     ):
         name = sample if mapping_csv else guid
         samples_status[name] = fetch_sample(sample_id=guid, host=host).get("status")
