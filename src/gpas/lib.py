@@ -342,7 +342,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]
     data = response.json().get("files", [])
     output_files = {
         d["filename"]: RemoteFile(
-            filename=d["filename"].replace("_", ".", 1),
+            filename=d["filename"],
             sample_id=d["sample_id"],
             run_id=d["run_id"],
         )
