@@ -165,6 +165,20 @@ gpas --version
 
 
 
+### Using alternate API servers
+
+```bash
+export GPAS_HOST="dev.portal.gpas.world"
+```
+
+To unset
+
+```bash
+unset GPAS_HOST
+```
+
+
+
 ### Using a local development server
 
 ```bash
