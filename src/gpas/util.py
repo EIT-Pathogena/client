@@ -97,8 +97,10 @@ def upload_file(
     sample_id: int, file_path: Path, host: str, protocol: str, checksum: str
 ) -> None:
     with httpx.Client(
-        timeout=600, event_hooks=httpx_hooks
-    ) as client:  # 10 minute timeout
+        event_hooks=httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=7200,  # 2 hours
+    ) as client:
         with open(file_path, "rb") as fh:
             client.post(
                 f"{protocol}://{host}/api/v1/samples/{sample_id}/files",

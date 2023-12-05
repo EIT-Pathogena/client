@@ -82,7 +82,11 @@ def create_batch(name: str, host: str) -> int:
         },
     }
     data = {"name": name, "telemetry_data": telemetry_data}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=10,
+    ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
@@ -138,7 +142,11 @@ def create_sample(
 def run_sample(sample_id: str, host: str) -> int:
     """Patch sample status, create run, and patch run status to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=10,
+    ) as client:
         client.patch(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
@@ -426,9 +434,9 @@ def download(
     for guid, sample in guids_samples.items():
         output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         with httpx.Client(
-            timeout=7200,  # 2 hours
             event_hooks=util.httpx_hooks,
-            transport=httpx.HTTPTransport(retries=4),
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=7200,  # 2 hours
         ) as client:
             for filename in filenames:
                 prefixed_filename = f"{guid}_{filename}"
