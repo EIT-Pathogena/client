@@ -211,14 +211,11 @@ def upload_single(
         decontamination_log = clean_fastqs(
             fastqs=fastq_paths,
             rename=True,
-            reorder=True,
             threads=threads,
             force=True,
         )
     else:
-        decontamination_log = clean_fastqs(
-            fastqs=fastq_paths, rename=True, reorder=True, force=True
-        )
+        decontamination_log = clean_fastqs(fastqs=fastq_paths, rename=True, force=True)
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     if dry_run:
