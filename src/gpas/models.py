@@ -5,6 +5,16 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
+
+
+def validate_file_extension(
+    filename: str, allowed_extensions: list = ALLOWED_EXTENSIONS
+):
+    filename = str(filename)
+    return True if filename.endswith(allowed_extensions) else False
+
+
 class UploadSample(BaseModel):
     batch_name: str = Field(
         default=None, description="Batch name (anonymised prior to upload)"
@@ -38,21 +48,6 @@ class UploadSample(BaseModel):
         Literal["illumina", "ont"], description="DNA sequencing instrument platform"
     )
 
-    # @field_validator("reads_1", "reads_2")
-    # def validate_file_extension(cls, d: Path):
-    #     allowed_extensions = {".fastq", ".fq", ".fastq.gz", ".fq.gz"}
-    #     print(f"{d=}")
-    #     if d and not d.name.endswith(tuple(allowed_extensions)):
-    #         raise ValueError(
-    #             f"Invalid file extension {d.suffix} for file {d.name}. Allowed extensions are {allowed_extensions}"
-    #         )
-    #     return d
-
-    # @field_validator("reads_1", "reads_2")
-    # def validate_file_exists(cls, v: Path):
-    #     if v is not None and (not v.exists() or not v.is_file()):
-    #         raise ValueError(f"{v} is not a valid file")
-
     @model_validator(mode="after")
     def check_fastqs_are_different(self):
         if self.reads_1 == self.reads_2:
@@ -61,14 +56,20 @@ class UploadSample(BaseModel):
 
     @model_validator(mode="after")
     def validate_fastqs_by_platform(self):
-        reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
-        reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
+        reads_1 = self.reads_1
+        reads_2 = self.reads_2
+        reads_1_resolved_path = self.upload_csv.resolve().parent / reads_1
+        reads_2_resolved_path = self.upload_csv.resolve().parent / reads_2
         if self.instrument_platform == "ont":
             if not reads_1_resolved_path.is_file():
                 raise ValueError("reads_1 must be a valid FASTQ file path")
             if self.reads_2.is_file():
                 raise ValueError(
                     "reads_2 must be empty where instrument_platform is ont"
+                )
+            if reads_1 and not validate_file_extension(reads_1.name):
+                raise ValueError(
+                    f"Invalid file extension for file {self.reads_1.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
                 )
         elif self.instrument_platform == "illumina":
             if (
@@ -78,17 +79,19 @@ class UploadSample(BaseModel):
                 raise ValueError(
                     "reads_1 and reads_2 must be valid FASTQ file paths where instrument_platform is illumina"
                 )
-            if not (self.upload_csv.resolve().parent / self.reads_2).is_file():
-                raise ValueError("reads_2 is not a valid file path")
+            if reads_1 and not validate_file_extension(reads_1.name):
+                raise ValueError(
+                    f"Invalid file extension for file {self.reads_1.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
+                )
+            if reads_2 and not validate_file_extension(reads_2.name):
+                raise ValueError(
+                    f"Invalid file extension for file {self.reads_2.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
+                )
         return self
 
     # @model_validator(pre=True)
     # def lowercase_all_fields(cls, values: dict[str, Any]) -> dict[str, Any]:
     #     return {k: (v.lower() if isinstance(v, str) else v) for k, v in values.items()}
-    # @field_validator("reads_1", "reads_2")
-    # def validate_file_exists(cls, v: Path):
-    #     if v is not None and (not v.exists() or not v.is_file()):
-    #         raise ValueError(f"{v} is not a valid file")
 
 
 class UploadBatch(BaseModel):
