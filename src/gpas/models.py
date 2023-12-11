@@ -2,7 +2,7 @@ from datetime import date
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class UploadSample(BaseModel):
@@ -14,7 +14,9 @@ class UploadSample(BaseModel):
     )
     upload_csv: Path = Field(description="Absolute path of upload CSV file")
     reads_1: Path = Field(description="Relative path of first FASTQ file")
-    reads_2: Path = Field(description="Relative path of second FASTQ file")
+    reads_2: Path = Field(
+        description="Relative path of second FASTQ file", default=None
+    )
     control: str = Field(
         Literal["positive", "negative", ""], description="Control status of sample"
     )
@@ -36,14 +38,15 @@ class UploadSample(BaseModel):
         Literal["illumina", "ont"], description="DNA sequencing instrument platform"
     )
 
-    @field_validator("reads_1", "reads_2")
-    def validate_file_extension(cls, d: Path):
-        allowed_extensions = {".fastq", ".fq", ".fastq.gz", ".fq.gz"}
-        if d is not None and not d.name.endswith(tuple(allowed_extensions)):
-            raise ValueError(
-                f"Invalid file extension {d.suffix} for file {d.name}. Allowed extensions are {allowed_extensions}"
-            )
-        return d
+    # @field_validator("reads_1", "reads_2")
+    # def validate_file_extension(cls, d: Path):
+    #     allowed_extensions = {".fastq", ".fq", ".fastq.gz", ".fq.gz"}
+    #     print(f"{d=}")
+    #     if d and not d.name.endswith(tuple(allowed_extensions)):
+    #         raise ValueError(
+    #             f"Invalid file extension {d.suffix} for file {d.name}. Allowed extensions are {allowed_extensions}"
+    #         )
+    #     return d
 
     # @field_validator("reads_1", "reads_2")
     # def validate_file_exists(cls, v: Path):
@@ -57,11 +60,26 @@ class UploadSample(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_fastqs_exist(self):
-        if not (self.upload_csv.resolve().parent / self.reads_1).is_file():
-            raise ValueError("reads_1 is not a valid file path")
-        if not (self.upload_csv.resolve().parent / self.reads_2).is_file():
-            raise ValueError("reads_2 is not a valid file path")
+    def validate_fastqs_by_platform(self):
+        reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
+        reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
+        if self.instrument_platform == "ont":
+            if not reads_1_resolved_path.is_file():
+                raise ValueError("reads_1 must be a valid FASTQ file path")
+            if self.reads_2.is_file():
+                raise ValueError(
+                    "reads_2 must be empty where instrument_platform is ont"
+                )
+        elif self.instrument_platform == "illumina":
+            if (
+                not reads_1_resolved_path.is_file()
+                or not reads_2_resolved_path.is_file()
+            ):
+                raise ValueError(
+                    "reads_1 and reads_2 must be valid FASTQ file paths where instrument_platform is illumina"
+                )
+            if not (self.upload_csv.resolve().parent / self.reads_2).is_file():
+                raise ValueError("reads_2 is not a valid file path")
         return self
 
     # @model_validator(pre=True)
@@ -87,9 +105,24 @@ class UploadBatch(BaseModel):
     def validate_unique_file_names(self):
         reads_1_filenames = [str(sample.reads_1.name) for sample in self.samples]
         reads_2_filenames = [str(sample.reads_2.name) for sample in self.samples]
-        for filenames in [reads_1_filenames, reads_2_filenames]:
-            if len(filenames) != len(set(filenames)):
+        instrument_platforms = self.samples[0].instrument_platform
+        if instrument_platforms == "ont":
+            if len(reads_1_filenames) != len(set(reads_1_filenames)):
                 raise ValueError("Found duplicate FASTQ filenames")
+        elif instrument_platforms == "illumina":
+            if len(reads_1_filenames) + len(reads_1_filenames) != len(
+                set(reads_1_filenames) | set(reads_2_filenames)
+            ):
+                raise ValueError("Found duplicate FASTQ filenames")
+        return self
+
+    @model_validator(mode="after")
+    def validate_single_instrument_platform(self):
+        instrument_platforms = [sample.instrument_platform for sample in self.samples]
+        if len(set(instrument_platforms)) != 1:
+            raise ValueError(
+                "Samples within a batch must have the same instrument_platform"
+            )
         return self
 
 

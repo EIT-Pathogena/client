@@ -7,7 +7,9 @@ from pathlib import Path
 
 import httpx
 
-from hostile.lib import clean_paired_fastqs
+from hostile.lib import clean_fastqs, clean_paired_fastqs
+
+from pydantic import BaseModel
 from tqdm import tqdm
 
 import gpas
@@ -175,17 +177,119 @@ def upload(
 ) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    logging.debug(f"upload() {threads=}")
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
     upload_csv = Path(upload_csv)
     batch = util.parse_upload_csv(upload_csv)
+    instrument_platform = batch.samples[0].instrument_platform
+    logging.debug(f"{instrument_platform=}")
+    if instrument_platform == "ont":
+        upload_single(
+            upload_csv=upload_csv,
+            batch=batch,
+            threads=threads,
+            host=host,
+            dry_run=dry_run,
+        )
+    elif instrument_platform == "illumina":
+        upload_paired(
+            upload_csv=upload_csv,
+            batch=batch,
+            threads=threads,
+            host=host,
+            dry_run=dry_run,
+        )
 
+
+def upload_single(
+    upload_csv: Path, batch: BaseModel, threads: int | None, host: str, dry_run: bool
+):
+    fastq_paths = [upload_csv.parent / s.reads_1 for s in batch.samples]
+    if threads:
+        decontamination_log = clean_fastqs(
+            fastqs=fastq_paths,
+            rename=True,
+            reorder=True,
+            threads=threads,
+            force=True,
+        )
+    else:
+        decontamination_log = clean_fastqs(
+            fastqs=fastq_paths, rename=True, reorder=True, force=True
+        )
+    names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
+    logging.debug(f"{names_logs=}")
+    if dry_run:
+        return
+
+    # Generate and submit metadata
+    batch_name = util.generate_identifier()
+    batch_id = create_batch(name=batch_name, host=host)
+    mapping_csv_records = []
+    upload_meta = []
+    for sample in batch.samples:
+        name = sample.sample_name
+        reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
+        checksum = util.hash_file(reads_1_clean)
+        sample_id = create_sample(
+            host=host,
+            batch_id=batch_id,
+            collection_date=str(sample.collection_date),
+            control=util.map_control_value(sample.control),
+            country=sample.country,
+            subdivision=sample.subdivision,
+            district=sample.district,
+            client_decontamination_reads_removed_proportion=names_logs[name][
+                "reads_removed_proportion"
+            ],
+            client_decontamination_reads_in=names_logs[name]["reads_in"],
+            client_decontamination_reads_out=names_logs[name]["reads_out"],
+            checksum=checksum,
+        )
+        logging.debug(f"{sample_id=}")
+        reads_1_clean_renamed = reads_1_clean.rename(
+            reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
+        )
+        upload_meta.append((name, sample_id, reads_1_clean_renamed))
+        mapping_csv_records.append(
+            {
+                "batch_name": sample.batch_name,
+                "sample_name": sample.sample_name,
+                "remote_sample_name": sample_id,
+                "remote_batch_id": batch_id,
+            }
+        )
+    util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
+
+    # Upload reads
+    for sample in upload_meta:
+        name = sample[0]
+        sample_id = sample[1]
+        reads_1_clean_renamed = sample[2]
+        util.upload_paired_fastqs(
+            sample_id=sample_id,
+            sample_name=name,
+            reads_1=reads_1_clean_renamed,
+            host=host,
+            protocol=get_protocol(),
+        )
+        run_sample(sample_id=sample_id, host=host)
+        try:
+            reads_1_clean_renamed.unlink()
+        except Exception:
+            pass  # A failure here doesn't matter since upload is complete
+    logging.info(f"Uploaded batch {batch_name}")
+
+
+def upload_paired(
+    upload_csv: Path, batch: BaseModel, threads: int | None, host: str, dry_run: bool
+):
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
-    logging.debug(f"upload() {threads=}")
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
@@ -200,14 +304,13 @@ def upload(
         )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
-    control_map = {"positive": True, "negative": False, "": None}
     if dry_run:
         return
+
+    # Generate and submit metadata
     batch_name = util.generate_identifier()
     batch_id = create_batch(name=batch_name, host=host)
     mapping_csv_records = []
-
-    # Create sample metadata
     upload_meta = []
     for sample in batch.samples:
         name = sample.sample_name
@@ -218,7 +321,7 @@ def upload(
             host=host,
             batch_id=batch_id,
             collection_date=str(sample.collection_date),
-            control=control_map[sample.control],
+            control=util.map_control_value(sample.control),
             country=sample.country,
             subdivision=sample.subdivision,
             district=sample.district,

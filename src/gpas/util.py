@@ -148,3 +148,7 @@ def validate_guids(guids: list[str]) -> bool:
             return True
         except ValueError:
             return False
+
+
+def map_control_value(v: str) -> bool | None:
+    return {"positive": True, "negative": False, "": None}.get(v)

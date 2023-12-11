@@ -1,0 +1,3 @@
+batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform
+,sample1,reads/tuberculosis_1_1.fastq,,,2023-07-26,GBR,,,mycobacteria,homo sapiens,ont
+,sample2,reads/sars-cov-2_1_1.fastq,,,2023-07-26,GBR,,,mycobacteria,homo sapiens,ont
