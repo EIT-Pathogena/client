@@ -63,7 +63,7 @@ class UploadSample(BaseModel):
         if self.instrument_platform == "ont":
             if not reads_1_resolved_path.is_file():
                 raise ValueError("reads_1 must be a valid FASTQ file path")
-            if self.reads_2.is_file():
+            if reads_2_resolved_path.is_file():
                 raise ValueError(
                     "reads_2 must be empty where instrument_platform is ont"
                 )

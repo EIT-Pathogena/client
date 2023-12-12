@@ -171,6 +171,7 @@ def run_sample(sample_id: str, host: str) -> int:
 
 def upload(
     upload_csv: Path,
+    save: bool = False,
     threads: int | None = None,
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
@@ -189,6 +190,7 @@ def upload(
         upload_single(
             upload_csv=upload_csv,
             batch=batch,
+            save=save,
             threads=threads,
             host=host,
             dry_run=dry_run,
@@ -197,6 +199,7 @@ def upload(
         upload_paired(
             upload_csv=upload_csv,
             batch=batch,
+            save=save,
             threads=threads,
             host=host,
             dry_run=dry_run,
@@ -204,7 +207,12 @@ def upload(
 
 
 def upload_single(
-    upload_csv: Path, batch: BaseModel, threads: int | None, host: str, dry_run: bool
+    upload_csv: Path,
+    batch: BaseModel,
+    save: bool,
+    threads: int | None,
+    host: str,
+    dry_run: bool,
 ):
     fastq_paths = [upload_csv.parent / s.reads_1 for s in batch.samples]
     if threads:
@@ -228,8 +236,8 @@ def upload_single(
     upload_meta = []
     for sample in batch.samples:
         name = sample.sample_name
-        reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
-        checksum = util.hash_file(reads_1_clean)
+        reads_clean = Path(names_logs[name]["fastq1_out_path"])
+        checksum = util.hash_file(reads_clean)
         sample_id = create_sample(
             host=host,
             batch_id=batch_id,
@@ -246,10 +254,10 @@ def upload_single(
             checksum=checksum,
         )
         logging.debug(f"{sample_id=}")
-        reads_1_clean_renamed = reads_1_clean.rename(
-            reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
+        reads_clean_renamed = reads_clean.rename(
+            reads_clean.with_name(f"{sample_id}.clean.fastq.gz")
         )
-        upload_meta.append((name, sample_id, reads_1_clean_renamed))
+        upload_meta.append((name, sample_id, reads_clean_renamed))
         mapping_csv_records.append(
             {
                 "batch_name": sample.batch_name,
@@ -264,24 +272,30 @@ def upload_single(
     for sample in upload_meta:
         name = sample[0]
         sample_id = sample[1]
-        reads_1_clean_renamed = sample[2]
-        util.upload_paired_fastqs(
+        reads_clean_renamed = sample[2]
+        util.upload_fastq(
             sample_id=sample_id,
             sample_name=name,
-            reads_1=reads_1_clean_renamed,
+            reads=reads_clean_renamed,
             host=host,
             protocol=get_protocol(),
         )
         run_sample(sample_id=sample_id, host=host)
-        try:
-            reads_1_clean_renamed.unlink()
-        except Exception:
-            pass  # A failure here doesn't matter since upload is complete
+        if not save:
+            try:
+                reads_clean_renamed.unlink()
+            except Exception:
+                pass  # A failure here doesn't matter since upload is complete
     logging.info(f"Uploaded batch {batch_name}")
 
 
 def upload_paired(
-    upload_csv: Path, batch: BaseModel, threads: int | None, host: str, dry_run: bool
+    upload_csv: Path,
+    batch: BaseModel,
+    save: bool,
+    threads: int | None,
+    host: str,
+    dry_run: bool,
 ):
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
@@ -331,10 +345,10 @@ def upload_paired(
         )
         logging.debug(f"{sample_id=}")
         reads_1_clean_renamed = reads_1_clean.rename(
-            reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
+            reads_1_clean.with_name(f"{sample_id}.clean_1.fastq.gz")
         )
         reads_2_clean_renamed = reads_2_clean.rename(
-            reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
+            reads_2_clean.with_name(f"{sample_id}.clean_2.fastq.gz")
         )
         upload_meta.append(
             (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed)
@@ -364,11 +378,12 @@ def upload_paired(
             protocol=get_protocol(),
         )
         run_sample(sample_id=sample_id, host=host)
-        try:
-            reads_1_clean_renamed.unlink()
-            reads_2_clean_renamed.unlink()
-        except Exception:
-            pass  # A failure here doesn't matter since upload is complete
+        if not save:
+            try:
+                reads_1_clean_renamed.unlink()
+                reads_2_clean_renamed.unlink()
+            except Exception:
+                pass  # A failure here doesn't matter since upload is complete
     logging.info(f"Uploaded batch {batch_name}")
 
 

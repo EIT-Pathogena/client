@@ -27,7 +27,7 @@ def upload(
     *,
     # out_dir: Path = Path(),
     threads: int | None = None,
-    # save_reads: bool = False,
+    save: bool = False,
     dry_run: bool = False,
     host: str | None = None,
     debug: bool = False,
@@ -37,16 +37,16 @@ def upload(
     file which can be used to download output files with original sample names.
 
     :arg upload_csv: Path of upload csv
-    :arg threads: Number of alignment threads used during decontamination
-    :arg debug: Enable verbose debug messages
-    :arg host: API hostname
+    :arg save: Retain decontaminated reads after upload completion
     :arg dry_run: Exit before uploading reads
+    :arg threads: Number of alignment threads used during decontamination
+    :arg host: API hostname
+    :arg debug: Enable verbose debug messages
     """
     # :arg out_dir: Path of directory in which to save mapping CSV
-    # :arg save_reads: Save decontaminated reads in out_dir
     util.configure_debug_logging(debug)
     host = lib.get_host(host)
-    lib.upload(upload_csv, threads=threads, dry_run=dry_run, host=host)
+    lib.upload(upload_csv, save=save, dry_run=dry_run, threads=threads, host=host)
 
 
 def download(
