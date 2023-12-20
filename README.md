@@ -152,8 +152,8 @@ For technical support, please open an issue or contact `support@gpas.global`
 ```bash
 git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
-conda env create -y -f environment-dev.yml
-pip install --editable .
+conda env create -y -f environment.yml
+pip install --editable '.[dev]'
 ```
 
 **Updating**
@@ -165,17 +165,29 @@ gpas --version
 
 
 
-### Using an alternate API server
+### Using an alternate host
 
-```bash
-export GPAS_HOST="dev.portal.gpas.world"
-```
+1. The stateless way (use `--host` with every command):
+   ```bash
+   gpas auth --host dev.portal.gpas.world
+   gpas download --host dev.portal.gpas.world 516c482d-b92d-4726-99ca-2413f41e41e2  # e.g.
+   ```
 
-To unset:
+2. The stateful way (no need to use `--host` with each command):
+   ```export GPAS_HOST="dev.portal.gpas.world"
+   export GPAS_HOST="dev.portal.gpas.world"
+   ```
 
-```bash
-unset GPAS_HOST
-```
+   Then, as usual:
+   ```bash
+   gpas auth
+   gpas download 516c482d-b92d-4726-99ca-2413f41e41e2  # e.g.
+   ```
+
+   To reset:
+   ```bash
+   unset GPAS_HOST
+   ```
 
 
 
