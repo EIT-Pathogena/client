@@ -27,8 +27,8 @@ class UploadSample(BaseModel):
     reads_2: Path = Field(
         description="Relative path of second FASTQ file", default=None
     )
-    control: str = Field(
-        Literal["positive", "negative", ""], description="Control status of sample"
+    control: Literal["positive", "negative", ""] = Field(
+        description="Control status of sample"
     )
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
     country: str = Field(
@@ -38,14 +38,14 @@ class UploadSample(BaseModel):
         default=None, description="ISO 3166-2 principal subdivision"
     )
     district: str = Field(default=None, description="Granular location")
-    specimen_organism: str = Field(
-        Literal["mycobacteria"], description="Target specimen organism scientific name"
+    specimen_organism: Literal["mycobacteria", ""] = Field(
+        description="Target specimen organism scientific name"
     )
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    instrument_platform: str = Field(
-        Literal["illumina", "ont"], description="DNA sequencing instrument platform"
+    instrument_platform: Literal["illumina", "ont"] = Field(
+        description="DNA sequencing instrument platform"
     )
 
     @model_validator(mode="after")
