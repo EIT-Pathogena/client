@@ -45,3 +45,13 @@ def test_fail_empty_sample_name():
 def test_fail_mixed_instrument_platform():
     with pytest.raises(ValidationError):
         lib.upload("tests/data/invalid/mixed-instrument-platform.csv", dry_run=True)
+
+
+def test_fail_invalid_instrument_platform():
+    with pytest.raises(ValidationError):
+        lib.upload("tests/data/invalid/invalid-instrument-platform.csv", dry_run=True)
+
+
+def test_fail_invalid_control():
+    with pytest.raises(ValidationError):
+        lib.upload("tests/data/invalid/invalid-control.csv", dry_run=True)
