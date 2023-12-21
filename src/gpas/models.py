@@ -44,7 +44,8 @@ class UploadSample(BaseModel):
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    instrument_platform: Literal["illumina", "ont"] = Field(
+    # instrument_platform: Literal["illumina", "ont"] = Field(
+    instrument_platform: Literal["illumina"] = Field(
         description="DNA sequencing instrument platform"
     )
 
