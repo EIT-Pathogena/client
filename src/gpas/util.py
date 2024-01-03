@@ -119,7 +119,7 @@ def upload_fastq(
 ) -> None:
     """Upload FASTQ file to server"""
     reads = Path(reads)
-    logging.debug(f"{sample_id=}, {sample_name=}, {reads=}")
+    logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
     logging.info(f"Uploading {sample_name}")
     checksum = hash_file(reads)
     upload_file(sample_id, reads, host=host, protocol=protocol, checksum=checksum)
@@ -136,7 +136,9 @@ def upload_paired_fastqs(
 ) -> None:
     """Upload paired FASTQ files to server"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
-    logging.debug(f"{sample_id=}, {sample_name=}, {reads_1=}, {reads_2=}")
+    logging.debug(
+        f"upload_paired_fastqs(): {sample_id=}, {sample_name=}, {reads_1=}, {reads_2=}"
+    )
     logging.info(f"Uploading {sample_name}")
     checksum1 = hash_file(reads_1)
     checksum2 = hash_file(reads_2)

@@ -345,10 +345,10 @@ def upload_paired(
         )
         logging.debug(f"{sample_id=}")
         reads_1_clean_renamed = reads_1_clean.rename(
-            reads_1_clean.with_name(f"{sample_id}.clean_1.fastq.gz")
+            reads_1_clean.with_name(f"{sample_id}_1.fastq.gz")
         )
         reads_2_clean_renamed = reads_2_clean.rename(
-            reads_2_clean.with_name(f"{sample_id}.clean_2.fastq.gz")
+            reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
         )
         upload_meta.append(
             (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed)
@@ -414,7 +414,7 @@ def query(
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
         logging.info(f"Using samples in {mapping_csv}")
-        logging.debug(guids_samples)
+        logging.debug(f"{guids_samples=}")
     else:
         raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
     samples_metadata = {}
