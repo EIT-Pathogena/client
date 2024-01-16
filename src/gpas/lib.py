@@ -286,7 +286,9 @@ def upload_single(
                 reads_clean_renamed.unlink()
             except Exception:
                 pass  # A failure here doesn't matter since upload is complete
-    logging.info(f"Uploaded batch {batch_name}")
+    logging.info(
+        f"Uploaded batch {batch_name} and created {batch_name}.mapping.csv (keep this safe)"
+    )
 
 
 def upload_paired(
@@ -384,7 +386,9 @@ def upload_paired(
                 reads_2_clean_renamed.unlink()
             except Exception:
                 pass  # A failure here doesn't matter since upload is complete
-    logging.info(f"Uploaded batch {batch_name}")
+    logging.info(
+        f"Uploaded batch {batch_name} and created {batch_name}.mapping.csv (keep this safe)"
+    )
 
 
 def fetch_sample(sample_id: str, host: str) -> dict:
