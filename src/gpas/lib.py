@@ -22,7 +22,6 @@ from gpas.models import RemoteFile
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-# DEFAULT_HOST = "dev.portal.gpas.world"
 DEFAULT_HOST = "research.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
 
@@ -65,10 +64,13 @@ def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None
 
 def check_authentication(host: str) -> None:
     with httpx.Client(event_hooks=util.httpx_hooks):
-        httpx.get(
+        response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
         )
+    if response.is_error:
+        logging.error(f"Authentication failed for host {host}")
+        raise RuntimeError("Authentication failed. You may need to re-authenticate")
 
 
 def create_batch(name: str, host: str) -> int:
@@ -218,12 +220,18 @@ def upload_single(
     if threads:
         decontamination_log = clean_fastqs(
             fastqs=fastq_paths,
+            index="human-t2t-hla-argos985-mycob140",
             rename=True,
             threads=threads,
             force=True,
         )
     else:
-        decontamination_log = clean_fastqs(fastqs=fastq_paths, rename=True, force=True)
+        decontamination_log = clean_fastqs(
+            fastqs=fastq_paths,
+            index="human-t2t-hla-argos985-mycob140",
+            rename=True,
+            force=True,
+        )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     if dry_run:
@@ -286,9 +294,7 @@ def upload_single(
                 reads_clean_renamed.unlink()
             except Exception:
                 pass  # A failure here doesn't matter since upload is complete
-    logging.info(
-        f"Uploaded batch {batch_name} and created {batch_name}.mapping.csv (keep this safe)"
-    )
+    logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
 def upload_paired(
@@ -306,6 +312,7 @@ def upload_paired(
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
+            index="human-t2t-hla-argos985-mycob140",
             rename=True,
             reorder=True,
             threads=threads,
@@ -313,7 +320,11 @@ def upload_paired(
         )
     else:
         decontamination_log = clean_paired_fastqs(
-            fastqs=fastq_path_tuples, rename=True, reorder=True, force=True
+            fastqs=fastq_path_tuples,
+            index="human-t2t-hla-argos985-mycob140",
+            rename=True,
+            reorder=True,
+            force=True,
         )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
@@ -386,9 +397,7 @@ def upload_paired(
                 reads_2_clean_renamed.unlink()
             except Exception:
                 pass  # A failure here doesn't matter since upload is complete
-    logging.info(
-        f"Uploaded batch {batch_name} and created {batch_name}.mapping.csv (keep this safe)"
-    )
+    logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
 def fetch_sample(sample_id: str, host: str) -> dict:
