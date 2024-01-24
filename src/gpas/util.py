@@ -85,11 +85,12 @@ def write_csv(records: list[dict], file_name: Path | str) -> None:
             writer.writerow(r)
 
 
-def hash_file(path: Path) -> str:
+def hash_file(file_path: Path) -> str:
     hasher = hashlib.sha256()
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(16_384), b""):
-            hasher.update(block)
+    CHUNK_SIZE = 1_048_576  # 2**20, 1MiB
+    with open(Path(file_path), "rb") as fh:
+        while chunk := fh.read(CHUNK_SIZE):
+            hasher.update(chunk)
     return hasher.hexdigest()
 
 
