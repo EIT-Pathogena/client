@@ -1,6 +1,6 @@
-# GPAS CLI
+# GPAS client
 
-The command line and Python API client for the GPAS mycobacterial platform. Enables secure sample upload with client-side human read removal and retrieval of analytical outputs.
+The command line interface and Python API client for the GPAS mycobacterial platform. The client enables secure sample upload with client-side human read removal, and enables programmatic retrieval of analytical outputs. For the best experience, a Linux or MacOS machine with 16GB of RAM is recommended.
 
 
 
@@ -8,7 +8,7 @@ The command line and Python API client for the GPAS mycobacterial platform. Enab
 
 ### Installing Miniconda
 
-If a conda package manager is already installed, skip to [Installing the GPAS CLI](#installing-or-updating-the-gpas-cli), otherwise:
+If a conda package manager is already installed, skip to [Installing the client](#installing-or-updating-the-client), otherwise:
 
 **Linux**
 
@@ -20,7 +20,7 @@ If a conda package manager is already installed, skip to [Installing the GPAS CL
 
 **MacOS**
 
-The GPAS CLI requires an `x86_64` conda installation. If your Mac has an Apple processor, you must disable or delete any existing `arm64` conda installations before continuing.
+The client requires an `x86_64` conda installation. If your Mac has an Apple processor, disable or delete existing `arm64` conda installations before continuing.
 
 - If your Mac has an Apple processor, using Terminal, firstly run:
   ```bash
@@ -34,7 +34,7 @@ The GPAS CLI requires an `x86_64` conda installation. If your Mac has an Apple p
 
 
 
-### Installing or updating the GPAS CLI
+### Installing or updating the client
 
 - If using a Mac with an Apple processor, using Terminal, firstly run:
 
@@ -74,7 +74,7 @@ Run `gpas --help` for an overview of CLI subcommands. For help with a specific s
 
 #### Authentication (`gpas auth`)
 
-The first time you use the CLI, you will need to authenticate by running `gpas auth` and entering your username and password. This token will be used automatically for subsequent commands.
+You will need to authenticate the first time you use the client. Do this by running `gpas auth` and entering your username and password. A token will be saved automatically inside your home directory.
 
 ```
 gpas auth
@@ -86,19 +86,23 @@ Enter your password: ***************
 
 #### Uploading samples (`gpas upload`)
 
-Performs metadata validation and client-side removal of human reads in each of your samples before uploading sequences to the GPAS platform.
+The upload subcommand performs metadata validation and client-side removal of human reads for each of your samples, before uploading sequences to the GPAS platform for analysis.
 
 ```bash
 gpas upload tests/data/illumina.csv
 ```
 
-This generates a mapping CSV (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote identifiers (GUIDs). Keep this file safe as it's useful for downloading and relinking results later.
+During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote names. Keep this file safe, as it is useful for downloading and relinking results later.
+
+A 4GB human genome index is downloaded the first time you run `gpas upload`. If for any reason this is interrupted, simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity check.
+
+To retain the decontaminated FASTQ files uploaded to GPAS, include the optional `--save` flag. To perform decontamination without uploading anything, use the optional `--dry-run` flag.
 
 
 
 #### Downloading files (`gpas download`)
 
-Downloads the output (and/or input) files associated with a batch of samples given a mapping CSV generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are prefixed with the sample names provided at upload. Otherwise downloaded files are prefixed with the sample GUID.
+The download subcommand retrieves the output (and/or input) files associated with a batch of samples given a mapping CSV generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are prefixed with the sample names provided at upload. Otherwise downloaded files are prefixed with the sample GUID.
 
 ```bash
 # Download the main reports for all samples in a5w2e8.mapping.csv
@@ -117,14 +121,14 @@ gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e0
 gpas download a5w2e8.mapping.csv --out-dir results
 
 # Download input files
-gpas download --inputs a5w2e8.mapping.csv --filenames ""
+gpas download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
 
 
 #### Querying sample metadata (`gpas query`)
 
-Fetches either the processing status (`gpas query status`) or raw metadata (`gpas query raw`) of one more samples given a mapping CSV generated during upload, or one or more sample GUIDs.
+The query subcommand fetches either the processing status (`gpas query status`) or raw metadata (`gpas query raw`) of one more samples given a mapping CSV generated during upload, or one or more sample GUIDs.
 
 ```bash
 # Query the processing status of all samples in a5w2e8.mapping.csv
@@ -170,7 +174,7 @@ gpas --version
 1. The stateless way (use `--host` with every command):
    ```bash
    gpas auth --host dev.portal.gpas.world
-   gpas download --host dev.portal.gpas.world 516c482d-b92d-4726-99ca-2413f41e41e2  # e.g.
+   gpas upload samples.csv --host dev.portal.gpas.world
    ```
 
 2. The stateful way (no need to use `--host` with each command):
@@ -181,7 +185,7 @@ gpas --version
    Then, as usual:
    ```bash
    gpas auth
-   gpas download 516c482d-b92d-4726-99ca-2413f41e41e2  # e.g.
+   gpas upload samples.csv
    ```
 
    To reset:
