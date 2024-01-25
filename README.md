@@ -213,9 +213,9 @@ unset GPAS_PROTOCOL
 
 ```bash
 pytest
-# Increment version string inside src/gpas/__init__.py
-git tag 0.xx.0  # Tag new version
-git push origin main --tags  # Push including tags
+# Increment version strings inside src/gpas/__init__.py, Dockerfile
+git tag 0.xx.0
+git push origin main --tags
 flit build
 flit publish  # Uploads to PyPI given appropriate permission
 # Announce in Slack CLI channel
