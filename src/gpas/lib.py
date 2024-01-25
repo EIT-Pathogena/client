@@ -115,7 +115,7 @@ def create_batch(host: str) -> int:
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
-    return response.json()["id"]
+    return response.json()["id"], response.json()['name']
 
 
 def create_sample(
