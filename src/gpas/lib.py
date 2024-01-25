@@ -92,7 +92,7 @@ def check_authentication(host: str) -> None:
         raise RuntimeError("Authentication failed. You may need to re-authenticate")
 
 
-def create_batch(name: str, host: str) -> int:
+def create_batch(host: str) -> int:
     """Create batch on server, return batch id"""
     telemetry_data = {
         "client": {
@@ -104,7 +104,7 @@ def create_batch(name: str, host: str) -> int:
             "version": hostile.__version__,
         },
     }
-    data = {"name": name, "telemetry_data": telemetry_data}
+    data = {"telemetry_data": telemetry_data}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -257,8 +257,7 @@ def upload_single(
         return
 
     # Generate and submit metadata
-    batch_name = util.generate_identifier()
-    batch_id = create_batch(name=batch_name, host=host)
+    batch_id, batch_name = create_batch(host=host)
     mapping_csv_records = []
     upload_meta = []
     for sample in batch.samples:
@@ -351,8 +350,7 @@ def upload_paired(
         return
 
     # Generate and submit metadata
-    batch_name = util.generate_identifier()
-    batch_id = create_batch(name=batch_name, host=host)
+    batch_id, batch_name = create_batch(host=host)
     mapping_csv_records = []
     upload_meta = []
     for sample in batch.samples:
