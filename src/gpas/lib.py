@@ -38,9 +38,8 @@ class UnsupportedClientException(Exception):
             current_version (str): The version returned by the API
         """
         self.message = (
-            "\n\nInstalled client is outdated, please update!\n"
-            f"Installed version {this_version}, supported versions >= {current_version}\n\n"
-            "Update instructions:\n"
+            f"\n\nThe installed client version ({this_version}) is no longer supported, please update\n\n"
+            "To update, run:\n"
             "conda create -y -n gpas -c conda-forge -c bioconda hostile && conda activate gpas && pip install gpas"
         )
 
@@ -547,7 +546,7 @@ def check_client_version(host: str) -> None:
         )
     server_version = response.json()["version"]
     if Version(server_version) > Version(gpas.__version__):
-        logging.error("Current client version is outdated!")
+        logging.error("Client update required")
         raise UnsupportedClientException(gpas.__version__, server_version)
 
 
