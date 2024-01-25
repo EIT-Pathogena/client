@@ -2,6 +2,7 @@ import csv
 import json
 import logging
 import os
+from semantic_version import Version
 
 from pathlib import Path
 
@@ -25,6 +26,24 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 DEFAULT_HOST = "research.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
 
+class UnsupportedClientException(Exception):
+    """Exception for when this client version becomes unsupported by the API.
+    """
+    def __init__(self, this_version: str, current_version: str):
+        """Raise this exception with a sensible message
+
+        Args:
+            this_version (str): The version of installed version
+            current_version (str): The version returned by the API
+        """
+        self.message = (
+            "\n\nInstalled client is outdated, please update!\n"
+            f"Installed version {this_version}, supported versions >= {current_version}\n\n"
+            "Update instructions:\n"
+            "conda create -y -n gpas -c conda-forge -c bioconda hostile && conda activate gpas && pip install gpas"
+        )
+        
+        super().__init__(self.message)
 
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
@@ -527,10 +546,9 @@ def check_client_version(host: str) -> None:
             f"{get_protocol()}://{host}/cli-version",
         )
     server_version = response.json()["version"]
-    if server_version > gpas.__version__:
-        logging.warning(
-            f"A newer version of GPAS client ({server_version}) is available, please update"
-        )
+    if Version(server_version) > Version(gpas.__version__):
+        logging.error("Current client version is outdated!")
+        raise UnsupportedClientException(gpas.__version__, server_version)
 
 
 def download(
