@@ -26,9 +26,10 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 DEFAULT_HOST = "research.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
 
+
 class UnsupportedClientException(Exception):
-    """Exception for when this client version becomes unsupported by the API.
-    """
+    """Exception for when this client version becomes unsupported by the API."""
+
     def __init__(self, this_version: str, current_version: str):
         """Raise this exception with a sensible message
 
@@ -42,8 +43,9 @@ class UnsupportedClientException(Exception):
             "Update instructions:\n"
             "conda create -y -n gpas -c conda-forge -c bioconda hostile && conda activate gpas && pip install gpas"
         )
-        
+
         super().__init__(self.message)
+
 
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
@@ -92,7 +94,7 @@ def check_authentication(host: str) -> None:
         raise RuntimeError("Authentication failed. You may need to re-authenticate")
 
 
-def create_batch(host: str) -> int:
+def create_batch(host: str) -> tuple[str, str]:
     """Create batch on server, return batch id"""
     telemetry_data = {
         "client": {
@@ -115,7 +117,7 @@ def create_batch(host: str) -> int:
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
-    return response.json()["id"], response.json()['name']
+    return response.json()["id"], response.json()["name"]
 
 
 def create_sample(
