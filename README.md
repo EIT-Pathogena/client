@@ -143,6 +143,12 @@ gpas query raw a5w2e8.mapping.csv
 
 
 
+#### Downloading decontamination indexes (`gpas download-index`)
+
+The human genome index used for host decontamination is downloaded automatically when running `gpas upload` for the first time. You may however trigger this manually by running `gpas download-index`.
+
+
+
 ## Support
 
 For technical support, please open an issue or contact `support@gpas.global`

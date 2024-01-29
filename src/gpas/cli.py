@@ -145,27 +145,11 @@ def query_status(
             print(f"{name} \t{status}")
 
 
-# def run(
-#     *, samples: str | None = None, batch: str | None = None, host: str | None = None
-# ):
-#     """
-#     Reanalyse of one or more uploaded samples
-
-#     :arg samples: Comma-separated list of sample IDs
-#     :arg batch: Batch ID
-#     :arg host: API hostname
-#     """
-#     host = lib.get_host(host)
-#     if not bool(samples) ^ bool(batch):
-#         raise ValueError("Specify either samples or batch, not both")
-#     if samples:
-#         samples = samples.strip().split(",")
-#         for sample in samples:
-#             run_id = lib.run_sample(sample, host=host)
-#             logging.info(f"Created run_id {run_id} for sample_id {sample}")
-
-#     else:
-#         raise ValueError("Specify either samples or batch")
+def download_index() -> None:
+    """
+    Download and cache host decontamination index.
+    """
+    lib.download_index()
 
 
 def main() -> None:
@@ -174,8 +158,8 @@ def main() -> None:
             "auth": auth,
             "upload": upload,
             "download": download,
+            "download-index": download_index,
             "query": {"raw": query_raw, "status": query_status},
-            # "run": run,
         },
         no_negated_flags=True,
         strict_kwonly=True,

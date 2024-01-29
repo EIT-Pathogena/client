@@ -7,7 +7,8 @@ from pathlib import Path
 
 import httpx
 
-from hostile.lib import clean_fastqs, clean_paired_fastqs
+from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
+from hostile.util import BUCKET_URL, XDG_DATA_DIR
 
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -642,3 +643,10 @@ def download_single(
                 fh.write(data)
                 progress.update(len(data))
     logging.debug(f"Downloaded {filename}")
+
+
+def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
+    logging.info(f"Cache directory: {XDG_DATA_DIR}")
+    logging.info(f"Manifest URL: {BUCKET_URL}/manifest.json")
+    ALIGNER.minimap2.value.check_index(name)
+    ALIGNER.bowtie2.value.check_index(name)
