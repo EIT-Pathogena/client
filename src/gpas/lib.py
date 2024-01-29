@@ -21,9 +21,9 @@ from gpas.models import RemoteFile
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-
 DEFAULT_HOST = "research.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
+HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
 def get_host(cli_host: str | None) -> str:
@@ -220,7 +220,7 @@ def upload_single(
     if threads:
         decontamination_log = clean_fastqs(
             fastqs=fastq_paths,
-            index="human-t2t-hla-argos985-mycob140",
+            index=HOSTILE_INDEX_NAME,
             rename=True,
             threads=threads,
             force=True,
@@ -228,7 +228,7 @@ def upload_single(
     else:
         decontamination_log = clean_fastqs(
             fastqs=fastq_paths,
-            index="human-t2t-hla-argos985-mycob140",
+            index=HOSTILE_INDEX_NAME,
             rename=True,
             force=True,
         )
@@ -312,7 +312,7 @@ def upload_paired(
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
-            index="human-t2t-hla-argos985-mycob140",
+            index=HOSTILE_INDEX_NAME,
             rename=True,
             reorder=True,
             threads=threads,
@@ -321,7 +321,7 @@ def upload_paired(
     else:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
-            index="human-t2t-hla-argos985-mycob140",
+            index=HOSTILE_INDEX_NAME,
             rename=True,
             reorder=True,
             force=True,
