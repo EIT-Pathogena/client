@@ -16,8 +16,7 @@ from tqdm import tqdm
 import gpas
 import hostile
 
-from gpas import util
-from gpas.models import RemoteFile
+from gpas import util, models
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -112,7 +111,7 @@ def create_sample(
     client_decontamination_reads_in: int,
     client_decontamination_reads_out: int,
     checksum: str,
-    instrument_platform: str = "illumina",
+    instrument_platform: util.PLATFORMS,
     specimen_organism: str = "mycobacteria",
     host_organism: str = "homo sapiens",
 ) -> str:
@@ -144,7 +143,7 @@ def create_sample(
     return response.json()["id"]
 
 
-def run_sample(sample_id: str, host: str) -> int:
+def run_sample(sample_id: str, host: str) -> str:
     """Patch sample status, create run, and patch run status to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
@@ -186,7 +185,7 @@ def upload(
         check_client_version(host)
         check_authentication(host)
     upload_csv = Path(upload_csv)
-    batch = util.parse_upload_csv(upload_csv)
+    batch = models.parse_upload_csv(upload_csv)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
     if instrument_platform == "ont":
@@ -261,6 +260,7 @@ def upload_single(
             client_decontamination_reads_in=names_logs[name]["reads_in"],
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
+            instrument_platform=sample.instrument_platform,
         )
         logging.debug(f"{sample_id=}")
         reads_clean_renamed = reads_clean.rename(
@@ -356,6 +356,7 @@ def upload_paired(
             client_decontamination_reads_in=names_logs[name]["reads_in"],
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
+            instrument_platform=sample.instrument_platform,
         )
         logging.debug(f"{sample_id=}")
         reads_1_clean_renamed = reads_1_clean.rename(
@@ -468,8 +469,8 @@ def status(
     return samples_status
 
 
-def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]:
-    """Return RemoteFile instances for a sample input files"""
+def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
+    """Return models.RemoteFile instances for a sample input files"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
@@ -478,7 +479,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]
         )
     data = response.json().get("files", [])
     output_files = {
-        d["filename"]: RemoteFile(
+        d["filename"]: models.RemoteFile(
             filename=d["filename"],
             sample_id=d["sample_id"],
             run_id=d["run_id"],
@@ -491,8 +492,8 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, RemoteFile]
 
 def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
-) -> dict[str, RemoteFile]:
-    """Return RemoteFile instances for a sample, optionally including only latest run"""
+) -> dict[str, models.RemoteFile]:
+    """Return models.RemoteFile instances for a sample, optionally including only latest run"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.get(
@@ -501,7 +502,7 @@ def fetch_output_files(
         )
     data = response.json().get("files", [])
     output_files = {
-        d["filename"]: RemoteFile(
+        d["filename"]: models.RemoteFile(
             filename=d["filename"].replace("_", ".", 1),
             sample_id=d["sample_id"],
             run_id=d["run_id"],

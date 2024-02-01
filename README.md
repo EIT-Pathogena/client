@@ -124,7 +124,9 @@ gpas download a5w2e8.mapping.csv --out-dir results
 gpas download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
-The complete list of `--filenames` available for download varies by sample and can be found in the Downloads section of sample view pages in the web portal.
+The complete list of `--filenames` available for download varies by sample, and can be found in the Downloads section of sample view pages in the GPAS web portal.
+
+
 
 #### Querying sample metadata (`gpas query`)
 
@@ -164,6 +166,7 @@ git clone https://github.com/GlobalPathogenAnalysisService/cli.git
 cd cli
 conda env create -y -f environment.yml
 pip install --editable '.[dev]'
+pre-commit install
 ```
 
 **Updating**

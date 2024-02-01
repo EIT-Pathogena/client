@@ -61,3 +61,8 @@ def test_fail_mixed_instrument_platform():
 def test_fail_invalid_instrument_platform():
     with pytest.raises(ValidationError):
         lib.upload("tests/data/invalid/invalid-instrument-platform.csv", dry_run=True)
+
+
+def test_fail_ont_without_dev_mode():
+    with pytest.raises(ValidationError):
+        lib.upload("tests/data/ont-2.csv", dry_run=True)

@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from gpas import util
+
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
@@ -44,9 +46,8 @@ class UploadSample(BaseModel):
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    # instrument_platform: Literal["illumina", "ont"] = Field(
-    instrument_platform: Literal["illumina"] = Field(
-        description="DNA sequencing instrument platform"
+    instrument_platform: util.PLATFORMS = Field(
+        description="Sequencing instrument platform"
     )
 
     @model_validator(mode="after")
@@ -88,6 +89,13 @@ class UploadSample(BaseModel):
                 raise ValueError(
                     f"Invalid file extension for file {self.reads_2.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def enforce_dev_mode(self):
+        dev_mode = util.is_dev_mode()
+        if not dev_mode and self.instrument_platform == "ont":
+            raise ValueError("ONT support is currently unavailable")
         return self
 
     # @model_validator(pre=True)
@@ -134,3 +142,10 @@ class RemoteFile(BaseModel):
     filename: str
     run_id: int
     sample_id: str
+
+
+def parse_upload_csv(upload_csv: Path) -> UploadBatch:
+    records = util.parse_csv(upload_csv)
+    return UploadBatch(  # Include upload_csv to enable relative fastq path validation
+        samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records]
+    )

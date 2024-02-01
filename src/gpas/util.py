@@ -2,15 +2,18 @@ import csv
 import hashlib
 import json
 import logging
+import os
 import random
 import string
 import uuid
 
 from pathlib import Path
+from typing import Literal
 
 import httpx
 
-from gpas.models import UploadBatch, UploadSample
+
+PLATFORMS = Literal["illumina", "ont"]
 
 
 def configure_debug_logging(debug: bool):
@@ -66,13 +69,6 @@ def parse_csv(csv_path: Path) -> list[dict]:
     with open(csv_path, "r") as fh:
         reader = csv.DictReader(fh)
         return [row for row in reader]
-
-
-def parse_upload_csv(upload_csv: Path) -> UploadBatch:
-    records = parse_csv(upload_csv)
-    return UploadBatch(  # Include upload_csv to enable relative fastq path validation
-        samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records]
-    )
 
 
 def write_csv(records: list[dict], file_name: Path | str) -> None:
@@ -172,3 +168,7 @@ def validate_guids(guids: list[str]) -> bool:
 
 def map_control_value(v: str) -> bool | None:
     return {"positive": True, "negative": False, "": None}.get(v)
+
+
+def is_dev_mode() -> bool:
+    return True if "GPAS_DEV_MODE" in os.environ else False
