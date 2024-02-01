@@ -171,6 +171,39 @@ def run_sample(sample_id: str, host: str) -> str:
         return run_id
 
 
+def validate_batch(
+    batch: models.UploadBatch,
+    host: str,
+) -> None:
+    """Perform pre-submission validation of a batch of sample model subsets"""
+    pass
+    data = []
+    for sample in batch.samples:
+        data.append(
+            {
+                "collection_date": str(sample.collection_date),
+                "country": sample.country,
+                "subdivision": sample.subdivision,
+                "district": sample.district,
+                "instrument_platform": sample.instrument_platform,
+                "specimen_organism": sample.specimen_organism,
+            }
+        )
+    logging.debug(f"Validating {data=}")
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=60,
+    ) as client:
+        response = client.post(
+            f"{get_protocol()}://{host}/api/v1/batches/validate",
+            headers=headers,
+            json=data,
+        )
+    logging.debug(f"{response.json()=}")
+
+
 def upload(
     upload_csv: Path,
     save: bool = False,
@@ -181,11 +214,12 @@ def upload(
     """Upload a batch of one or more samples to the GPAS platform"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
     logging.debug(f"upload() {threads=}")
+    upload_csv = Path(upload_csv)
+    batch = models.parse_upload_csv(upload_csv)
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
-    upload_csv = Path(upload_csv)
-    batch = models.parse_upload_csv(upload_csv)
+        validate_batch(batch=batch, host=host)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
     if instrument_platform == "ont":
