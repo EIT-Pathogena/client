@@ -16,9 +16,6 @@ def validate_file_extension(
 
 
 class UploadSample(BaseModel):
-    batch_name: str = Field(
-        default=None, description="Batch name (anonymised prior to upload)"
-    )
     sample_name: str = Field(
         min_length=1, description="Sample name (anonymised prior to upload)"
     )
