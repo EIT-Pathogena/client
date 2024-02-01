@@ -1,6 +1,6 @@
 # GPAS client
 
-The command line interface and Python API client for the GPAS mycobacterial platform. The client enables secure sample upload with client-side human read removal, and enables programmatic retrieval of analytical outputs. For the best experience, a Linux or MacOS machine with 16GB of RAM is recommended.
+The command line interface for the GPAS mycobacterial platform. The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to upload, sample identifiers are anonymised and human host sequences are removed. For the best experience, a multicore machine with 16GB of RAM running Linux or MacOS is recommended.
 
 
 
@@ -124,7 +124,7 @@ gpas download a5w2e8.mapping.csv --out-dir results
 gpas download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
-
+The complete list of `--filenames` available for download varies by sample and can be found in the Downloads section of sample view pages in the web portal.
 
 #### Querying sample metadata (`gpas query`)
 

@@ -542,7 +542,6 @@ def download(
     out_dir: Path = Path("."),
     rename: bool = True,
     host: str = DEFAULT_HOST,
-    debug: bool = False,
 ) -> None:
     """Download latest output files for a sample"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
