@@ -176,7 +176,6 @@ def validate_batch(
     host: str,
 ) -> None:
     """Perform pre-submission validation of a batch of sample model subsets"""
-    pass
     data = []
     for sample in batch.samples:
         data.append(

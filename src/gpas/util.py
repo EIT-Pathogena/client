@@ -32,7 +32,7 @@ def log_response(response):
         request = response.request
         response.read()
         logging.error(
-            f"{request.method} {request.url} ({response.status_code}) {response.json()=}"
+            f"{request.method} {request.url} ({response.status_code}):\n{json.dumps(response.json(), indent=4)}"
         )
 
 
