@@ -3,8 +3,6 @@ import hashlib
 import json
 import logging
 import os
-import random
-import string
 import uuid
 
 from pathlib import Path
@@ -32,7 +30,7 @@ def log_response(response):
         request = response.request
         response.read()
         logging.error(
-            f"{request.method} {request.url} ({response.status_code}):\n{json.dumps(response.json(), indent=4)}"
+            f"{request.method} {request.url} ({response.status_code}) response:\n{json.dumps(response.json(), indent=4)}"
         )
 
 
@@ -41,14 +39,6 @@ def raise_for_status(response):
 
 
 httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
-
-
-def generate_identifier(length=6):
-    letters_and_digits = string.ascii_letters + string.digits
-    random_identifier = "".join(
-        random.choice(letters_and_digits) for _ in range(length)
-    )
-    return random_identifier.lower()
 
 
 def get_access_token(host: str) -> str:
