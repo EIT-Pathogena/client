@@ -7,7 +7,7 @@ import pytest
 
 from pydantic import ValidationError
 
-from gpas import lib
+from gpas import lib, models
 
 
 def run(cmd: str, cwd: Path = Path()):
@@ -63,6 +63,10 @@ def test_fail_invalid_instrument_platform():
         lib.upload("tests/data/invalid/invalid-instrument-platform.csv", dry_run=True)
 
 
-def test_fail_ont_without_dev_mode():
-    with pytest.raises(ValidationError):
-        lib.upload("tests/data/ont-2.csv", dry_run=True)
+def test_validate_illumina_model():
+    models.parse_upload_csv("tests/data/illumina.csv")
+    models.parse_upload_csv("tests/data/illumina-2.csv")
+
+
+def test_validate_ont_model():
+    models.parse_upload_csv("tests/data/ont.csv")

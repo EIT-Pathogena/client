@@ -91,12 +91,10 @@ class UploadSample(BaseModel):
                 )
         return self
 
-    @model_validator(mode="after")
-    def enforce_dev_mode(self):
-        dev_mode = util.is_dev_mode()
-        if not dev_mode and self.instrument_platform == "ont":
-            raise ValueError("ONT support is currently unavailable")
-        return self
+    # @model_validator(mode="after")
+    # def enforce_dev_mode(self):
+    #     dev_mode = util.is_dev_mode()  # Use this bool for client side feature gating
+    #     return self
 
     # @model_validator(pre=True)
     # def lowercase_all_fields(cls, values: dict[str, Any]) -> dict[str, Any]:
