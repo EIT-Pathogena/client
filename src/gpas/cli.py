@@ -89,7 +89,6 @@ def download(
             out_dir=out_dir,
             rename=rename,
             host=host,
-            debug=debug,
         )
     else:
         raise ValueError(
