@@ -234,7 +234,7 @@ unset GPAS_PROTOCOL
 
 ### Releasing a new version
 
-Having installed an editable [development environment](https://github.com/GlobalPathogenAnalysisService/client?tab=readme-ov-file#development) (with pre-commit, pytest and flit)
+Having installed an editable [development environment](https://github.com/GlobalPathogenAnalysisService/client?tab=readme-ov-file#development) (with pre-commit, pytest and flit):
 
 ```bash
 pytest
