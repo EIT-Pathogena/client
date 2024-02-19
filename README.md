@@ -157,6 +157,10 @@ For technical support, please open an issue or contact `support@gpas.global`
 
 
 
+***
+
+
+
 ## Development
 
 **Development install**
@@ -204,6 +208,16 @@ gpas --version
 
 
 
+### Installing a pre-release version
+
+```bash
+conda create --yes -n gpas -c conda-forge -c bioconda hostile
+conda activate gpas
+pip install --pre gpas
+```
+
+
+
 ### Using a local development server
 
 ```bash
@@ -220,13 +234,16 @@ unset GPAS_PROTOCOL
 
 ### Releasing a new version
 
+Having installed an editable [development environment](https://github.com/GlobalPathogenAnalysisService/client?tab=readme-ov-file#development) (with pre-commit, pytest and flit)
+
 ```bash
 pytest
-# Increment version strings inside src/gpas/__init__.py, Dockerfile
-git tag 0.xx.0
+# Bump version strings inside src/gpas/__init__.py AND Dockerfile
+# Use format e.g. 1.0.0a1 for pre-releases (following example of Pydantic)
+git tag 0.0.0. # e.g.
 git push origin main --tags
-flit build
-flit publish  # Uploads to PyPI given appropriate permission
+flit build  # Build package
+flit publish  # Authenticate and upload package to PyPI
 # Announce in Slack CLI channel
 # PR gpas/gpas/settings.py with new version
 ```
