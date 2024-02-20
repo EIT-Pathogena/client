@@ -81,7 +81,7 @@ def hash_file(file_path: Path) -> str:
 
 
 def upload_file(
-    sample_id: int, file_path: Path, host: str, protocol: str, checksum: str
+    sample_id: int, file_path: Path, host: str, protocol: str, checksum: str, dirty_checksum: str
 ) -> None:
     with httpx.Client(
         event_hooks=httpx_hooks,
@@ -93,7 +93,7 @@ def upload_file(
                 f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
                 headers={"Authorization": f"Bearer {get_access_token(host)}"},
                 files={"file": fh},
-                data={"checksum": checksum},
+                data={"checksum": checksum, "dirty_checksum": dirty_checksum},
             )
 
 
@@ -103,13 +103,14 @@ def upload_fastq(
     reads: Path,
     host: str,
     protocol: str,
+    dirty_checksum: str,
 ) -> None:
     """Upload FASTQ file to server"""
     reads = Path(reads)
     logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
     logging.info(f"Uploading {sample_name}")
     checksum = hash_file(reads)
-    upload_file(sample_id, reads, host=host, protocol=protocol, checksum=checksum)
+    upload_file(sample_id, reads, host=host, protocol=protocol, checksum=checksum, dirty_checksum=dirty_checksum)
     logging.info(f"  Uploaded {reads.name}")
 
 
@@ -120,6 +121,8 @@ def upload_paired_fastqs(
     reads_2: Path,
     host: str,
     protocol: str,
+    dirty_checksum_1: str,
+    dirty_checksum_2: str,
 ) -> None:
     """Upload paired FASTQ files to server"""
     reads_1, reads_2 = Path(reads_1), Path(reads_2)
@@ -129,9 +132,9 @@ def upload_paired_fastqs(
     logging.info(f"Uploading {sample_name}")
     checksum1 = hash_file(reads_1)
     checksum2 = hash_file(reads_2)
-    upload_file(sample_id, reads_1, host=host, protocol=protocol, checksum=checksum1)
+    upload_file(sample_id, reads_1, host=host, protocol=protocol, checksum=checksum1, dirty_checksum=dirty_checksum_1)
     logging.info(f"  Uploaded {reads_1.name}")
-    upload_file(sample_id, reads_2, host=host, protocol=protocol, checksum=checksum2)
+    upload_file(sample_id, reads_2, host=host, protocol=protocol, checksum=checksum2, dirty_checksum=dirty_checksum_2)
     logging.info(f"  Uploaded {reads_2.name}")
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
