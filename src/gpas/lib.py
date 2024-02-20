@@ -294,7 +294,6 @@ def upload_single(
             client_decontamination_reads_in=names_logs[name]["reads_in"],
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
-            dirty_checksum=dirty_checksum,
             instrument_platform=sample.instrument_platform,
         )
         logging.debug(f"{sample_id=}")
