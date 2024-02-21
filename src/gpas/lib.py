@@ -277,7 +277,9 @@ def upload_single(
     for sample in batch.samples:
         name = sample.sample_name
         reads_clean = Path(names_logs[name]["fastq1_out_path"])
+        reads_dirty = Path(names_logs[name]["fastq1_in_path"])
         checksum = util.hash_file(reads_clean)
+        dirty_checksum = util.hash_file(reads_dirty)
         sample_id = create_sample(
             host=host,
             batch_id=batch_id,
@@ -298,7 +300,7 @@ def upload_single(
         reads_clean_renamed = reads_clean.rename(
             reads_clean.with_name(f"{sample_id}.clean.fastq.gz")
         )
-        upload_meta.append((name, sample_id, reads_clean_renamed))
+        upload_meta.append((name, sample_id, reads_clean_renamed, dirty_checksum))
         mapping_csv_records.append(
             {
                 "batch_name": sample.batch_name,
@@ -311,16 +313,14 @@ def upload_single(
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
 
     # Upload reads
-    for sample in upload_meta:
-        name = sample[0]
-        sample_id = sample[1]
-        reads_clean_renamed = sample[2]
+    for name, sample_id, reads_clean_renamed, dirty_checksum in upload_meta:
         util.upload_fastq(
             sample_id=sample_id,
             sample_name=name,
             reads=reads_clean_renamed,
             host=host,
             protocol=get_protocol(),
+            dirty_checksum=dirty_checksum,
         )
         run_sample(sample_id=sample_id, host=host)
         if not save:
@@ -373,6 +373,10 @@ def upload_paired(
         name = sample.sample_name
         reads_1_clean = Path(names_logs[name]["fastq1_out_path"])
         reads_2_clean = Path(names_logs[name]["fastq2_out_path"])
+        reads_1_dirty = Path(names_logs[name]["fastq1_in_path"])
+        reads_2_dirty = Path(names_logs[name]["fastq2_in_path"])
+        dirty_checksum_1 = util.hash_file(reads_1_dirty)
+        dirty_checksum_2 = util.hash_file(reads_2_dirty)
         checksum = util.hash_file(reads_1_clean)
         sample_id = create_sample(
             host=host,
@@ -398,7 +402,7 @@ def upload_paired(
             reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
         )
         upload_meta.append(
-            (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed)
+            (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed, dirty_checksum_1, dirty_checksum_2)
         )
         mapping_csv_records.append(
             {
@@ -412,11 +416,7 @@ def upload_paired(
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
 
     # Upload reads
-    for sample in upload_meta:
-        name = sample[0]
-        sample_id = sample[1]
-        reads_1_clean_renamed = sample[2]
-        reads_2_clean_renamed = sample[3]
+    for name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed, dirty_checksum_1, dirty_checksum_2 in upload_meta:
         util.upload_paired_fastqs(
             sample_id=sample_id,
             sample_name=name,
@@ -424,6 +424,8 @@ def upload_paired(
             reads_2=reads_2_clean_renamed,
             host=host,
             protocol=get_protocol(),
+            dirty_checksum_1=dirty_checksum_1,
+            dirty_checksum_2=dirty_checksum_2,
         )
         run_sample(sample_id=sample_id, host=host)
         if not save:
