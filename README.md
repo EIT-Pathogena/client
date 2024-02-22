@@ -44,9 +44,9 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create --yes -n gpas -c conda-forge -c bioconda hostile
+  conda create -y -n gpas -c conda-forge -c bioconda hostile
   conda activate gpas
-  pip install gpas
+  pip install --upgrade gpas
   ```
 
 - Test:
@@ -191,7 +191,7 @@ gpas --version
    ```
 
 2. The stateful way (no need to use `--host` with each command):
-   ```export GPAS_HOST="dev.portal.gpas.world"
+   ```bash
    export GPAS_HOST="dev.portal.gpas.world"
    ```
 
