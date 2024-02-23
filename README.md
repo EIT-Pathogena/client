@@ -108,11 +108,14 @@ The download subcommand retrieves the output (and/or input) files associated wit
 # Download the main reports for all samples in a5w2e8.mapping.csv
 gpas download a5w2e8.mapping.csv
 
-# Download the main and speciation reports for samples in a5w2e8.mapping.csv
+# Download the main and speciation reports for all samples in a5w2e8.mapping.csv
 gpas download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
 
 # Download the main report for one sample
 gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+
+# Download the final assembly for one M. tuberculosis sample
+gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
 
 # Download the main report for two samples
 gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
@@ -120,7 +123,7 @@ gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e0
 # Save downloaded files to a specific directory
 gpas download a5w2e8.mapping.csv --out-dir results
 
-# Download input files
+# Download only input fastqs
 gpas download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
