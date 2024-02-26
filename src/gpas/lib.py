@@ -10,6 +10,7 @@ import httpx
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
 from hostile.util import BUCKET_URL, XDG_DATA_DIR
 
+from packaging.version import Version
 from pydantic import BaseModel
 from tqdm import tqdm
 
@@ -402,7 +403,14 @@ def upload_paired(
             reads_2_clean.with_name(f"{sample_id}_2.fastq.gz")
         )
         upload_meta.append(
-            (name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed, dirty_checksum_1, dirty_checksum_2)
+            (
+                name,
+                sample_id,
+                reads_1_clean_renamed,
+                reads_2_clean_renamed,
+                dirty_checksum_1,
+                dirty_checksum_2,
+            )
         )
         mapping_csv_records.append(
             {
@@ -416,7 +424,14 @@ def upload_paired(
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
 
     # Upload reads
-    for name, sample_id, reads_1_clean_renamed, reads_2_clean_renamed, dirty_checksum_1, dirty_checksum_2 in upload_meta:
+    for (
+        name,
+        sample_id,
+        reads_1_clean_renamed,
+        reads_2_clean_renamed,
+        dirty_checksum_1,
+        dirty_checksum_2,
+    ) in upload_meta:
         util.upload_paired_fastqs(
             sample_id=sample_id,
             sample_name=name,
@@ -558,16 +573,21 @@ def parse_csv(path: Path):
 
 
 def check_client_version(host: str) -> None:
-    """Check that client version exceeds the server version"""
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    """Raise exception if the client is outdated"""
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=2),
+        timeout=10,
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/cli-version",
         )
     server_version = response.json()["version"]
-    if server_version > gpas.__version__:
-        logging.warning(
-            f"A newer version of GPAS client ({server_version}) is available, please update"
-        )
+    logging.debug(
+        f"Client version {gpas.__version__}, server version: {server_version})"
+    )
+    if Version(server_version) > Version(gpas.__version__):
+        raise util.UnsupportedClientException(gpas.__version__, server_version)
 
 
 def download(

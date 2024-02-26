@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import os
+import subprocess
 import uuid
 
 from pathlib import Path
@@ -12,6 +13,23 @@ import httpx
 
 
 PLATFORMS = Literal["illumina", "ont"]
+
+
+class UnsupportedClientException(Exception):
+    """Exception raised for unsupported client versions"""
+
+    def __init__(self, this_version: str, current_version: str):
+        """Raise this exception with a sensible message
+        Args:
+            this_version (str): The version of installed version
+            current_version (str): The version returned by the API
+        """
+        self.message = (
+            f"\n\nThe installed client version ({this_version}) is no longer supported, please update\n\n"
+            "To update, run:\n"
+            "conda create -y -n gpas -c conda-forge -c bioconda hostile && conda activate gpas && pip install --upgrade gpas"
+        )
+        super().__init__(self.message)
 
 
 def configure_debug_logging(debug: bool):
@@ -39,6 +57,12 @@ def raise_for_status(response):
 
 
 httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
+
+
+def run(cmd: str, cwd: Path = Path()):
+    return subprocess.run(
+        cmd, cwd=cwd, shell=True, check=True, text=True, capture_output=True
+    )
 
 
 def get_access_token(host: str) -> str:
@@ -81,7 +105,12 @@ def hash_file(file_path: Path) -> str:
 
 
 def upload_file(
-    sample_id: int, file_path: Path, host: str, protocol: str, checksum: str, dirty_checksum: str
+    sample_id: int,
+    file_path: Path,
+    host: str,
+    protocol: str,
+    checksum: str,
+    dirty_checksum: str,
 ) -> None:
     with httpx.Client(
         event_hooks=httpx_hooks,
@@ -110,7 +139,14 @@ def upload_fastq(
     logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
     logging.info(f"Uploading {sample_name}")
     checksum = hash_file(reads)
-    upload_file(sample_id, reads, host=host, protocol=protocol, checksum=checksum, dirty_checksum=dirty_checksum)
+    upload_file(
+        sample_id,
+        reads,
+        host=host,
+        protocol=protocol,
+        checksum=checksum,
+        dirty_checksum=dirty_checksum,
+    )
     logging.info(f"  Uploaded {reads.name}")
 
 
@@ -132,9 +168,23 @@ def upload_paired_fastqs(
     logging.info(f"Uploading {sample_name}")
     checksum1 = hash_file(reads_1)
     checksum2 = hash_file(reads_2)
-    upload_file(sample_id, reads_1, host=host, protocol=protocol, checksum=checksum1, dirty_checksum=dirty_checksum_1)
+    upload_file(
+        sample_id,
+        reads_1,
+        host=host,
+        protocol=protocol,
+        checksum=checksum1,
+        dirty_checksum=dirty_checksum_1,
+    )
     logging.info(f"  Uploaded {reads_1.name}")
-    upload_file(sample_id, reads_2, host=host, protocol=protocol, checksum=checksum2, dirty_checksum=dirty_checksum_2)
+    upload_file(
+        sample_id,
+        reads_2,
+        host=host,
+        protocol=protocol,
+        checksum=checksum2,
+        dirty_checksum=dirty_checksum_2,
+    )
     logging.info(f"  Uploaded {reads_2.name}")
 
     # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:

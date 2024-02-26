@@ -94,7 +94,7 @@ gpas upload tests/data/illumina.csv
 
 During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote names. Keep this file safe, as it is useful for downloading and relinking results later.
 
-A 4GB human genome index is downloaded the first time you run `gpas upload`. If for any reason this is interrupted, simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity check.
+A 4GB human genome index is downloaded the first time you run `gpas upload`. If for any reason this is interrupted, simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity check. You may optionally download the index ahead of time using the command `gpas download-index`.
 
 To retain the decontaminated FASTQ files uploaded to GPAS, include the optional `--save` flag. To perform decontamination without uploading anything, use the optional `--dry-run` flag.
 

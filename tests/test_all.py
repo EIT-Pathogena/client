@@ -1,19 +1,11 @@
 import os
-import subprocess
-
-from pathlib import Path
 
 import pytest
 
 from pydantic import ValidationError
 
 from gpas import lib, models
-
-
-def run(cmd: str, cwd: Path = Path()):
-    return subprocess.run(
-        cmd, cwd=cwd, shell=True, check=True, text=True, capture_output=True
-    )
+from gpas.util import run
 
 
 def test_cli_version():

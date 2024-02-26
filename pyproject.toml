@@ -11,10 +11,11 @@ dynamic = ["version", "description"]
 requires-python = ">=3.10"
 dependencies = [
   "defopt>=6.4.0",
-  "httpx[http2]>=0.24.1",
-  "platformdirs>=3.5.1",
-  "tqdm>=4.65.0",
-  "pydantic>=2.1.1",
+  "httpx[http2]>=0.27.0",
+  "packaging>=23.2",
+  "platformdirs>=4.2.0",
+  "tqdm>=4.66.2",
+  "pydantic>=2.6.2",
 ]
 
 [project.scripts]
@@ -22,7 +23,7 @@ gpas = "gpas.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.3.1",
-    "pre-commit>=3.3.2",
+    "pytest>=8.0.2  ",
+    "pre-commit>=3.6.2",
     "flit>=3.9.0"
 ]
