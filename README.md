@@ -1,6 +1,6 @@
 # GPAS client
 
-The command line interface for the GPAS mycobacterial platform. The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to upload, sample identifiers are anonymised and human host sequences are removed. For the best experience, a multicore machine with 16GB of RAM running Linux or MacOS is recommended.
+The command line interface for the GPAS mycobacterial platform. The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM running Linux or MacOS is recommended.
 
 
 
@@ -150,7 +150,7 @@ gpas query raw a5w2e8.mapping.csv
 
 #### Downloading decontamination indexes (`gpas download-index`)
 
-The human genome index used for host decontamination is downloaded automatically when running `gpas upload` for the first time. You may however trigger this manually by running `gpas download-index`.
+The human genome index used for host decontamination is downloaded automatically when running `gpas upload` for the first time. You may trigger this manually ahead of upload with `gpas download-index`.
 
 
 

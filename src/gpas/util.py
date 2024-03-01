@@ -25,8 +25,8 @@ class UnsupportedClientException(Exception):
             current_version (str): The version returned by the API
         """
         self.message = (
-            f"\n\nThe installed client version ({this_version}) is no longer supported, please update\n\n"
-            "To update, run:\n"
+            f"\n\nThe installed client version ({this_version}) is no longer supported."
+            " To update the client, please run:\n\n"
             "conda create -y -n gpas -c conda-forge -c bioconda hostile && conda activate gpas && pip install --upgrade gpas"
         )
         super().__init__(self.message)
