@@ -14,6 +14,11 @@ import httpx
 
 PLATFORMS = Literal["illumina", "ont"]
 
+retry_strategy = httpx.Retry(
+    total=3,  # Total number of retries (including the initial request)
+    status_forcelist=[500, 502, 503, 504],  # HTTP status codes to retry
+    backoff_factor=0.5,  # Factor by which the delay increases after each retry
+)
 
 class UnsupportedClientException(Exception):
     """Exception raised for unsupported client versions"""
