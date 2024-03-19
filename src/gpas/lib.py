@@ -96,7 +96,6 @@ def create_batch(host: str) -> tuple[str, str]:
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
-            retry=util.retry_strategy
         )
     return response.json()["id"], response.json()["name"]
 
@@ -136,12 +135,14 @@ def create_sample(
     }
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples",
             headers=headers,
             json=data,
-            retry=util.retry_strategy
         )
     return response.json()["id"]
 
@@ -158,20 +159,17 @@ def run_sample(sample_id: str, host: str) -> str:
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
             json={"status": "Ready"},
-            retry=util.retry_strategy
         )
         post_run_response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs",
             headers=headers,
             json={"sample_id": sample_id},
-            retry=util.retry_strategy
         )
         run_id = post_run_response.json()["id"]
         client.patch(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
             headers=headers,
             json={"status": "Ready"},
-            retry=util.retry_strategy
         )
         logging.debug(f"{run_id=}")
         return run_id
@@ -205,7 +203,6 @@ def validate_batch(
             f"{get_protocol()}://{host}/api/v1/batches/validate",
             headers=headers,
             json=data,
-            retry=util.retry_strategy
         )
     logging.debug(f"{response.json()=}")
 
@@ -461,11 +458,13 @@ def upload_paired(
 def fetch_sample(sample_id: str, host: str) -> dict:
     """Fetch sample data from server"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
-            retry=util.retry_strategy
         )
     return response.json()
 
@@ -529,11 +528,13 @@ def status(
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample input files"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
-            retry=util.retry_strategy
         )
     data = response.json().get("files", [])
     output_files = {
@@ -553,11 +554,13 @@ def fetch_output_files(
 ) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample, optionally including only latest run"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
-            retry=util.retry_strategy
         )
     data = response.json().get("files", [])
     output_files = {
