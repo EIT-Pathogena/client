@@ -204,6 +204,21 @@ def validate_batch(
     logging.debug(f"{response.json()=}")
 
 
+def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
+    """Validate a given upload CSV and exit.
+
+    Args:
+        upload_csv (Path): Path to the upload CSV
+        host (str, optional): Name of the host to validate against. Defaults to DEFAULT_HOST.
+    """
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    logging.debug("validate()")
+    upload_csv = Path(upload_csv)
+    batch = models.parse_upload_csv(upload_csv)
+    validate_batch(batch=batch, host=host)
+    logging.info(f"Successfully validated {upload_csv}!")
+
+
 def upload(
     upload_csv: Path,
     save: bool = False,
@@ -686,14 +701,17 @@ def download_single(
             total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
         )
         chunk_size = 262_144
-        with Path(out_dir).joinpath(f"{filename}").open("wb") as fh, tqdm(
-            total=file_size,
-            unit="B",
-            unit_scale=True,
-            desc=filename,
-            leave=False,  # Works only if using a context manager
-            position=0,  # Avoids leaving line break with leave=False
-        ) as progress:
+        with (
+            Path(out_dir).joinpath(f"{filename}").open("wb") as fh,
+            tqdm(
+                total=file_size,
+                unit="B",
+                unit_scale=True,
+                desc=filename,
+                leave=False,  # Works only if using a context manager
+                position=0,  # Avoids leaving line break with leave=False
+            ) as progress,
+        ):
             for data in r.iter_bytes(chunk_size):
                 fh.write(data)
                 progress.update(len(data))
