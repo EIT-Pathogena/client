@@ -150,6 +150,7 @@ def download_index() -> None:
     """
     lib.download_index()
 
+
 def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) -> None:
     """Validate a given upload CSV.
 

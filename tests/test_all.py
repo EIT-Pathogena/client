@@ -63,6 +63,7 @@ def test_validate_illumina_model():
 def test_validate_ont_model():
     models.parse_upload_csv("tests/data/ont.csv")
 
+
 def test_validate_fail_invalid_control():
     with pytest.raises(ValidationError):
         lib.validate("tests/data/invalid/invalid-control.csv")
