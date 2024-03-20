@@ -27,6 +27,19 @@ DEFAULT_PROTOCOL = "https"
 HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
+class InvalidPathError(Exception):
+    """Custom exception for giving nice user errors around missing paths."""
+
+    def __init__(self, message: str):
+        """Constructor, used to pass a custom message to user.
+
+        Args:
+            message (str): Message about this path
+        """
+        self.message = message
+        super().__init__(self.message)
+
+
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
     if cli_host:
@@ -692,20 +705,24 @@ def download_single(
     out_dir: Path,
 ):
     logging.info(f"Downloading {filename}")
+    check_outdir(out_dir)
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
         progress = tqdm(
             total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
         )
         chunk_size = 262_144
-        with Path(out_dir).joinpath(f"{filename}").open("wb") as fh, tqdm(
-            total=file_size,
-            unit="B",
-            unit_scale=True,
-            desc=filename,
-            leave=False,  # Works only if using a context manager
-            position=0,  # Avoids leaving line break with leave=False
-        ) as progress:
+        with (
+            Path(out_dir).joinpath(f"{filename}").open("wb") as fh,
+            tqdm(
+                total=file_size,
+                unit="B",
+                unit_scale=True,
+                desc=filename,
+                leave=False,  # Works only if using a context manager
+                position=0,  # Avoids leaving line break with leave=False
+            ) as progress,
+        ):
             for data in r.iter_bytes(chunk_size):
                 fh.write(data)
                 progress.update(len(data))
@@ -717,3 +734,19 @@ def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
     logging.info(f"Manifest URL: {BUCKET_URL}/manifest.json")
     ALIGNER.minimap2.value.check_index(name)
     ALIGNER.bowtie2.value.check_index(name)
+
+
+def check_outdir(path: Path) -> None:
+    """Given an outdir path, check that it exists (and is a directory).
+
+    Args:
+        path (Path): Outdir path
+    """
+    if path.exists():
+        if path.is_dir():
+            return
+        logging.error(f"Given out dir ({str(path)}) exists, but is a file!")
+        raise InvalidPathError(f"Given out dir ({str(path)}) exists, but is a file!")
+
+    logging.error(f"Given out dir ({str(path)}) does not exist!")
+    raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
