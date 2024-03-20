@@ -203,6 +203,19 @@ def validate_batch(
         )
     logging.debug(f"{response.json()=}")
 
+def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
+    """Validate a given upload CSV and exit.
+
+    Args:
+        upload_csv (Path): Path to the upload CSV
+        host (str, optional): Name of the host to validate against. Defaults to DEFAULT_HOST.
+    """
+    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    logging.debug("validate()")
+    upload_csv = Path(upload_csv)
+    batch = models.parse_upload_csv(upload_csv)
+    validate_batch(batch=batch, host=host)
+    logging.info(f"Successfully validated {upload_csv}!")
 
 def upload(
     upload_csv: Path,

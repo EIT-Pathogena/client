@@ -62,3 +62,22 @@ def test_validate_illumina_model():
 
 def test_validate_ont_model():
     models.parse_upload_csv("tests/data/ont.csv")
+
+def test_validate_fail_invalid_control():
+    with pytest.raises(ValidationError):
+        lib.validate("tests/data/invalid/invalid-control.csv")
+
+
+def test_validate_fail_invalid_specimen_organism():
+    with pytest.raises(ValidationError):
+        lib.validate("tests/data/invalid/invalid-specimen-organism.csv")
+
+
+def test_validate_fail_mixed_instrument_platform():
+    with pytest.raises(ValidationError):
+        lib.validate("tests/data/invalid/mixed-instrument-platform.csv")
+
+
+def test_validate_fail_invalid_instrument_platform():
+    with pytest.raises(ValidationError):
+        lib.validate("tests/data/invalid/invalid-instrument-platform.csv")

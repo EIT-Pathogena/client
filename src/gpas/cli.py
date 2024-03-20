@@ -150,6 +150,17 @@ def download_index() -> None:
     """
     lib.download_index()
 
+def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) -> None:
+    """Validate a given upload CSV.
+
+    :arg upload_csv: Path of upload csv
+    :arg host: API hostname
+    :arg debug: Enable verbose debug messages
+    """
+    util.configure_debug_logging(debug)
+    host = lib.get_host(host)
+    lib.validate(upload_csv, host=host)
+
 
 def main() -> None:
     defopt.run(
@@ -159,6 +170,7 @@ def main() -> None:
             "download": download,
             "download-index": download_index,
             "query": {"raw": query_raw, "status": query_status},
+            "validate": validate,
         },
         no_negated_flags=True,
         strict_kwonly=True,
