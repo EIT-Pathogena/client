@@ -103,7 +103,7 @@ def create_batch(host: str) -> tuple[str, str]:
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=10,
+        timeout=60,
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/batches",
@@ -151,6 +151,7 @@ def create_sample(
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
+        timeout=60
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples",
@@ -166,7 +167,7 @@ def run_sample(sample_id: str, host: str) -> str:
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=10,
+        timeout=30,
     ) as client:
         client.patch(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
