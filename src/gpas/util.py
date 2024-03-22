@@ -35,7 +35,8 @@ class UnsupportedClientException(Exception):
 class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401"""
     def __init__(self):
-        self.message = "Authorization failed! Please re-authenticate with `gpas auth` and try again."
+        self.message = "Authorization failed! Please re-authenticate with `gpas auth` and try again.\n"
+        "If the problem persists please contact support (support@gpas.global)."
         super().__init__(self.message)
 
 class PermissionError(Exception):
