@@ -27,6 +27,19 @@ DEFAULT_PROTOCOL = "https"
 HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
+class InvalidPathError(Exception):
+    """Custom exception for giving nice user errors around missing paths."""
+
+    def __init__(self, message: str):
+        """Constructor, used to pass a custom message to user.
+
+        Args:
+            message (str): Message about this path
+        """
+        self.message = message
+        super().__init__(self.message)
+
+
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
     if cli_host:
@@ -90,7 +103,7 @@ def create_batch(host: str) -> tuple[str, str]:
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=10,
+        timeout=60,
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/batches",
@@ -135,7 +148,11 @@ def create_sample(
     }
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=60
+    ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples",
             headers=headers,
@@ -150,7 +167,7 @@ def run_sample(sample_id: str, host: str) -> str:
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=10,
+        timeout=30,
     ) as client:
         client.patch(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
@@ -470,7 +487,10 @@ def upload_paired(
 def fetch_sample(sample_id: str, host: str) -> dict:
     """Fetch sample data from server"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
@@ -537,7 +557,10 @@ def status(
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample input files"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
@@ -560,7 +583,10 @@ def fetch_output_files(
 ) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample, optionally including only latest run"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
@@ -695,6 +721,7 @@ def download_single(
     out_dir: Path,
 ):
     logging.info(f"Downloading {filename}")
+    check_outdir(out_dir)
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
         progress = tqdm(
@@ -723,3 +750,19 @@ def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
     logging.info(f"Manifest URL: {BUCKET_URL}/manifest.json")
     ALIGNER.minimap2.value.check_index(name)
     ALIGNER.bowtie2.value.check_index(name)
+
+
+def check_outdir(path: Path) -> None:
+    """Given an outdir path, check that it exists (and is a directory).
+
+    Args:
+        path (Path): Outdir path
+    """
+    if path.exists():
+        if path.is_dir():
+            return
+        logging.error(f"Given out dir ({str(path)}) exists, but is a file!")
+        raise InvalidPathError(f"Given out dir ({str(path)}) exists, but is a file!")
+
+    logging.error(f"Given out dir ({str(path)}) does not exist!")
+    raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")

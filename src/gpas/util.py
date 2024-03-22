@@ -31,6 +31,42 @@ class UnsupportedClientException(Exception):
         )
         super().__init__(self.message)
 
+# Python errors for neater client errors
+class AuthorizationError(Exception):
+    """Custom exception for authorization issues. 401"""
+    def __init__(self):
+        self.message = "Authorization failed! Please re-authenticate with `gpas auth` and try again.\n"
+        "If the problem persists please contact support (support@gpas.global)."
+        super().__init__(self.message)
+
+class PermissionError(Exception):
+    """Custom exception for permission issues. 403"""
+    def __init__(self):
+        self.message = (
+            "You don't have access to this resource! Check logs for more details.\n"
+            "Please contact support if you think you should be able to access this resource (support@gpas.global)."
+        )
+        super().__init__(self.message)
+
+class MissingError(Exception):
+    """Custom exception for missing issues. 404"""
+    def __init__(self):
+        self.message = (
+            "Resource not found! It's possible you asked for something which doesn't exist. "
+            "Please double check that the resource exists.\n"
+            "Note that not all samples have all available output files!"
+        )
+        super().__init__(self.message)
+
+class ServerSideError(Exception):
+    """Custom exception for all other server side errors. 5xx"""
+    def __init__(self):
+        self.message = (
+            "We had some trouble with the server, please double check your command and try again in a moment.\n"
+            "If the problem persists, please contact support (support@gpas.global)."
+        )
+        super().__init__(self.message)
+
 
 def configure_debug_logging(debug: bool):
     if debug:
@@ -52,7 +88,19 @@ def log_response(response):
         )
 
 
-def raise_for_status(response):
+def raise_for_status(response: httpx.Response):
+    if response.is_error:
+        response.read()
+        if response.status_code == 401:
+            raise AuthorizationError()
+        elif response.status_code == 403:
+            raise PermissionError()
+        elif response.status_code == 404:
+            raise MissingError()
+        elif response.status_code // 100 == 5:
+            raise ServerSideError()
+            
+    # Default to httpx errors in other cases
     response.raise_for_status()
 
 

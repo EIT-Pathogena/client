@@ -11,10 +11,9 @@ ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 
 def validate_file_extension(
-    filename: str, allowed_extensions: list = ALLOWED_EXTENSIONS
+    filename: str, allowed_extensions: tuple[str] = ALLOWED_EXTENSIONS
 ):
-    filename = str(filename)
-    return True if filename.endswith(allowed_extensions) else False
+    return filename.endswith(allowed_extensions)
 
 
 class UploadSample(BaseModel):
