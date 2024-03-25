@@ -6,6 +6,8 @@ import os
 import subprocess
 import uuid
 
+from tenacity import retry, wait_random_exponential, stop_after_attempt
+
 from pathlib import Path
 from typing import Literal
 
@@ -151,7 +153,7 @@ def hash_file(file_path: Path) -> str:
             hasher.update(chunk)
     return hasher.hexdigest()
 
-
+@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_file(
     sample_id: int,
     file_path: Path,
