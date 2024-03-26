@@ -7,6 +7,8 @@ from pathlib import Path
 
 import httpx
 
+from tenacity import retry, wait_random_exponential, stop_after_attempt
+
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
 from hostile.util import BUCKET_URL, XDG_DATA_DIR
 
@@ -112,7 +114,7 @@ def create_batch(host: str) -> tuple[str, str]:
         )
     return response.json()["id"], response.json()["name"]
 
-
+@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def create_sample(
     host: str,
     batch_id: str,
@@ -160,7 +162,7 @@ def create_sample(
         )
     return response.json()["id"]
 
-
+@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def run_sample(sample_id: str, host: str) -> str:
     """Patch sample status, create run, and patch run status to trigger processing"""
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
@@ -712,7 +714,7 @@ def download(
                         out_dir=Path(out_dir),
                     )
 
-
+@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def download_single(
     client: httpx.Client,
     url: str,
