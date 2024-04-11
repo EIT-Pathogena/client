@@ -1,0 +1,3 @@
+batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform
+batch_name,read_4,tests/data/empty_files/read_4_1.fastq.gz,tests/data/empty_files/read_4_2.fastq.gz,,2024-01-01,GBR,,,mycobacteria,homo sapiens,illumina
+batch_name,read_5,tests/data/empty_files/read_5_1.fastq.gz,tests/data/empty_files/read_5_2.fastq.gz,,2024-01-01,GBR,,,mycobacteria,homo sapiens,illumina

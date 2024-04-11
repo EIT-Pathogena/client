@@ -1,11 +1,13 @@
 import os
 
 import pytest
+import filecmp
 
 from pydantic import ValidationError
 
 from gpas import lib, models
 from gpas.util import run
+from gpas.create_upload_csv import build_upload_csv
 
 
 def test_cli_version():
@@ -82,3 +84,55 @@ def test_validate_fail_mixed_instrument_platform():
 def test_validate_fail_invalid_instrument_platform():
     with pytest.raises(ValidationError):
         lib.validate("tests/data/invalid/invalid-instrument-platform.csv")
+
+
+def test_build_csv_illumina(tmp_path):
+    build_upload_csv(
+        "tests/data/empty_files",
+        f"{tmp_path}/output.csv",
+        "illumina",
+        "batch_name",
+        "2024-01-01",
+        "GBR",
+    )
+
+    assert filecmp.cmp(
+        "tests/data/auto_upload_csvs/illumina.csv", f"{tmp_path}/output.csv"
+    )
+
+
+def test_build_csv_ont(tmp_path):
+    build_upload_csv(
+        "tests/data/empty_files",
+        f"{tmp_path}/output.csv",
+        "ont",
+        "batch_name",
+        "2024-01-01",
+        "GBR",
+        district="dis",
+        subdivision="sub",
+        pipeline="pipe",
+        host_organism="unicorn",
+        ont_read_suffix="_2.fastq.gz",
+    )
+
+    assert filecmp.cmp("tests/data/auto_upload_csvs/ont.csv", f"{tmp_path}/output.csv")
+
+
+def test_build_csv_batches(tmp_path):
+    build_upload_csv(
+        "tests/data/empty_files",
+        f"{tmp_path}/output.csv",
+        "illumina",
+        "batch_name",
+        "2024-01-01",
+        "GBR",
+        max_batch_size=3,
+    )
+
+    assert filecmp.cmp(
+        "tests/data/auto_upload_csvs/batch1.csv", f"{tmp_path}/output_1.csv"
+    )
+    assert filecmp.cmp(
+        "tests/data/auto_upload_csvs/batch2.csv", f"{tmp_path}/output_2.csv"
+    )
