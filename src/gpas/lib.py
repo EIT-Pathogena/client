@@ -10,7 +10,7 @@ import httpx
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
-from hostile.util import BUCKET_URL, XDG_DATA_DIR
+from hostile.util import BUCKET_URL, CACHE_DIR
 
 from packaging.version import Version
 from pydantic import BaseModel
@@ -114,6 +114,7 @@ def create_batch(host: str) -> tuple[str, str]:
         )
     return response.json()["id"], response.json()["name"]
 
+
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def create_sample(
     host: str,
@@ -153,7 +154,7 @@ def create_sample(
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=60
+        timeout=60,
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples",
@@ -161,6 +162,7 @@ def create_sample(
             json=data,
         )
     return response.json()["id"]
+
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def run_sample(sample_id: str, host: str) -> str:
@@ -714,6 +716,7 @@ def download(
                         out_dir=Path(out_dir),
                     )
 
+
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def download_single(
     client: httpx.Client,
@@ -748,7 +751,7 @@ def download_single(
 
 
 def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
-    logging.info(f"Cache directory: {XDG_DATA_DIR}")
+    logging.info(f"Cache directory: {CACHE_DIR}")
     logging.info(f"Manifest URL: {BUCKET_URL}/manifest.json")
     ALIGNER.minimap2.value.check_index(name)
     ALIGNER.bowtie2.value.check_index(name)
