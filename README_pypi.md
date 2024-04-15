@@ -132,7 +132,7 @@ The complete list of `--filenames` available for download varies by sample, and 
 
 #### Generating Upload CSV (`gpas build-csv`)
 
-If you have a folder containing all the reads you would like to upload, then `gpas build-csv` can be used to help generate the upload csv.
+If you have a folder containing all the reads you would like to upload, then `gpas build-csv` can be used to help generate the upload csv. See the GPAS User Guide for detailed descriptions of all the fields.
 You'll need to fill in some of the required parameters.
 
 ```bash
