@@ -205,7 +205,7 @@ defaults = {
     "country": None,
     "district": "",
     "subdivision": "",
-    "seq_tech": "illumina",
+    "instrument_platform": "illumina",
     "ont_read_suffix": ".fastq.gz",
     "illumina_read1_suffix": "_1.fastq.gz",
     "illumina_read2_suffix": "_2.fastq.gz",
@@ -242,9 +242,9 @@ defaults = {
     show_default=True,
 )
 @click.option(
-    "--seq-tech",
+    "--instrument-platform",
     type=click.Choice(["illumina", "ont"]),
-    default=defaults["seq_tech"],
+    default=defaults["instrument_platform"],
     help="Sequencing technology",
 )
 @click.option(
@@ -286,7 +286,7 @@ defaults = {
 def build_csv(
     samples_folder: Path,
     output_csv: Path,
-    seq_tech: str,
+    instrument_platform: str,
     batch_name: str,
     collection_date: datetime,
     country: str,
@@ -311,12 +311,12 @@ def build_csv(
 
     upload_data = UploadData(
         batch_name=batch_name,
-        seq_tech=seq_tech,
-        collection_date=collection_date.strftime("%Y-%m-%d"),
+        instrument_platform=instrument_platform,  # type: ignore
+        collection_date=collection_date,
         country=country,
         subdivision=subdivision,
         district=district,
-        pipeline=pipeline,
+        specimen_organism=pipeline,  # type: ignore
         host_organism=host_organism,
         ont_read_suffix=ont_read_suffix,
         illumina_read1_suffix=illumina_read1_suffix,

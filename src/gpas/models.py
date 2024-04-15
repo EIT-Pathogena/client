@@ -16,20 +16,12 @@ def validate_file_extension(
     return filename.endswith(allowed_extensions)
 
 
-class UploadSample(BaseModel):
+class UploadBase(BaseModel):
     batch_name: str = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
-    sample_name: str = Field(
-        min_length=1, description="Sample name (anonymised prior to upload)"
-    )
-    upload_csv: Path = Field(description="Absolute path of upload CSV file")
-    reads_1: Path = Field(description="Relative path of first FASTQ file")
-    reads_2: Path = Field(
-        description="Relative path of second FASTQ file", default=None
-    )
-    control: Literal["positive", "negative", ""] = Field(
-        description="Control status of sample"
+    instrument_platform: util.PLATFORMS = Field(
+        description="Sequencing instrument platform"
     )
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
     country: str = Field(
@@ -40,13 +32,24 @@ class UploadSample(BaseModel):
     )
     district: str = Field(default=None, description="Granular location")
     specimen_organism: Literal["mycobacteria", ""] = Field(
-        description="Target specimen organism scientific name"
+        default="mycobacteria", description="Target specimen organism scientific name"
     )
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    instrument_platform: util.PLATFORMS = Field(
-        description="Sequencing instrument platform"
+
+
+class UploadSample(UploadBase):
+    sample_name: str = Field(
+        min_length=1, description="Sample name (anonymised prior to upload)"
+    )
+    upload_csv: Path = Field(description="Absolute path of upload CSV file")
+    reads_1: Path = Field(description="Relative path of first FASTQ file")
+    reads_2: Path = Field(
+        description="Relative path of second FASTQ file", default=None
+    )
+    control: Literal["positive", "negative", ""] = Field(
+        description="Control status of sample"
     )
 
     @model_validator(mode="after")

@@ -5,10 +5,11 @@ import pytest
 import logging
 
 from pydantic import ValidationError
+from datetime import datetime
 
 from gpas import lib, models
 from gpas.util import run
-from gpas.create_upload_csv import build_upload_csv
+from gpas.create_upload_csv import build_upload_csv, UploadData
 
 
 def test_cli_version():
@@ -108,10 +109,10 @@ def test_build_csv_illumina(tmp_path, caplog, upload_data):
 
 def test_build_csv_ont(tmp_path, caplog, upload_data):
     caplog.set_level(logging.INFO)
-    upload_data.seq_tech = "ont"
+    upload_data.instrument_platform = "ont"
     upload_data.district = "dis"
     upload_data.subdivision = "sub"
-    upload_data.pipeline = "pipe"
+    upload_data.specimen_organism = "pipe"
     upload_data.host_organism = "unicorn"
     upload_data.ont_read_suffix = "_2.fastq.gz"
     build_upload_csv(
@@ -164,11 +165,38 @@ def test_build_csv_unmatched_files(tmp_path, upload_data):
 
 
 def test_build_csv_invalid_tech(tmp_path, upload_data):
-    upload_data.seq_tech = "invalid"
+    # Note that this should be caught by the model validation
+    upload_data.instrument_platform = "invalid"
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/unmatched_files",
             f"{tmp_path}/output.csv",
             upload_data,
         )
-    assert "Invalid seq_tech" in str(e_info.value)
+    assert "Invalid instrument platform" in str(e_info.value)
+
+
+def test_upload_data_model():
+    # Test that making model with invalid country makes error
+    with pytest.raises(ValidationError):
+        UploadData(
+            batch_name="batch_name",
+            instrument_platform="invalid",  # type: ignore
+            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+            country="GBR",
+        )
+    with pytest.raises(ValidationError):
+        UploadData(
+            batch_name="batch_name",
+            instrument_platform="ont",
+            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+            country="G",
+        )
+    with pytest.raises(ValidationError):
+        UploadData(
+            batch_name="batch_name",
+            instrument_platform="ont",
+            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+            country="GBR",
+            specimen_organism="invalid",  # type: ignore
+        )

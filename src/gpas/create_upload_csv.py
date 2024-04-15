@@ -1,28 +1,24 @@
 from pathlib import Path
 import logging
 import csv
-from dataclasses import dataclass
+
+from pydantic import Field
+from gpas.models import UploadBase
 
 
-@dataclass
-class UploadData:
-    """Class to hold data for upload CSV creation."""
-
-    # CSV data
-    batch_name: str
-    seq_tech: str
-    collection_date: str
-    country: str
-    subdivision: str = ""
-    district: str = ""
-    pipeline: str = "mycobacteria"
-    host_organism: str = "homo sapiens"
-
-    # Creation data
-    ont_read_suffix: str = ".fastq.gz"
-    illumina_read1_suffix: str = "_1.fastq.gz"
-    illumina_read2_suffix: str = "_2.fastq.gz"
-    max_batch_size: int = 50
+class UploadData(UploadBase):
+    ont_read_suffix: str = Field(
+        default=".fastq.gz", description="Suffix for ONT reads"
+    )
+    illumina_read1_suffix: str = Field(
+        default="_1.fastq.gz", description="Suffix for Illumina reads (first of pair)"
+    )
+    illumina_read2_suffix: str = Field(
+        default="_2.fastq.gz", description="Suffix for Illumina reads (second of pair)"
+    )
+    max_batch_size: int = Field(
+        default=50, description="Maximum number of samples per batch"
+    )
 
 
 def build_upload_csv(
@@ -35,7 +31,7 @@ def build_upload_csv(
     output_csv = Path(output_csv)
     assert samples_folder.is_dir()  # This should be dealth with by Click
 
-    if upload_data.seq_tech == "illumina":
+    if upload_data.instrument_platform == "illumina":
         if upload_data.illumina_read1_suffix == upload_data.illumina_read2_suffix:
             raise ValueError("Must have different reads suffixes")
 
@@ -59,13 +55,13 @@ def build_upload_csv(
             )
 
         files = [(g, str(f1), str(f2)) for g, f1, f2 in zip(guids1, fastqs1, fastqs2)]
-    elif upload_data.seq_tech == "ont":
+    elif upload_data.instrument_platform == "ont":
         fastqs = list(samples_folder.glob(f"*{upload_data.ont_read_suffix}"))
         fastqs.sort()
         guids = [f.name.replace(upload_data.ont_read_suffix, "") for f in fastqs]
         files = [(g, str(f), str("")) for g, f in zip(guids, fastqs)]
     else:
-        raise ValueError("Invalid seq_tech")
+        raise ValueError("Invalid instrument platform")
 
     if upload_data.max_batch_size >= len(files):
         _write_csv(
@@ -137,8 +133,8 @@ def _write_csv(
                     upload_data.country,
                     upload_data.subdivision,
                     upload_data.district,
-                    upload_data.pipeline,
+                    upload_data.specimen_organism,
                     upload_data.host_organism,
-                    upload_data.seq_tech,
+                    upload_data.instrument_platform,
                 ]
             )
