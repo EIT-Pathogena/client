@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import csv
 
 
 def build_upload_csv(
@@ -52,7 +53,7 @@ def build_upload_csv(
         raise ValueError("Invalid seq_tech")
 
     if max_batch_size >= len(files):
-        _build_csv(
+        _write_csv(
             output_csv,
             batch_name,
             files,
@@ -71,7 +72,7 @@ def build_upload_csv(
             output_csvs.append(
                 output_csv.with_name(f"{output_csv.stem}_{i}{output_csv.suffix}")
             )
-            _build_csv(
+            _write_csv(
                 output_csv.with_name(f"{output_csv.stem}_{i}{output_csv.suffix}"),
                 batch_name,
                 chunk,
@@ -89,15 +90,14 @@ def build_upload_csv(
     logging.info("You can use `gpas validate` to check the CSV files before uploading.")
 
 
-def chunks(lst, n):
+def chunks(lst: list, n: int) -> list[list]:
     """
     Yield successive n-sized chunks from provided list.
     """
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+    return [lst[i : i + n] for i in range(0, len(lst), n)]
 
 
-def _build_csv(
+def _write_csv(
     filename: Path,
     batch_name: str,
     read_files: list[tuple[str, str, str]],
@@ -112,11 +112,39 @@ def _build_csv(
     """
     Build a CSV file for upload to the Genomic Pathogen Analysis System (GPAS).
     """
-    with open(filename, "w", encoding="utf-8") as out:
-        out.write(
-            "batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform\n"
+    # Note that csv module uses CRLF line endings
+    with open(filename, "w", newline="", encoding="utf-8") as outfile:
+        csv_writer = csv.writer(outfile)
+        csv_writer.writerow(
+            [
+                "batch_name",
+                "sample_name",
+                "reads_1",
+                "reads_2",
+                "control",
+                "collection_date",
+                "country",
+                "subdivision",
+                "district",
+                "specimen_organism",
+                "host_organism",
+                "instrument_platform",
+            ]
         )
         for sample, f1, f2 in read_files:
-            out.write(
-                f"{batch_name},{sample},{f1},{f2},,{collection_date},{country},{subdivision},{district},{pipeline},{host_organism},{tech}\n"
+            csv_writer.writerow(
+                [
+                    batch_name,
+                    sample,
+                    f1,
+                    f2,
+                    "",
+                    collection_date,
+                    country,
+                    subdivision,
+                    district,
+                    pipeline,
+                    host_organism,
+                    tech,
+                ]
             )

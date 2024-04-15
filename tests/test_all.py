@@ -1,7 +1,8 @@
 import os
 
-import pytest
 import filecmp
+import pytest
+import logging
 
 from pydantic import ValidationError
 
@@ -86,7 +87,8 @@ def test_validate_fail_invalid_instrument_platform():
         lib.validate("tests/data/invalid/invalid-instrument-platform.csv")
 
 
-def test_build_csv_illumina(tmp_path):
+def test_build_csv_illumina(tmp_path, caplog):
+    caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
@@ -100,8 +102,15 @@ def test_build_csv_illumina(tmp_path):
         "tests/data/auto_upload_csvs/illumina.csv", f"{tmp_path}/output.csv"
     )
 
+    assert "Created 1 CSV files: output.csv" in caplog.text
+    assert (
+        "You can use `gpas validate` to check the CSV files before uploading."
+        in caplog.text
+    )
 
-def test_build_csv_ont(tmp_path):
+
+def test_build_csv_ont(tmp_path, caplog):
+    caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
@@ -117,9 +126,11 @@ def test_build_csv_ont(tmp_path):
     )
 
     assert filecmp.cmp("tests/data/auto_upload_csvs/ont.csv", f"{tmp_path}/output.csv")
+    assert "Created 1 CSV files: output.csv" in caplog.text
 
 
-def test_build_csv_batches(tmp_path):
+def test_build_csv_batches(tmp_path, caplog):
+    caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
@@ -136,3 +147,44 @@ def test_build_csv_batches(tmp_path):
     assert filecmp.cmp(
         "tests/data/auto_upload_csvs/batch2.csv", f"{tmp_path}/output_2.csv"
     )
+    assert "Created 2 CSV files: output_1.csv, output_2.csv" in caplog.text
+
+
+def test_build_csv_suffix_match(tmp_path):
+    with pytest.raises(ValueError) as e_info:
+        build_upload_csv(
+            "tests/data/empty_files",
+            f"{tmp_path}/output.csv",
+            "illumina",
+            "batch_name",
+            "2024-01-01",
+            "GBR",
+            illumina_read2_suffix="_1.fastq.gz",
+        )
+    assert str(e_info.value) == "Must have different reads suffixes"
+
+
+def test_build_csv_unmatched_files(tmp_path):
+    with pytest.raises(ValueError) as e_info:
+        build_upload_csv(
+            "tests/data/unmatched_files",
+            f"{tmp_path}/output.csv",
+            "illumina",
+            "batch_name",
+            "2024-01-01",
+            "GBR",
+        )
+    assert "Each sample must have two paired files" in str(e_info.value)
+
+
+def test_build_csv_invalid_tech(tmp_path):
+    with pytest.raises(ValueError) as e_info:
+        build_upload_csv(
+            "tests/data/unmatched_files",
+            f"{tmp_path}/output.csv",
+            "invalid",
+            "batch_name",
+            "2024-01-01",
+            "GBR",
+        )
+    assert "Invalid seq_tech" in str(e_info.value)
