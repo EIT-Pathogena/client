@@ -4,11 +4,13 @@ from getpass import getpass
 from pathlib import Path
 
 import click
+from trogon import tui
 
 from gpas import lib, util
 from gpas.create_upload_csv import build_upload_csv
 
 
+@tui(command="ui", help="Open Terminal User Interface")
 @click.group(name="GPAS")
 @click.version_option()
 @click.help_option("-h", "--help")
