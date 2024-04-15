@@ -203,8 +203,8 @@ def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) 
 # In future this could be updated based on a file
 defaults = {
     "country": None,
-    "district": None,
-    "subdivision": None,
+    "district": "",
+    "subdivision": "",
     "seq_tech": "illumina",
     "ont_read_suffix": ".fastq.gz",
     "illumina_read1_suffix": "_1.fastq.gz",
@@ -283,9 +283,6 @@ defaults = {
     show_default=True,
 )
 @click.option("--max-batch-size", type=int, default=50, show_default=True)
-@click.option(
-    "--save-defaults", is_flag=True, help="Save your options as defaults for next time."
-)
 def build_csv(
     samples_folder: Path,
     output_csv: Path,
