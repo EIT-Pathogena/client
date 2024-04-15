@@ -87,15 +87,12 @@ def test_validate_fail_invalid_instrument_platform():
         lib.validate("tests/data/invalid/invalid-instrument-platform.csv")
 
 
-def test_build_csv_illumina(tmp_path, caplog):
+def test_build_csv_illumina(tmp_path, caplog, upload_data):
     caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
-        "illumina",
-        "batch_name",
-        "2024-01-01",
-        "GBR",
+        upload_data,
     )
 
     assert filecmp.cmp(
@@ -109,36 +106,31 @@ def test_build_csv_illumina(tmp_path, caplog):
     )
 
 
-def test_build_csv_ont(tmp_path, caplog):
+def test_build_csv_ont(tmp_path, caplog, upload_data):
     caplog.set_level(logging.INFO)
+    upload_data.seq_tech = "ont"
+    upload_data.district = "dis"
+    upload_data.subdivision = "sub"
+    upload_data.pipeline = "pipe"
+    upload_data.host_organism = "unicorn"
+    upload_data.ont_read_suffix = "_2.fastq.gz"
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
-        "ont",
-        "batch_name",
-        "2024-01-01",
-        "GBR",
-        district="dis",
-        subdivision="sub",
-        pipeline="pipe",
-        host_organism="unicorn",
-        ont_read_suffix="_2.fastq.gz",
+        upload_data,
     )
 
     assert filecmp.cmp("tests/data/auto_upload_csvs/ont.csv", f"{tmp_path}/output.csv")
     assert "Created 1 CSV files: output.csv" in caplog.text
 
 
-def test_build_csv_batches(tmp_path, caplog):
+def test_build_csv_batches(tmp_path, caplog, upload_data):
     caplog.set_level(logging.INFO)
+    upload_data.max_batch_size = 3
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
-        "illumina",
-        "batch_name",
-        "2024-01-01",
-        "GBR",
-        max_batch_size=3,
+        upload_data,
     )
 
     assert filecmp.cmp(
@@ -150,41 +142,33 @@ def test_build_csv_batches(tmp_path, caplog):
     assert "Created 2 CSV files: output_1.csv, output_2.csv" in caplog.text
 
 
-def test_build_csv_suffix_match(tmp_path):
+def test_build_csv_suffix_match(tmp_path, upload_data):
+    upload_data.illumina_read2_suffix = "_1.fastq.gz"
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/empty_files",
             f"{tmp_path}/output.csv",
-            "illumina",
-            "batch_name",
-            "2024-01-01",
-            "GBR",
-            illumina_read2_suffix="_1.fastq.gz",
+            upload_data,
         )
     assert str(e_info.value) == "Must have different reads suffixes"
 
 
-def test_build_csv_unmatched_files(tmp_path):
+def test_build_csv_unmatched_files(tmp_path, upload_data):
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/unmatched_files",
             f"{tmp_path}/output.csv",
-            "illumina",
-            "batch_name",
-            "2024-01-01",
-            "GBR",
+            upload_data,
         )
     assert "Each sample must have two paired files" in str(e_info.value)
 
 
-def test_build_csv_invalid_tech(tmp_path):
+def test_build_csv_invalid_tech(tmp_path, upload_data):
+    upload_data.seq_tech = "invalid"
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/unmatched_files",
             f"{tmp_path}/output.csv",
-            "invalid",
-            "batch_name",
-            "2024-01-01",
-            "GBR",
+            upload_data,
         )
     assert "Invalid seq_tech" in str(e_info.value)

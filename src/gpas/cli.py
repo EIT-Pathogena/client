@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 
 from gpas import lib, util
-from gpas.create_upload_csv import build_upload_csv
+from gpas.create_upload_csv import build_upload_csv, UploadData
 
 
 @click.group(name="GPAS")
@@ -309,19 +309,23 @@ def build_csv(
     output_csv = Path(output_csv)
     samples_folder = Path(samples_folder)
 
+    upload_data = UploadData(
+        batch_name=batch_name,
+        seq_tech=seq_tech,
+        collection_date=collection_date.strftime("%Y-%m-%d"),
+        country=country,
+        subdivision=subdivision,
+        district=district,
+        pipeline=pipeline,
+        host_organism=host_organism,
+        ont_read_suffix=ont_read_suffix,
+        illumina_read1_suffix=illumina_read1_suffix,
+        illumina_read2_suffix=illumina_read2_suffix,
+        max_batch_size=max_batch_size,
+    )
+
     build_upload_csv(
         samples_folder,
         output_csv,
-        seq_tech,
-        batch_name,
-        collection_date.strftime("%Y-%m-%d"),
-        country,
-        subdivision,
-        district,
-        pipeline,
-        host_organism,
-        ont_read_suffix,
-        illumina_read1_suffix,
-        illumina_read2_suffix,
-        max_batch_size,
+        upload_data,
     )
