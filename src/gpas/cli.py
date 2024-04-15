@@ -301,7 +301,8 @@ def build_csv(
 ):
     """
     Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
-    Recommended to use `gpas ui` for this command due to the numerous options.
+    Use max_batch_size to split into multiple separate upload csvs.\n
+    Adjust the read_suffix parameters to match the file endings for your read files.
     """
     if len(country) != 3:
         raise ValueError(f"Country ({country}) should be 3 letter code")
