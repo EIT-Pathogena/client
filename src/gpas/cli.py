@@ -285,9 +285,6 @@ defaults = {
     show_default=True,
 )
 @click.option("--max-batch-size", type=int, default=50, show_default=True)
-@click.option(
-    "--save-defaults", is_flag=True, help="Save your options as defaults for next time."
-)
 def build_csv(
     samples_folder: Path,
     output_csv: Path,
