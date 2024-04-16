@@ -1,4 +1,5 @@
 # Bioconda-based build against latest PyPI release
+# Created for a specific user. Not part of the pypi release process
 FROM condaforge/miniforge3:latest
 ENV GPAS_CLIENT_VERSION=1.0.0
 RUN mamba install -c bioconda hostile>=1.0.0
