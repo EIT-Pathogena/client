@@ -130,6 +130,17 @@ gpas download a5w2e8.mapping.csv --inputs --filenames ""
 The complete list of `--filenames` available for download varies by sample, and can be found in the Downloads section of sample view pages in the GPAS web portal.
 
 
+#### Generating Upload CSV (`gpas build-csv`)
+
+If you have a folder containing all the reads you would like to upload, then `gpas build-csv` can be used to help generate the upload csv. See the GPAS User Guide for detailed descriptions of all the fields.
+You'll need to fill in some of the required parameters.
+
+```bash
+gpas build-csv --output-csv upload.csv --batch-name test_batch --collection-date 2024-04-15 --country GBR --max-batch-size 25 my_folder
+```
+
+You can then go through the csv and manually mark samples as positive/negative controls, or give them sample names (by default they are named based on the filename).
+
 
 #### Querying sample metadata (`gpas query`)
 
