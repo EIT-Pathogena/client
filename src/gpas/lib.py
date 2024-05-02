@@ -20,6 +20,7 @@ import gpas
 import hostile
 
 from gpas import util, models
+from gpas.util import MissingError
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -661,7 +662,10 @@ def download(
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
     filenames = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
-        output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
+        try:
+            output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
+        except MissingError:
+            pass # Missing output files should not cause the program to end
         with httpx.Client(
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
