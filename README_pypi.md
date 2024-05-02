@@ -44,7 +44,7 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create -y -n gpas -c conda-forge -c bioconda hostile
+  conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
   conda activate gpas
   pip install --upgrade gpas
   ```
