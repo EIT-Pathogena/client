@@ -333,6 +333,7 @@ def upload_single(
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
             instrument_platform=sample.instrument_platform,
+            specimen_organism=sample.specimen_organism
         )
         logging.debug(f"{sample_id=}")
         reads_clean_renamed = reads_clean.rename(
@@ -431,6 +432,7 @@ def upload_paired(
             client_decontamination_reads_out=names_logs[name]["reads_out"],
             checksum=checksum,
             instrument_platform=sample.instrument_platform,
+            specimen_organism=sample.specimen_organism
         )
         logging.debug(f"{sample_id=}")
         reads_1_clean_renamed = reads_1_clean.rename(
