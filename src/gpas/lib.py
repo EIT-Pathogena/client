@@ -665,7 +665,7 @@ def download(
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            pass # Missing output files should not cause the program to end
+            output_files = [] # There are no output files. The run may have failed.
         with httpx.Client(
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
