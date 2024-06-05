@@ -5,15 +5,15 @@ from pathlib import Path
 
 import click
 
-from gpas import lib, util
-from gpas.create_upload_csv import build_upload_csv, UploadData
+from pathogena import lib, util
+from pathogena.create_upload_csv import build_upload_csv, UploadData
 
 
-@click.group(name="GPAS")
+@click.group(name="Pathogena")
 @click.version_option()
 @click.help_option("-h", "--help")
 def main():
-    """GPAS command line interface."""
+    """EIT Pathogena command line interface."""
     pass
 
 
@@ -24,7 +24,7 @@ def auth(
     host: str | None = None,
 ) -> None:
     """
-    Authenticate with the GPAS platform.
+    Authenticate with the EIT Pathogena platform.
     """
     host = lib.get_host(host)
     username = input("Enter your username: ")
@@ -59,7 +59,7 @@ def upload(
     debug: bool = False,
 ) -> None:
     """
-    Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
+    Validate, decontaminate and upload reads to the EIT Pathogena platform. Creates a mapping CSV
     file which can be used to download output files with original sample names.
     """
     # :arg out_dir: Path of directory in which to save mapping CSV

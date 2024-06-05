@@ -44,9 +44,9 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-  conda activate gpas
-  pip install --upgrade gpas
+  conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+  conda activate pathogena
+  pip install --upgrade pathogena
   ```
 
 - Test:
@@ -71,7 +71,7 @@ pre-commit install
 
 ```bash
 git pull origin main
-gpas --version
+pathogena --version
 ```
 
 
@@ -80,8 +80,8 @@ gpas --version
 
 1. The stateless way (use `--host` with every command):
    ```bash
-   gpas auth --host dev.portal.gpas.world
-   gpas upload samples.csv --host dev.portal.gpas.world
+   pathogena auth --host dev.portal.pathogena.world
+   pathogena upload samples.csv --host dev.portal.pathogena.world
    ```
 
 2. The stateful way (no need to use `--host` with each command):
@@ -91,8 +91,8 @@ gpas --version
 
    Then, as usual:
    ```bash
-   gpas auth
-   gpas upload samples.csv
+   pathogena auth
+   pathogena upload samples.csv
    ```
 
    To reset:
@@ -105,9 +105,9 @@ gpas --version
 ### Installing a pre-release version
 
 ```bash
-conda create --yes -n gpas -c conda-forge -c bioconda hostile==1.1.0
-conda activate gpas
-pip install --pre gpas
+conda create --yes -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --pre pathogena
 ```
 
 
@@ -132,12 +132,12 @@ Having installed an editable [development environment](https://github.com/Global
 
 ```bash
 pytest
-# Bump version strings inside src/gpas/__init__.py AND Dockerfile
+# Bump version strings inside src/pathogena/__init__.py AND Dockerfile
 # Use format e.g. 1.0.0a1 for pre-releases (following example of Pydantic)
 git tag 0.0.0. # e.g.
 git push origin main --tags
 flit build  # Build package
 flit publish  # Authenticate and upload package to PyPI
 # Announce in Slack CLI channel
-# PR gpas/gpas/settings.py with new version
+# PR pathogena/pathogena/settings.py with new version
 ```

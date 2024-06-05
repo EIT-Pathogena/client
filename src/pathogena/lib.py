@@ -16,11 +16,11 @@ from packaging.version import Version
 from pydantic import BaseModel
 from tqdm import tqdm
 
-import gpas
+import pathogena
 import hostile
 
-from gpas import util, models
-from gpas.util import MissingError
+from pathogena import util, models
+from pathogena.util import MissingError, create_headers
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -47,30 +47,23 @@ def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
     if cli_host:
         return cli_host
-    elif "GPAS_HOST" in os.environ:
-        env_host = os.environ["GPAS_HOST"]
-        return env_host
     else:
-        return DEFAULT_HOST
+        return os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
 
 
 def get_protocol() -> str:
-    if "GPAS_PROTOCOL" in os.environ:
-        protocol = os.environ["GPAS_PROTOCOL"]
-        return protocol
-    else:
-        return DEFAULT_PROTOCOL
+    return os.environ.get("PATHOGENA_PROTOCOL", DEFAULT_PROTOCOL)
 
 
 def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None:
-    """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
+    """Requests, writes auth token to ~/.config/pathogena/tokens/<host>"""
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
         )
     data = response.json()
-    conf_dir = Path.home() / ".config" / "gpas"
+    conf_dir = Path.home() / ".config" / "pathogena"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
     token_path = token_dir / f"{host}.json"
@@ -83,7 +76,7 @@ def check_authentication(host: str) -> None:
     with httpx.Client(event_hooks=util.httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            headers=create_headers(host),
         )
     if response.is_error:
         logging.error(f"Authentication failed for host {host}")
@@ -94,8 +87,8 @@ def create_batch(host: str) -> tuple[str, str]:
     """Create batch on server, return batch id"""
     telemetry_data = {
         "client": {
-            "name": "gpas-client",
-            "version": gpas.__version__,
+            "name": "pathogena-client",
+            "version": pathogena.__version__,
         },
         "decontamination": {
             "name": "hostile",
@@ -110,7 +103,7 @@ def create_batch(host: str) -> tuple[str, str]:
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/batches",
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            headers=create_headers(host),
             json=data,
         )
     return response.json()["id"], response.json()["name"]
@@ -150,7 +143,6 @@ def create_sample(
         "specimen_organism": specimen_organism,
         "host_organism": host_organism,
     }
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -159,7 +151,7 @@ def create_sample(
     ) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/samples",
-            headers=headers,
+            headers=create_headers(host),
             json=data,
         )
     return response.json()["id"]
@@ -168,7 +160,7 @@ def create_sample(
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def run_sample(sample_id: str, host: str) -> str:
     """Patch sample status, create run, and patch run status to trigger processing"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = create_headers(host)
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -212,7 +204,7 @@ def validate_batch(
             }
         )
     logging.debug(f"Validating {data=}")
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = create_headers(host)
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -233,7 +225,7 @@ def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
         upload_csv (Path): Path to the upload CSV
         host (str, optional): Name of the host to validate against. Defaults to DEFAULT_HOST.
     """
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    print_client_version(host)
     logging.debug("validate()")
     upload_csv = Path(upload_csv)
     batch = models.parse_upload_csv(upload_csv)
@@ -248,8 +240,8 @@ def upload(
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
 ) -> None:
-    """Upload a batch of one or more samples to the GPAS platform"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    """Upload a batch of one or more samples to the Pathogena platform"""
+    print_client_version(host)
     logging.debug(f"upload() {threads=}")
     upload_csv = Path(upload_csv)
     batch = models.parse_upload_csv(upload_csv)
@@ -491,14 +483,13 @@ def upload_paired(
 
 def fetch_sample(sample_id: str, host: str) -> dict:
     """Fetch sample data from server"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
-            headers=headers,
+            headers=create_headers(host),
         )
     return response.json()
 
@@ -509,7 +500,7 @@ def query(
     host: str = DEFAULT_HOST,
 ) -> dict[str, dict]:
     """Query sample metadata returning a dict of metadata keyed by sample ID"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    print_client_version(host)
     check_client_version(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
@@ -537,7 +528,7 @@ def status(
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
     """Query sample status"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    print_client_version(host)
     check_client_version(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
@@ -559,16 +550,19 @@ def status(
     return samples_status
 
 
+def print_client_version(host):
+    logging.info(f"Pathogena client version {pathogena.__version__} ({host})")
+
+
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample input files"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
-            headers=headers,
+            headers=create_headers(host),
         )
     data = response.json().get("files", [])
     output_files = {
@@ -587,14 +581,13 @@ def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
 ) -> dict[str, models.RemoteFile]:
     """Return models.RemoteFile instances for a sample, optionally including only latest run"""
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
-            headers=headers,
+            headers=create_headers(host),
         )
     data = response.json().get("files", [])
     output_files = {
@@ -630,10 +623,10 @@ def check_client_version(host: str) -> None:
         )
     server_version = response.json()["version"]
     logging.debug(
-        f"Client version {gpas.__version__}, server version: {server_version})"
+        f"Client version {pathogena.__version__}, server version: {server_version})"
     )
-    if Version(server_version) > Version(gpas.__version__):
-        raise util.UnsupportedClientException(gpas.__version__, server_version)
+    if Version(server_version) > Version(pathogena.__version__):
+        raise util.UnsupportedClientException(pathogena.__version__, server_version)
 
 
 def download(
@@ -646,9 +639,8 @@ def download(
     host: str = DEFAULT_HOST,
 ) -> None:
     """Download latest output files for a sample"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
+    print_client_version(host)
     check_client_version(host)
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
@@ -665,7 +657,7 @@ def download(
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = [] # There are no output files. The run may have failed.
+            output_files = []  # There are no output files. The run may have failed.
         with httpx.Client(
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
@@ -689,7 +681,7 @@ def download(
                         client=client,
                         filename=filename_fmt,
                         url=url,
-                        headers=headers,
+                        headers=create_headers(host),
                         out_dir=Path(out_dir),
                     )
                 elif set(
@@ -716,7 +708,7 @@ def download(
                         client=client,
                         filename=filename_fmt,
                         url=url,
-                        headers=headers,
+                        headers=create_headers(host),
                         out_dir=Path(out_dir),
                     )
 

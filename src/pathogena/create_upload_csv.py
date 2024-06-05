@@ -3,7 +3,7 @@ import logging
 import csv
 
 from pydantic import Field
-from gpas.models import UploadBase
+from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
@@ -84,7 +84,9 @@ def build_upload_csv(
     logging.info(
         f"Created {len(output_csvs)} CSV files: {', '.join([csv.name for csv in output_csvs])}"
     )
-    logging.info("You can use `gpas validate` to check the CSV files before uploading.")
+    logging.info(
+        "You can use `pathogena validate` to check the CSV files before uploading."
+    )
 
 
 def chunks(lst: list, n: int) -> list[list]:

@@ -44,9 +44,9 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-  conda activate gpas
-  pip install --upgrade gpas
+  conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+  conda activate pathogena
+  pip install --upgrade pathogena
   ```
 
 - Test:
@@ -61,7 +61,7 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 Ensure that the conda environment is active:
 
 ```bash
-conda activate gpas
+conda activate pathogena
 ```
 
 
@@ -89,7 +89,7 @@ Enter your password: ***************
 The upload subcommand performs metadata validation and client-side removal of human reads for each of your samples, before uploading sequences to the GPAS platform for analysis.
 
 ```bash
-gpas upload tests/data/illumina.csv
+pathogena upload tests/data/illumina.csv
 ```
 
 During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote names. Keep this file safe, as it is useful for downloading and relinking results later.
@@ -106,25 +106,25 @@ The download subcommand retrieves the output (and/or input) files associated wit
 
 ```bash
 # Download the main reports for all samples in a5w2e8.mapping.csv
-gpas download a5w2e8.mapping.csv
+pathogena download a5w2e8.mapping.csv
 
 # Download the main and speciation reports for all samples in a5w2e8.mapping.csv
-gpas download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
+pathogena download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
 
 # Download the main report for one sample
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 
 # Download the final assembly for one M. tuberculosis sample
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
 
 # Download the main report for two samples
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
 
 # Save downloaded files to a specific directory
-gpas download a5w2e8.mapping.csv --out-dir results
+pathogena download a5w2e8.mapping.csv --out-dir results
 
 # Download only input fastqs
-gpas download a5w2e8.mapping.csv --inputs --filenames ""
+pathogena download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
 The complete list of `--filenames` available for download varies by sample, and can be found in the Downloads section of sample view pages in the GPAS web portal.
@@ -136,7 +136,7 @@ If you have a folder containing all the reads you would like to upload, then `gp
 You'll need to fill in some of the required parameters.
 
 ```bash
-gpas build-csv --output-csv upload.csv --batch-name test_batch --collection-date 2024-04-15 --country GBR --max-batch-size 25 my_folder
+pathogena build-csv --output-csv upload.csv --batch-name test_batch --collection-date 2024-04-15 --country GBR --max-batch-size 25 my_folder
 ```
 
 You can then go through the csv and manually mark samples as positive/negative controls, or give them sample names (by default they are named based on the filename).
@@ -148,13 +148,13 @@ The query subcommand fetches either the processing status (`gpas query status`) 
 
 ```bash
 # Query the processing status of all samples in a5w2e8.mapping.csv
-gpas query status a5w2e8.mapping.csv
+pathogena query status a5w2e8.mapping.csv
 
 # Query the processing status of a single sample
-gpas query status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+pathogena query status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 
 # Query all available metadata in JSON format
-gpas query raw a5w2e8.mapping.csv
+pathogena query raw a5w2e8.mapping.csv
 ```
 
 

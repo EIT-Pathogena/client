@@ -1,6 +1,6 @@
 import pytest
 
-from gpas.create_upload_csv import UploadData
+from pathogena.create_upload_csv import UploadData
 from datetime import datetime
 
 

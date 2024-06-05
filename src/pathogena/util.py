@@ -9,7 +9,7 @@ import uuid
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Dict
 
 import httpx
 
@@ -29,7 +29,8 @@ class UnsupportedClientException(Exception):
         self.message = (
             f"\n\nThe installed client version ({this_version}) is no longer supported."
             " To update the client, please run:\n\n"
-            "conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0 && conda activate gpas && pip install --upgrade gpas"
+            "conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0 &&"
+            " conda activate pathogena && pip install --upgrade pathogena"
         )
         super().__init__(self.message)
 
@@ -39,8 +40,8 @@ class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401"""
 
     def __init__(self):
-        self.message = "Authorization failed! Please re-authenticate with `gpas auth` and try again.\n"
-        "If the problem persists please contact support (support@gpas.global)."
+        self.message = "Authorization failed! Please re-authenticate with `pathogena auth` and try again.\n"
+        "If the problem persists please contact support (support@pathogena.global)."
         super().__init__(self.message)
 
 
@@ -50,7 +51,7 @@ class PermissionError(Exception):
     def __init__(self):
         self.message = (
             "You don't have access to this resource! Check logs for more details.\n"
-            "Please contact support if you think you should be able to access this resource (support@gpas.global)."
+            "Please contact support if you think you should be able to access this resource (support@pathogena.global)."
         )
         super().__init__(self.message)
 
@@ -73,7 +74,7 @@ class ServerSideError(Exception):
     def __init__(self):
         self.message = (
             "We had some trouble with the server, please double check your command and try again in a moment.\n"
-            "If the problem persists, please contact support (support@gpas.global)."
+            "If the problem persists, please contact support (support@pathogena.global)."
         )
         super().__init__(self.message)
 
@@ -123,9 +124,13 @@ def run(cmd: str, cwd: Path = Path()):
     )
 
 
+def create_headers(host: str) -> Dict[str, str]:
+    return {"Authorization": f"Bearer {get_access_token(host)}"}
+
+
 def get_access_token(host: str) -> str:
-    """Reads token from ~/.config/gpas/tokens/<host>"""
-    token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host}.json"
+    """Reads token from ~/.config/pathogena/tokens/<host>"""
+    token_path = Path.home() / ".config" / "pathogena" / "tokens" / f"{host}.json"
     logging.debug(f"{token_path=}")
     try:
         data = json.loads((token_path).read_text())
@@ -179,7 +184,7 @@ def upload_file(
         with open(file_path, "rb") as fh:
             client.post(
                 f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
-                headers={"Authorization": f"Bearer {get_access_token(host)}"},
+                headers=create_headers(host),
                 files={"file": fh},
                 data={"checksum": checksum, "dirty_checksum": dirty_checksum},
             )
@@ -273,4 +278,4 @@ def map_control_value(v: str) -> bool | None:
 
 
 def is_dev_mode() -> bool:
-    return True if "GPAS_DEV_MODE" in os.environ else False
+    return True if "PATHOGENA_DEV_MODE" in os.environ else False
