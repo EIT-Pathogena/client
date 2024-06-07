@@ -382,6 +382,14 @@ def upload_paired(
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
+    unmatched_fastqs_msgs = []
+    for fastq_path_tuple in fastq_path_tuples:
+        if not fastq_match(*fastq_path_tuple):
+            unmatched_fastqs_msgs.append(
+                f"FASTQ files {fastq_path_tuple[0]} and {fastq_path_tuple[1]} do not have the same number of lines"
+            )
+    if unmatched_fastqs_msgs:
+        raise RuntimeError(", ".join(unmatched_fastqs_msgs))
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
