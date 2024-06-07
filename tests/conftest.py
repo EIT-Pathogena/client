@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 
 from gpas.create_upload_csv import UploadData
@@ -13,3 +14,18 @@ def upload_data():
         country="GBR",
         host_organism="homo sapiens",
     )
+
+
+@pytest.fixture
+def human_1_1_fastq_gz() -> Path:
+    return Path("tests/data/reads/human_1_1.fastq.gz")
+
+
+@pytest.fixture
+def human_1_2_fastq_gz() -> Path:
+    return Path("tests/data/reads/human_1_2.fastq.gz")
+
+
+@pytest.fixture
+def bad_1_1_fastq_gz() -> Path:
+    return Path("tests/data/reads/bad_1_1.fastq.gz")
