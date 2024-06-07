@@ -1,4 +1,5 @@
 import csv
+import gzip
 import json
 import logging
 import os
@@ -665,7 +666,7 @@ def download(
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = [] # There are no output files. The run may have failed.
+            output_files = []  # There are no output files. The run may have failed.
         with httpx.Client(
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
@@ -775,3 +776,12 @@ def check_outdir(path: Path) -> None:
 
     logging.error(f"Given out dir ({str(path)}) does not exist!")
     raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
+
+
+def fastq_match(file_1: Path, file_2: Path) -> bool:
+    """Check that the number of lines in two FASTQ files match"""
+    with gzip.open(file_1, "rb") as contents:
+        num_lines_1 = sum(1 for _ in contents)
+    with gzip.open(file_2, "rb") as contents:
+        num_lines_2 = sum(1 for _ in contents)
+    return num_lines_1 == num_lines_2
