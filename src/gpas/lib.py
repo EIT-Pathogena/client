@@ -803,6 +803,10 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
         with open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
 
+    if num_lines_1 == 0:
+        logging.warning(f"FASTQ file {file_1} is empty")
+        valid = False
+
     if file_2:  # Paired-end (illumina)
         try:
             with gzip.open(file_2, "r") as contents:
@@ -810,6 +814,10 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
         except gzip.BadGzipFile:
             with open(file_2, "r") as contents:
                 num_lines_2 = sum(1 for _ in contents)
+
+        if num_lines_2 == 0:
+            logging.warning(f"FASTQ file {file_2} is empty")
+            valid = False
 
         if num_lines_1 != num_lines_2:
             logging.warning(
