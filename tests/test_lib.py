@@ -8,7 +8,7 @@ def test_fastq_gz_match(human_1_1_fastq_gz, human_1_2_fastq_gz):
 def test_not_fastq_gz_match(bad_1_1_fastq_gz, human_1_2_fastq_gz, caplog):
     assert not lib.valid_fastq(bad_1_1_fastq_gz, human_1_2_fastq_gz)
     assert (
-        "WARNING  root:lib.py:807 FASTQ files tests/data/reads/bad_1_1.fastq.gz and tests/data/reads/human_1_2.fastq.gz do not have the same number of lines"
+        "FASTQ files tests/data/reads/bad_1_1.fastq.gz and tests/data/reads/human_1_2.fastq.gz do not have the same number of lines"
         in caplog.text
     )
 
