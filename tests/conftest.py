@@ -29,3 +29,13 @@ def human_1_2_fastq_gz() -> Path:
 @pytest.fixture
 def bad_1_1_fastq_gz() -> Path:
     return Path("tests/data/reads/bad_1_1.fastq.gz")
+
+
+@pytest.fixture
+def sars_cov_2_1_1_fastq() -> Path:
+    return Path("tests/data/reads/sars-cov-2_1_1.fastq")
+
+
+@pytest.fixture
+def sars_cov_2_1_2_fastq() -> Path:
+    return Path("tests/data/reads/sars-cov-2_1_2.fastq")
