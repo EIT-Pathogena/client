@@ -789,17 +789,17 @@ def check_outdir(path: Path) -> None:
 def fastq_match(file_1: Path, file_2: Path) -> bool:
     """Check that the number of lines in two FASTQ files match"""
     try:
-        with gzip.open(file_1, "rb") as contents:
+        with gzip.open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
     except gzip.BadGzipFile:
-        with open(file_1, "rb") as contents:
+        with open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
 
     try:
-        with gzip.open(file_2, "rb") as contents:
+        with gzip.open(file_2, "r") as contents:
             num_lines_2 = sum(1 for _ in contents)
     except gzip.BadGzipFile:
-        with open(file_2, "rb") as contents:
+        with open(file_2, "r") as contents:
             num_lines_2 = sum(1 for _ in contents)
 
     return num_lines_1 == num_lines_2
