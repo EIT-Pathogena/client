@@ -196,6 +196,12 @@ def run_sample(sample_id: str, host: str) -> str:
 
 
 def validate_fastqs(batch: models.UploadBatch, upload_csv: Path) -> None:
+    """Validate FASTQ files for a batch of samples
+
+    Arguments:
+    batch (models.UploadBatch): Batch to validate
+    upload_csv (Path): Path of `upload.csv` file
+    """
     fastq_path_tuples = [
         (
             upload_csv.parent / s.reads_1,
