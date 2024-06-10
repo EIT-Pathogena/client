@@ -382,14 +382,12 @@ def upload_paired(
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
-    unmatched_fastqs_msgs = []
+    all_fastqs_valid = True
     for fastq_path_tuple in fastq_path_tuples:
-        if not fastq_match(*fastq_path_tuple):
-            unmatched_fastqs_msgs.append(
-                f"FASTQ files {fastq_path_tuple[0]} and {fastq_path_tuple[1]} do not have the same number of lines"
-            )
-    if unmatched_fastqs_msgs:
-        raise RuntimeError(", ".join(unmatched_fastqs_msgs))
+        if not valid_fastq(*fastq_path_tuple):
+            all_fastqs_valid = False
+    if not all_fastqs_valid:
+        raise RuntimeError("FASTQ files are not valid")
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
@@ -786,8 +784,9 @@ def check_outdir(path: Path) -> None:
     raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
 
 
-def fastq_match(file_1: Path, file_2: Path) -> bool:
-    """Check that the number of lines in two FASTQ files match"""
+def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
+    valid = True  # Assume valid unless we find evidence otherwise
+
     try:
         with gzip.open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
@@ -795,11 +794,18 @@ def fastq_match(file_1: Path, file_2: Path) -> bool:
         with open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
 
-    try:
-        with gzip.open(file_2, "r") as contents:
-            num_lines_2 = sum(1 for _ in contents)
-    except gzip.BadGzipFile:
-        with open(file_2, "r") as contents:
-            num_lines_2 = sum(1 for _ in contents)
+    if file_2:  # Paired-end (illumina)
+        try:
+            with gzip.open(file_2, "r") as contents:
+                num_lines_2 = sum(1 for _ in contents)
+        except gzip.BadGzipFile:
+            with open(file_2, "r") as contents:
+                num_lines_2 = sum(1 for _ in contents)
 
-    return num_lines_1 == num_lines_2
+        if num_lines_1 != num_lines_2:
+            logging.warning(
+                f"FASTQ files {file_1} and {file_2} do not have the same number of lines"
+            )
+            valid = False
+
+    return valid
