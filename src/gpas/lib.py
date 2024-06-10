@@ -821,7 +821,7 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
 
         if num_lines_1 != num_lines_2:
             logging.warning(
-                f"FASTQ files {file_1} and {file_2} do not have the same number of lines"
+                f"FASTQ files {file_1} ({num_lines_1} lines) and {file_2} ({num_lines_2} lines) do not have the same number of lines"
             )
             valid = False
 
