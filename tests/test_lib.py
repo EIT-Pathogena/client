@@ -13,5 +13,5 @@ def test_not_fastq_gz_match(bad_1_1_fastq_gz, human_1_2_fastq_gz, caplog):
     )
 
 
-def test_valid_fastq(sars_cov_2_1_1_fastq, sars_cov_2_1_2_fastq):
+def test_fastq_match(sars_cov_2_1_1_fastq, sars_cov_2_1_2_fastq):
     assert lib.valid_fastq(sars_cov_2_1_1_fastq, sars_cov_2_1_2_fastq)
