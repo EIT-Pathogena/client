@@ -39,3 +39,23 @@ def sars_cov_2_1_1_fastq() -> Path:
 @pytest.fixture
 def sars_cov_2_1_2_fastq() -> Path:
     return Path("tests/data/reads/sars-cov-2_1_2.fastq")
+
+
+@pytest.fixture
+def empty_fastq_1() -> Path:
+    return Path("tests/data/empty_files/read_1_1.fastq")
+
+
+@pytest.fixture
+def empty_fastq_2() -> Path:
+    return Path("tests/data/empty_files/read_1_2.fastq")
+
+
+@pytest.fixture
+def empty_fastq_gz_1() -> Path:
+    return Path("tests/data/empty_files/read_1_1.fastq.gz")
+
+
+@pytest.fixture
+def empty_fastq_gz_2() -> Path:
+    return Path("tests/data/empty_files/read_1_2.fastq.gz")
