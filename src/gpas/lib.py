@@ -4,7 +4,7 @@ import json
 import logging
 import os
 
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 import httpx
 
@@ -195,6 +195,26 @@ def run_sample(sample_id: str, host: str) -> str:
         return run_id
 
 
+def validate_fastqs(batch: models.UploadBatch, upload_csv: Path) -> None:
+    fastq_path_tuples = [
+        (
+            upload_csv.parent / s.reads_1,
+            (
+                (upload_csv.parent / s.reads_2)
+                if not s.reads_2 == PosixPath(".")
+                else None
+            ),
+        )
+        for s in batch.samples
+    ]
+    all_fastqs_valid = True
+    for fastq_path_tuple in fastq_path_tuples:
+        if not valid_fastq(*fastq_path_tuple):
+            all_fastqs_valid = False
+    if not all_fastqs_valid:
+        raise RuntimeError("FASTQ files are not valid")
+
+
 def validate_batch(
     batch: models.UploadBatch,
     host: str,
@@ -257,6 +277,7 @@ def upload(
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
+        validate_fastqs(batch, upload_csv)
         validate_batch(batch=batch, host=host)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
@@ -382,12 +403,6 @@ def upload_paired(
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
-    all_fastqs_valid = True
-    for fastq_path_tuple in fastq_path_tuples:
-        if not valid_fastq(*fastq_path_tuple):
-            all_fastqs_valid = False
-    if not all_fastqs_valid:
-        raise RuntimeError("FASTQ files are not valid")
     if threads:
         decontamination_log = clean_paired_fastqs(
             fastqs=fastq_path_tuples,
