@@ -1,3 +1,4 @@
+import pytest
 from gpas import lib
 
 
@@ -31,3 +32,17 @@ def test_fastq_empty_illumina(empty_fastq_1, empty_fastq_2):
 
 def test_fastq_gz_empty_illumina(empty_fastq_gz_1, empty_fastq_gz_2):
     assert not lib.valid_fastq(empty_fastq_gz_1, empty_fastq_gz_2)
+
+
+def test_validate_fastqs_illumina(illumina_2_samples_batch, illumina_2_samples_csv):
+    lib.validate_fastqs(illumina_2_samples_batch, illumina_2_samples_csv)
+
+
+def test_mismatched_fastqs_illumina(illumina_2_mismatch_batch, illumina_2_mismatch_csv):
+    with pytest.raises(RuntimeError) as excinfo:
+        lib.validate_fastqs(illumina_2_mismatch_batch, illumina_2_mismatch_csv)
+        assert "FASTQ files are not valid" in str(excinfo.value)
+
+
+def test_validate_fastqs_ont(ont_2_samples_batch, ont_2_samples_csv):
+    lib.validate_fastqs(ont_2_samples_batch, ont_2_samples_csv)
