@@ -785,6 +785,15 @@ def check_outdir(path: Path) -> None:
 
 
 def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
+    """
+    Validate whether the FASTQ input files are valid, if more than one
+    file is given, assume a paired-end illumina FASTQ file and check the
+    length of the FASTQ files match.
+
+    Arguments:
+        file_1 (Path): FASTQ input file
+        file_2 (Path | None): FASTQ input file
+    """
     valid = True  # Assume valid unless we find evidence otherwise
 
     try:
