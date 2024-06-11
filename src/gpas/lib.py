@@ -828,6 +828,10 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
         logging.warning(f"FASTQ file {file_1} is empty")
         valid = False
 
+    if num_lines_1 % 4 != 0:
+        logging.warning(f"FASTQ file {file_1} does not have a multiple of 4 lines")
+        valid = False
+
     if file_2:  # Paired-end (illumina)
         try:
             with gzip.open(file_2, "r") as contents:
@@ -838,6 +842,10 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
 
         if num_lines_2 == 0:
             logging.warning(f"FASTQ file {file_2} is empty")
+            valid = False
+
+        if num_lines_2 % 4 != 0:
+            logging.warning(f"FASTQ file {file_2} does not have a multiple of 4 lines")
             valid = False
 
         if num_lines_1 != num_lines_2:
