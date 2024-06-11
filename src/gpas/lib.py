@@ -1,9 +1,10 @@
 import csv
+import gzip
 import json
 import logging
 import os
 
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 import httpx
 
@@ -194,6 +195,32 @@ def run_sample(sample_id: str, host: str) -> str:
         return run_id
 
 
+def validate_fastqs(batch: models.UploadBatch, upload_csv: Path) -> None:
+    """Validate FASTQ files for a batch of samples
+
+    Arguments:
+    batch (models.UploadBatch): Batch to validate
+    upload_csv (Path): Path of `upload.csv` file
+    """
+    fastq_path_tuples = [
+        (
+            upload_csv.parent / s.reads_1,
+            (
+                (upload_csv.parent / s.reads_2)
+                if not s.reads_2 == PosixPath(".")
+                else None
+            ),
+        )
+        for s in batch.samples
+    ]
+    all_fastqs_valid = True
+    for fastq_path_tuple in fastq_path_tuples:
+        if not valid_fastq(*fastq_path_tuple):
+            all_fastqs_valid = False
+    if not all_fastqs_valid:
+        raise RuntimeError("FASTQ files are not valid")
+
+
 def validate_batch(
     batch: models.UploadBatch,
     host: str,
@@ -256,6 +283,7 @@ def upload(
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
+        validate_fastqs(batch, upload_csv)
         validate_batch(batch=batch, host=host)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
@@ -665,7 +693,7 @@ def download(
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = [] # There are no output files. The run may have failed.
+            output_files = []  # There are no output files. The run may have failed.
         with httpx.Client(
             event_hooks=util.httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
@@ -775,3 +803,55 @@ def check_outdir(path: Path) -> None:
 
     logging.error(f"Given out dir ({str(path)}) does not exist!")
     raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
+
+
+def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
+    """
+    Validate whether the FASTQ input files are valid, if more than one
+    file is given, assume a paired-end illumina FASTQ file and check the
+    length of the FASTQ files match.
+
+    Arguments:
+        file_1 (Path): FASTQ input file
+        file_2 (Path | None): FASTQ input file
+    """
+    valid = True  # Assume valid unless we find evidence otherwise
+
+    try:
+        with gzip.open(file_1, "r") as contents:
+            num_lines_1 = sum(1 for _ in contents)
+    except gzip.BadGzipFile:
+        with open(file_1, "r") as contents:
+            num_lines_1 = sum(1 for _ in contents)
+
+    if num_lines_1 == 0:
+        logging.warning(f"FASTQ file {file_1} is empty")
+        valid = False
+
+    if num_lines_1 % 4 != 0:
+        logging.warning(f"FASTQ file {file_1} does not have a multiple of 4 lines")
+        valid = False
+
+    if file_2:  # Paired-end (illumina)
+        try:
+            with gzip.open(file_2, "r") as contents:
+                num_lines_2 = sum(1 for _ in contents)
+        except gzip.BadGzipFile:
+            with open(file_2, "r") as contents:
+                num_lines_2 = sum(1 for _ in contents)
+
+        if num_lines_2 == 0:
+            logging.warning(f"FASTQ file {file_2} is empty")
+            valid = False
+
+        if num_lines_2 % 4 != 0:
+            logging.warning(f"FASTQ file {file_2} does not have a multiple of 4 lines")
+            valid = False
+
+        if num_lines_1 != num_lines_2:
+            logging.warning(
+                f"FASTQ files {file_1} ({num_lines_1} lines) and {file_2} ({num_lines_2} lines) do not have the same number of lines"
+            )
+            valid = False
+
+    return valid
