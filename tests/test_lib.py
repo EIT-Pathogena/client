@@ -9,17 +9,23 @@ def test_fastq_gz_match(human_1_1_fastq_gz, human_1_2_fastq_gz):
 def test_not_fastq_gz_match(bad_1_1_fastq_gz, human_1_2_fastq_gz, caplog):
     assert not lib.valid_fastq(bad_1_1_fastq_gz, human_1_2_fastq_gz)
     assert (
+        "FASTQ file tests/data/reads/bad_1_1.fastq.gz does not have a multiple of 4 lines"
+        in caplog.text
+    )
+    assert (
         "FASTQ files tests/data/reads/bad_1_1.fastq.gz (5 lines) and tests/data/reads/human_1_2.fastq.gz (4 lines) do not have the same number of lines"
         in caplog.text
     )
+    pass
 
 
 def test_fastq_match(sars_cov_2_1_1_fastq, sars_cov_2_1_2_fastq):
     assert lib.valid_fastq(sars_cov_2_1_1_fastq, sars_cov_2_1_2_fastq)
 
 
-def test_fastq_empty_ont(empty_fastq_1):
+def test_fastq_empty_ont(empty_fastq_1, caplog):
     assert not lib.valid_fastq(empty_fastq_1)
+    assert "FASTQ file tests/data/empty_files/read_1_1.fastq is empty" in caplog.text
 
 
 def test_fastq_gz_empty_ont(empty_fastq_gz_1):
