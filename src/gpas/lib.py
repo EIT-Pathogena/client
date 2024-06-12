@@ -21,12 +21,12 @@ import gpas
 import hostile
 
 from gpas import util, models
-from gpas.util import MissingError
+from gpas.util import DOMAINS, MissingError
 
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-DEFAULT_HOST = "research.portal.gpas.world"
+DEFAULT_HOST = DOMAINS.get("research", "research.portal.gpas.world")
 DEFAULT_PROTOCOL = "https"
 HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
@@ -46,13 +46,9 @@ class InvalidPathError(Exception):
 
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
-    if cli_host:
-        return cli_host
-    elif "GPAS_HOST" in os.environ:
-        env_host = os.environ["GPAS_HOST"]
-        return env_host
-    else:
-        return DEFAULT_HOST
+    return (
+        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
+    )
 
 
 def get_protocol() -> str:

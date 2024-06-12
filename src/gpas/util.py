@@ -15,6 +15,12 @@ import httpx
 
 
 PLATFORMS = Literal["illumina", "ont"]
+DOMAINS = {
+    "production": "portal.gpas.world",
+    "research": "research.portal.gpas.world",
+    "staging": "staging.portal.gpas.world",
+    "development": "dev.portal.gpas.world",
+}
 
 
 class UnsupportedClientException(Exception):

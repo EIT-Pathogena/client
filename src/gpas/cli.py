@@ -9,16 +9,20 @@ from gpas import lib, util
 from gpas.create_upload_csv import build_upload_csv, UploadData
 
 
-@click.group(name="GPAS")
+@click.group(name="GPAS", context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
-@click.help_option("-h", "--help")
 def main():
     """GPAS command line interface."""
     pass
 
 
 @main.command()
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 def auth(
     *,
     host: str | None = None,
@@ -27,6 +31,7 @@ def auth(
     Authenticate with the GPAS platform.
     """
     host = lib.get_host(host)
+    click.echo(f"Authenticating with https://{host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password: ")
     lib.authenticate(username=username, password=password, host=host)
@@ -46,7 +51,12 @@ def auth(
     "--save", is_flag=True, help="Retain decontaminated reads after upload completion"
 )
 @click.option("--dry-run", is_flag=True, help="Exit before uploading reads")
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 @click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def upload(
     upload_csv: Path,
@@ -87,7 +97,12 @@ def upload(
     default=True,
     help="Rename downloaded files using sample names when given a mapping CSV",
 )
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 @click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def download(
     samples: str,
@@ -130,7 +145,12 @@ def download(
 
 @main.command()
 @click.argument("samples", type=str)
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 @click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> None:
     """
@@ -153,7 +173,12 @@ def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> 
 @main.command()
 @click.argument("samples", type=str)
 @click.option("--json", is_flag=True, help="Output status in JSON format")
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 @click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def query_status(
     samples: str, *, json: bool = False, host: str | None = None, debug: bool = False
@@ -191,7 +216,12 @@ def download_index() -> None:
 @click.argument(
     "upload_csv", type=click.Path(exists=True, dir_okay=False, readable=True)
 )
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
 @click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) -> None:
     """Validate a given upload CSV."""
