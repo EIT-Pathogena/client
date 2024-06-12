@@ -62,7 +62,7 @@ for sub-command options, if `--` is entered prior to pressing tab.
 
 #### Example usage
 
-![img.png](src/assets/tab-complete.gif)
+![tab-complete.png](src/assets/tab-complete.gif)
 
 #### Enabling tab completion with Bash
 
