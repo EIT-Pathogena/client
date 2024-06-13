@@ -19,7 +19,7 @@ DOMAINS = {
     "production": "portal.gpas.world",
     "research": "research.portal.gpas.world",
     "staging": "staging.portal.gpas.world",
-    "development": "dev.portal.gpas.world",
+    "dev": "dev.portal.gpas.world",
 }
 
 
