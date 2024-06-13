@@ -17,7 +17,6 @@ dependencies = [
   "pydantic>=2.6.2,<3",
   "tenacity==8.2.3",
   "click>=8.1.7",
-  "auto-click-auto>=0.1.4",
 ]
 
 [project.scripts]

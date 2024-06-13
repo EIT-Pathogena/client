@@ -66,12 +66,14 @@ for sub-command options, if `--` is entered prior to pressing tab.
 
 #### Enabling tab completion
 
+Run the following command to run a command to enable autocompletion, this will need to be executed
+on every new shell session, the command will output instructions on how to make this permanent depending on your
+environment. More information and instructions for other shells can be found in the 
+[Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
+
 ```bash
 gpas autocomplete
 ```
-
-More information and instructions for other shells can be found in the 
-[Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
 
 
 ## Usage

@@ -111,12 +111,19 @@ for sub-command options, if `--` is entered prior to pressing tab.
 
 #### Enabling tab completion
 
+Run the following command and follow the output to enable autocompletion, this will need to be executed
+on every new shell session, instructions are provided on how to make this permanent depending on your
+environment. More information and instructions for other shells can be found in the 
+[Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
+
 ```bash
-gpas autocomplete
+$ gpas autocomplete
+Run this command to enable autocompletion:
+    eval "$(_GPAS_COMPLETE=zsh_source gpas)"
+Add this to your ~/.zshrc file to enable this permanently:
+    command -v gpas > /dev/null 2>&1 && eval "$(_GPAS_COMPLETE=zsh_source gpas)"
 ```
 
-More information and instructions for other shells can be found in the 
-[Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
 
 ### Installing a pre-release version
 

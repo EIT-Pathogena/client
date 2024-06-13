@@ -1,11 +1,10 @@
 from datetime import datetime, date
 import json as json_
 from getpass import getpass
+from os import environ
 from pathlib import Path
 
 import click
-from auto_click_auto import enable_click_shell_completion
-from auto_click_auto.constants import ShellType
 
 from gpas import lib, util
 from gpas.create_upload_csv import build_upload_csv, UploadData
@@ -42,10 +41,12 @@ def auth(
 @main.command()
 def autocomplete() -> None:
     """Activate shell completion."""
-    enable_click_shell_completion(
-        program_name="gpas",
-        shells={ShellType.BASH, ShellType.FISH, ShellType.ZSH},
-        verbose=True,
+    shell = environ.get("SHELL", "/bin/bash").split("/")[-1]
+    single_use_command = f'eval "$(_GPAS_COMPLETE={shell}_source gpas)"'
+    print(f"Run this command to enable autocompletion:\n    {single_use_command}")
+    print(
+        f"Add this to your ~/.{shell}rc file to enable this permanently:\n"
+        f"    command -v gpas > /dev/null 2>&1 && {single_use_command}"
     )
 
 
