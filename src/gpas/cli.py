@@ -40,7 +40,7 @@ def auth(
 @click.option(
     "--threads",
     type=int,
-    default=None,
+    default=1,
     help="Number of alignment threads used during decontamination",
 )
 @click.option(
@@ -52,7 +52,7 @@ def upload(
     upload_csv: Path,
     *,
     # out_dir: Path = Path(),
-    threads: int | None = None,
+    threads: int = 1,
     save: bool = False,
     dry_run: bool = False,
     host: str | None = None,

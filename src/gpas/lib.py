@@ -24,7 +24,6 @@ import hostile
 from gpas import util, models
 from gpas.util import MissingError
 
-
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 DEFAULT_HOST = "research.portal.gpas.world"
@@ -309,26 +308,18 @@ def upload_single(
     upload_csv: Path,
     batch: BaseModel,
     save: bool,
-    threads: int | None,
+    threads: int,
     host: str,
     dry_run: bool,
 ):
     fastq_paths = [upload_csv.parent / s.reads_1 for s in batch.samples]
-    if threads:
-        decontamination_log = clean_fastqs(
-            fastqs=fastq_paths,
-            index=HOSTILE_INDEX_NAME,
-            rename=True,
-            threads=threads,
-            force=True,
-        )
-    else:
-        decontamination_log = clean_fastqs(
-            fastqs=fastq_paths,
-            index=HOSTILE_INDEX_NAME,
-            rename=True,
-            force=True,
-        )
+    decontamination_log = clean_fastqs(
+        fastqs=fastq_paths,
+        index=HOSTILE_INDEX_NAME,
+        rename=True,
+        threads=threads,
+        force=True,
+    )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     if dry_run:
@@ -399,7 +390,7 @@ def upload_paired(
     upload_csv: Path,
     batch: BaseModel,
     save: bool,
-    threads: int | None,
+    threads: int,
     host: str,
     dry_run: bool,
 ):
@@ -407,23 +398,14 @@ def upload_paired(
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples
     ]
-    if threads:
-        decontamination_log = clean_paired_fastqs(
-            fastqs=fastq_path_tuples,
-            index=HOSTILE_INDEX_NAME,
-            rename=True,
-            reorder=True,
-            threads=threads,
-            force=True,
-        )
-    else:
-        decontamination_log = clean_paired_fastqs(
-            fastqs=fastq_path_tuples,
-            index=HOSTILE_INDEX_NAME,
-            rename=True,
-            reorder=True,
-            force=True,
-        )
+    decontamination_log = clean_paired_fastqs(
+        fastqs=fastq_path_tuples,
+        index=HOSTILE_INDEX_NAME,
+        rename=True,
+        reorder=True,
+        threads=threads,
+        force=True,
+    )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
     logging.debug(f"{names_logs=}")
     if dry_run:
