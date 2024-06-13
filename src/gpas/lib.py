@@ -269,7 +269,7 @@ def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
 def upload(
     upload_csv: Path,
     save: bool = False,
-    threads: int | None = None,
+    threads: int = 1,
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
 ) -> None:
@@ -308,9 +308,9 @@ def upload_single(
     upload_csv: Path,
     batch: BaseModel,
     save: bool,
-    threads: int,
     host: str,
     dry_run: bool,
+    threads: int = 1,
 ):
     fastq_paths = [upload_csv.parent / s.reads_1 for s in batch.samples]
     decontamination_log = clean_fastqs(
