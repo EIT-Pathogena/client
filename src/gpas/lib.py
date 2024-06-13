@@ -3,6 +3,7 @@ import gzip
 import json
 import logging
 import os
+import multiprocessing
 from getpass import getpass
 
 from pathlib import Path, PosixPath
@@ -12,7 +13,7 @@ import httpx
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
-from hostile.util import BUCKET_URL, CACHE_DIR
+from hostile.util import BUCKET_URL, CACHE_DIR, choose_default_thread_count
 
 from packaging.version import Version
 from pydantic import BaseModel
@@ -26,6 +27,7 @@ from gpas.util import MissingError
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
+CPU_COUNT = multiprocessing.cpu_count()
 DEFAULT_HOST = "research.portal.gpas.world"
 DEFAULT_PROTOCOL = "https"
 HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
@@ -269,7 +271,7 @@ def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
 def upload(
     upload_csv: Path,
     save: bool = False,
-    threads: int = 1,
+    threads: int | None = None,
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
 ) -> None:
@@ -289,7 +291,7 @@ def upload(
             upload_csv=upload_csv,
             batch=batch,
             save=save,
-            threads=threads,
+            threads=threads if threads else choose_default_thread_count(CPU_COUNT),
             host=host,
             dry_run=dry_run,
         )
@@ -309,15 +311,15 @@ def upload_single(
     batch: BaseModel,
     save: bool,
     host: str,
+    threads: int,
     dry_run: bool,
-    threads: int = 1,
 ):
     fastq_paths = [upload_csv.parent / s.reads_1 for s in batch.samples]
     decontamination_log = clean_fastqs(
         fastqs=fastq_paths,
         index=HOSTILE_INDEX_NAME,
         rename=True,
-        threads=threads,
+        threads=threads if threads else choose_default_thread_count(CPU_COUNT),
         force=True,
     )
     names_logs = dict(zip([s.sample_name for s in batch.samples], decontamination_log))
@@ -390,10 +392,12 @@ def upload_paired(
     upload_csv: Path,
     batch: BaseModel,
     save: bool,
-    threads: int,
+    threads: int | None,
     host: str,
     dry_run: bool,
 ):
+    if not threads:
+        threads = choose_default_thread_count(CPU_COUNT)
     fastq_path_tuples = [
         (upload_csv.parent / s.reads_1, upload_csv.parent / s.reads_2)
         for s in batch.samples

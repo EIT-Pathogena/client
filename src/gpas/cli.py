@@ -40,7 +40,7 @@ def auth(
 @click.option(
     "--threads",
     type=int,
-    default=1,
+    default=None,
     help="Number of alignment threads used during decontamination",
 )
 @click.option(
