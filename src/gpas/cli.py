@@ -1,6 +1,5 @@
 from datetime import datetime, date
 import json as json_
-from getpass import getpass
 from pathlib import Path
 
 import click
@@ -12,9 +11,13 @@ from gpas.create_upload_csv import build_upload_csv, UploadData
 @click.group(name="GPAS")
 @click.version_option()
 @click.help_option("-h", "--help")
-def main():
+@click.option(
+    "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
+)
+def main(debug):
     """GPAS command line interface."""
-    pass
+    util.display_cli_version()
+    util.configure_debug_logging(debug)
 
 
 @main.command()
@@ -27,9 +30,7 @@ def auth(
     Authenticate with the GPAS platform.
     """
     host = lib.get_host(host)
-    username = input("Enter your username: ")
-    password = getpass(prompt="Enter your password: ")
-    lib.authenticate(username=username, password=password, host=host)
+    lib.authenticate(host=host)
 
 
 @main.command()
@@ -47,7 +48,6 @@ def auth(
 )
 @click.option("--dry-run", is_flag=True, help="Exit before uploading reads")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def upload(
     upload_csv: Path,
     *,
@@ -63,7 +63,6 @@ def upload(
     file which can be used to download output files with original sample names.
     """
     # :arg out_dir: Path of directory in which to save mapping CSV
-    util.configure_debug_logging(debug)
     host = lib.get_host(host)
     lib.upload(upload_csv, save=save, dry_run=dry_run, threads=threads, host=host)
 
@@ -88,7 +87,6 @@ def upload(
     help="Rename downloaded files using sample names when given a mapping CSV",
 )
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def download(
     samples: str,
     *,
@@ -97,13 +95,11 @@ def download(
     out_dir: Path = Path(),
     rename: bool = True,
     host: str | None = None,
-    debug: bool = False,
 ) -> None:
     """
     Download input and output files associated with sample IDs or a mapping CSV file
     created during upload.
     """
-    util.configure_debug_logging(debug)
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         lib.download(
@@ -131,13 +127,11 @@ def download(
 @main.command()
 @click.argument("samples", type=str)
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> None:
     """
     Fetch metadata for one or more SAMPLES in JSON format.
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
     """
-    util.configure_debug_logging(debug)
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         result = lib.query(samples=samples, host=host)
@@ -154,7 +148,6 @@ def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> 
 @click.argument("samples", type=str)
 @click.option("--json", is_flag=True, help="Output status in JSON format")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def query_status(
     samples: str, *, json: bool = False, host: str | None = None, debug: bool = False
 ) -> None:
@@ -162,7 +155,6 @@ def query_status(
     Fetch processing status for one or more SAMPLES.
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
     """
-    util.configure_debug_logging(debug)
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         result = lib.status(samples=samples, host=host)
@@ -192,10 +184,8 @@ def download_index() -> None:
     "upload_csv", type=click.Path(exists=True, dir_okay=False, readable=True)
 )
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) -> None:
     """Validate a given upload CSV."""
-    util.configure_debug_logging(debug)
     host = lib.get_host(host)
     lib.validate(upload_csv, host=host)
 

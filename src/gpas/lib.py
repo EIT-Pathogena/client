@@ -3,6 +3,7 @@ import gzip
 import json
 import logging
 import os
+from getpass import getpass
 
 from pathlib import Path, PosixPath
 
@@ -46,13 +47,9 @@ class InvalidPathError(Exception):
 
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
-    if cli_host:
-        return cli_host
-    elif "GPAS_HOST" in os.environ:
-        env_host = os.environ["GPAS_HOST"]
-        return env_host
-    else:
-        return DEFAULT_HOST
+    return (
+        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
+    )
 
 
 def get_protocol() -> str:
@@ -63,8 +60,11 @@ def get_protocol() -> str:
         return DEFAULT_PROTOCOL
 
 
-def authenticate(username: str, password: str, host: str = DEFAULT_HOST) -> None:
-    """Requests, writes auth token to ~/.config/gpas/tokens/<host>"""
+def authenticate(host: str = DEFAULT_HOST) -> None:
+    """Requests a user auth token, writes to ~/.config/gpas/tokens/<host>.json"""
+    logging.info(f"Authenticating with {host}")
+    username = input("Enter your username: ")
+    password = getpass(prompt="Enter your password: ")
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
@@ -260,7 +260,6 @@ def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
         upload_csv (Path): Path to the upload CSV
         host (str, optional): Name of the host to validate against. Defaults to DEFAULT_HOST.
     """
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     logging.debug("validate()")
     upload_csv = Path(upload_csv)
     batch = models.parse_upload_csv(upload_csv)
@@ -276,7 +275,6 @@ def upload(
     dry_run: bool = False,
 ) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     logging.debug(f"upload() {threads=}")
     upload_csv = Path(upload_csv)
     batch = models.parse_upload_csv(upload_csv)
@@ -565,7 +563,6 @@ def status(
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
     """Query sample status"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     check_client_version(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)

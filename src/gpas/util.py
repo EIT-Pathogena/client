@@ -13,6 +13,7 @@ from typing import Literal
 
 import httpx
 
+import gpas
 
 PLATFORMS = Literal["illumina", "ont"]
 
@@ -81,6 +82,7 @@ class ServerSideError(Exception):
 def configure_debug_logging(debug: bool):
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug logging enabled")
     else:
         logging.getLogger().setLevel(logging.INFO)
 
@@ -274,3 +276,7 @@ def map_control_value(v: str) -> bool | None:
 
 def is_dev_mode() -> bool:
     return True if "GPAS_DEV_MODE" in os.environ else False
+
+
+def display_cli_version() -> None:
+    logging.info(f"GPAS client version {gpas.__version__}")
