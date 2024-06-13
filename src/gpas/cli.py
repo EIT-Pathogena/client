@@ -4,6 +4,8 @@ from getpass import getpass
 from pathlib import Path
 
 import click
+from auto_click_auto import enable_click_shell_completion
+from auto_click_auto.constants import ShellType
 
 from gpas import lib, util
 from gpas.create_upload_csv import build_upload_csv, UploadData
@@ -35,6 +37,16 @@ def auth(
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password: ")
     lib.authenticate(username=username, password=password, host=host)
+
+
+@main.command()
+def autocomplete() -> None:
+    """Activate shell completion."""
+    enable_click_shell_completion(
+        program_name="gpas",
+        shells={ShellType.BASH, ShellType.FISH, ShellType.ZSH},
+        verbose=True,
+    )
 
 
 @main.command()

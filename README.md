@@ -109,16 +109,10 @@ for sub-command options, if `--` is entered prior to pressing tab.
 
 ![tab-complete.gif](src/assets/tab-complete.gif)
 
-#### Enabling tab completion with Bash
+#### Enabling tab completion
 
 ```bash
-eval "$(_GPAS_COMPLETE=bash_source gpas)"
-```
-
-#### Enabling tab completion with ZSH
-
-```zsh
-eval "$(_GPAS_COMPLETE=zsh_source gpas)"
+gpas autocomplete
 ```
 
 More information and instructions for other shells can be found in the 
