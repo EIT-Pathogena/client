@@ -1,6 +1,7 @@
 from datetime import datetime, date
 import json as json_
 from pathlib import Path
+import sys
 
 import click
 
@@ -319,3 +320,7 @@ def build_csv(
         output_csv,
         upload_data,
     )
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
