@@ -24,7 +24,7 @@ gpas = "gpas.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.2  ",
+    "pytest>=8.0.2",
     "pre-commit>=3.6.2",
     "flit>=3.9.0"
 ]
