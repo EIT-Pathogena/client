@@ -270,6 +270,7 @@ def upload(
     threads: int | None = None,
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
+    skip_fastq_check: bool = False,
 ) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
@@ -279,7 +280,8 @@ def upload(
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
-        validate_fastqs(batch, upload_csv)
+        if not skip_fastq_check:
+            validate_fastqs(batch, upload_csv)
         validate_batch(batch=batch, host=host)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
