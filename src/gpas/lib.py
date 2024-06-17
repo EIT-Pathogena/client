@@ -813,6 +813,8 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
     """
     valid = True  # Assume valid unless we find evidence otherwise
 
+    logging.info(f"Checking FASTQ files {file_1} and {file_2}")
+
     try:
         with gzip.open(file_1, "r") as contents:
             num_lines_1 = sum(1 for _ in contents)
