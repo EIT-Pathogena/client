@@ -122,6 +122,7 @@ A 4GB human genome index is downloaded the first time you run `gpas upload`. If 
 
 To retain the decontaminated FASTQ files uploaded to GPAS, include the optional `--save` flag. To perform decontamination without uploading anything, use the optional `--dry-run` flag.
 
+Adding the `--skip-fastq-check` flag will prevent basic validity checks from being done on the contents of FASTQ files, saving time.
 
 
 #### Downloading files (`gpas download`)

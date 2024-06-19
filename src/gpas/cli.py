@@ -66,7 +66,16 @@ def autocomplete() -> None:
     "--save", is_flag=True, help="Retain decontaminated reads after upload completion"
 )
 @click.option("--dry-run", is_flag=True, help="Exit before uploading reads")
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
+@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
+@click.option(
+    "--skip-fastq-check", is_flag=True, help="Skip checking FASTQ files for validity"
+)
 def upload(
     upload_csv: Path,
     *,
@@ -76,6 +85,7 @@ def upload(
     dry_run: bool = False,
     host: str | None = None,
     debug: bool = False,
+    skip_fastq_check: bool = False,
 ) -> None:
     """
     Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
@@ -83,7 +93,14 @@ def upload(
     """
     # :arg out_dir: Path of directory in which to save mapping CSV
     host = lib.get_host(host)
-    lib.upload(upload_csv, save=save, dry_run=dry_run, threads=threads, host=host)
+    lib.upload(
+        upload_csv,
+        save=save,
+        dry_run=dry_run,
+        threads=threads,
+        host=host,
+        skip_fastq_check=skip_fastq_check,
+    )
 
 
 @main.command()
