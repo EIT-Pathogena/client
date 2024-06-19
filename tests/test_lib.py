@@ -1,9 +1,14 @@
+import logging
 import pytest
 from gpas import lib
 
 
-def test_fastq_gz_match(human_1_1_fastq_gz, human_1_2_fastq_gz):
+def test_fastq_gz_match(human_1_1_fastq_gz, human_1_2_fastq_gz, caplog):
+    logging.getLogger().setLevel(
+        logging.INFO
+    )  # This is the default level when calling from the CLI
     assert lib.valid_fastq(human_1_1_fastq_gz, human_1_2_fastq_gz)
+    assert "Checking FASTQ files" in caplog.text
 
 
 def test_not_fastq_gz_match(bad_1_1_fastq_gz, human_1_2_fastq_gz, caplog):

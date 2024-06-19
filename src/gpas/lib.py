@@ -270,6 +270,7 @@ def upload(
     threads: int | None = None,
     host: str = DEFAULT_HOST,
     dry_run: bool = False,
+    skip_fastq_check: bool = False,
 ) -> None:
     """Upload a batch of one or more samples to the GPAS platform"""
     logging.info(f"GPAS client version {gpas.__version__} ({host})")
@@ -279,7 +280,8 @@ def upload(
     if not dry_run:
         check_client_version(host)
         check_authentication(host)
-        validate_fastqs(batch, upload_csv)
+        if not skip_fastq_check:
+            validate_fastqs(batch, upload_csv)
         validate_batch(batch=batch, host=host)
     instrument_platform = batch.samples[0].instrument_platform
     logging.debug(f"{instrument_platform=}")
@@ -812,6 +814,8 @@ def valid_fastq(file_1: Path, file_2: Path | None = None) -> bool:
         file_2 (Path | None): FASTQ input file
     """
     valid = True  # Assume valid unless we find evidence otherwise
+
+    logging.info(f"Checking FASTQ files {file_1} and {file_2}")
 
     try:
         with gzip.open(file_1, "r") as contents:
