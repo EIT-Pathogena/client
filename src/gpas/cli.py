@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, date
 import json as json_
 from os import environ
@@ -6,17 +7,17 @@ import sys
 
 import click
 
-from gpas import lib, util
+import gpas.util
+from gpas import lib, util, models
 from gpas.create_upload_csv import build_upload_csv, UploadData
 
 
 @click.group(name="GPAS", context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
-@click.help_option("-h", "--help")
 @click.option(
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
-def main(debug):
+def main(*, debug: bool = False):
     """GPAS command line interface."""
     util.display_cli_version()
     util.configure_debug_logging(debug)
@@ -54,7 +55,42 @@ def autocomplete() -> None:
 
 @main.command()
 @click.argument(
-    "upload_csv", type=click.Path(exists=True, dir_okay=False, readable=True)
+    "input_csv",
+    type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(exists=True, dir_okay=True, readable=True, path_type=Path),
+    default=Path("."),
+    help="Output directory for cleaned FASTQ files, lib.DEFAULT_METADATA to the current working directory.",
+)
+@click.option(
+    "--threads",
+    type=int,
+    default=None,
+    help="Number of alignment threads used during decontamination",
+)
+def decontaminate(
+    input_csv: Path,
+    *,
+    output_dir: Path = Path("."),
+    threads: int = None,
+) -> None:
+    """
+    Decontaminate reads from a CSV file.
+    """
+    batch = models.create_batch_from_csv(input_csv)
+    gpas.util.check_outdir(output_dir)
+    cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
+        input_csv, batch, threads, output_dir
+    )
+    batch.update_sample_metadata(metadata=cleaned_batch_metadata)
+
+
+@main.command()
+@click.argument(
+    "upload_csv",
+    type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
 )
 @click.option(
     "--threads",
@@ -65,42 +101,59 @@ def autocomplete() -> None:
 @click.option(
     "--save", is_flag=True, help="Retain decontaminated reads after upload completion"
 )
-@click.option("--dry-run", is_flag=True, help="Exit before uploading reads")
 @click.option(
     "--host",
     type=click.Choice(util.DOMAINS.values()),
     default=None,
     help="API hostname (for development)",
 )
-@click.option("--debug", is_flag=True, help="Enable verbose debug messages")
 @click.option(
     "--skip-fastq-check", is_flag=True, help="Skip checking FASTQ files for validity"
+)
+@click.option("--host", type=str, default=None, help="API hostname (for development)")
+@click.option(
+    "--skip-decontamination",
+    is_flag=True,
+    default=False,
+    help="Run decontamination prior to upload",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(exists=True, dir_okay=True, readable=True, path_type=Path),
+    default=Path("."),
+    help="Output directory for cleaned FASTQ files, lib.DEFAULT_METADATA to the current working directory.",
 )
 def upload(
     upload_csv: Path,
     *,
-    # out_dir: Path = Path(),
     threads: int = 1,
     save: bool = False,
-    dry_run: bool = False,
     host: str | None = None,
-    debug: bool = False,
+    skip_decontamination: bool = True,
     skip_fastq_check: bool = False,
+    output_dir: Path = Path("."),
 ) -> None:
     """
     Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
     file which can be used to download output files with original sample names.
     """
-    # :arg out_dir: Path of directory in which to save mapping CSV
     host = lib.get_host(host)
-    lib.upload(
-        upload_csv,
-        save=save,
-        dry_run=dry_run,
-        threads=threads,
-        host=host,
-        skip_fastq_check=skip_fastq_check,
-    )
+    if skip_fastq_check and skip_decontamination:
+        logging.warning(
+            "Cannot skip FastQ checks and decontamination due to metadata requirements for upload, continuing with"
+            "checks enabled."
+        )
+        skip_fastq_check = False
+    batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
+    if skip_decontamination:
+        batch.update_sample_metadata()
+    else:
+        util.check_outdir(output_dir)
+        cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
+            upload_csv, batch, threads, output_dir=output_dir
+        )
+        batch.update_sample_metadata(metadata=cleaned_batch_metadata)
+    lib.upload(batch=batch, host=host, save=save)
 
 
 @main.command()
@@ -163,7 +216,7 @@ def download(
 @main.command()
 @click.argument("samples", type=str)
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> None:
+def query_raw(samples: str, *, host: str | None = None) -> None:
     """
     Fetch metadata for one or more SAMPLES in JSON format.
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
@@ -184,9 +237,7 @@ def query_raw(samples: str, *, host: str | None = None, debug: bool = False) -> 
 @click.argument("samples", type=str)
 @click.option("--json", is_flag=True, help="Output status in JSON format")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-def query_status(
-    samples: str, *, json: bool = False, host: str | None = None, debug: bool = False
-) -> None:
+def query_status(samples: str, *, json: bool = False, host: str | None = None) -> None:
     """
     Fetch processing status for one or more SAMPLES.
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
@@ -220,23 +271,10 @@ def download_index() -> None:
     "upload_csv", type=click.Path(exists=True, dir_okay=False, readable=True)
 )
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-def validate(upload_csv: Path, *, host: str | None = None, debug: bool = False) -> None:
+def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """Validate a given upload CSV."""
     host = lib.get_host(host)
     lib.validate(upload_csv, host=host)
-
-
-# In future this could be updated based on a file
-defaults = {
-    "country": None,
-    "district": "",
-    "subdivision": "",
-    "instrument_platform": "illumina",
-    "ont_read_suffix": ".fastq.gz",
-    "illumina_read1_suffix": "_1.fastq.gz",
-    "illumina_read2_suffix": "_2.fastq.gz",
-    "max_batch_size": 50,
-}
 
 
 @main.command()
@@ -264,47 +302,47 @@ defaults = {
     type=str,
     help="3-letter Country Code",
     required=True,
-    default=defaults["country"],
+    default=lib.DEFAULT_METADATA["country"],
     show_default=True,
 )
 @click.option(
     "--instrument-platform",
     type=click.Choice(["illumina", "ont"]),
-    default=defaults["instrument_platform"],
+    default=lib.DEFAULT_METADATA["instrument_platform"],
     help="Sequencing technology",
 )
 @click.option(
     "--subdivision",
     type=str,
     help="Subdivision",
-    default=defaults["subdivision"],
+    default=lib.DEFAULT_METADATA["subdivision"],
     show_default=True,
 )
 @click.option(
     "--district",
     type=str,
     help="District",
-    default=defaults["district"],
+    default=lib.DEFAULT_METADATA["district"],
     show_default=True,
 )
 @click.option(
     "--ont_read_suffix",
     type=str,
-    default=defaults["ont_read_suffix"],
+    default=lib.DEFAULT_METADATA["ont_read_suffix"],
     help="Read file ending for ONT fastq files",
     show_default=True,
 )
 @click.option(
     "--illumina_read1_suffix",
     type=str,
-    default=defaults["illumina_read1_suffix"],
+    default=lib.DEFAULT_METADATA["illumina_read1_suffix"],
     help="Read file ending for Illumina read 1 files",
     show_default=True,
 )
 @click.option(
     "--illumina_read2_suffix",
     type=str,
-    default=defaults["illumina_read2_suffix"],
+    default=lib.DEFAULT_METADATA["illumina_read2_suffix"],
     help="Read file ending for Illumina read 2 files",
     show_default=True,
 )
@@ -316,14 +354,14 @@ def build_csv(
     batch_name: str,
     collection_date: datetime,
     country: str,
-    subdivision: str = "",
-    district: str = "",
-    pipeline: str = "mycobacteria",
+    subdivision: str = lib.DEFAULT_METADATA["subdivision"],
+    district: str = lib.DEFAULT_METADATA["district"],
+    pipeline: str = lib.DEFAULT_METADATA["pipeline"],
     host_organism: str = "homo sapiens",
-    ont_read_suffix: str = ".fastq.gz",
-    illumina_read1_suffix: str = "_1.fastq.gz",
-    illumina_read2_suffix: str = "_2.fastq.gz",
-    max_batch_size: int = 50,
+    ont_read_suffix: str = lib.DEFAULT_METADATA["ont_read_suffix"],
+    illumina_read1_suffix: str = lib.DEFAULT_METADATA["illumina_read1_suffix"],
+    illumina_read2_suffix: str = lib.DEFAULT_METADATA["illumina_read2_suffix"],
+    max_batch_size: int = lib.DEFAULT_METADATA["max_batch_size"],
 ):
     """
     Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
