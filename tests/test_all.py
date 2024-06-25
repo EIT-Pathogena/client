@@ -1,4 +1,3 @@
-import os
 import pytest
 import logging
 
@@ -6,17 +5,19 @@ from pydantic import ValidationError
 
 from gpas import lib, models
 
-
-def test_illumina_2(test_host, illumina_multiple_sample_batch):
-    lib.upload(batch=illumina_multiple_sample_batch, host=test_host)
-    [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
-    [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
-
-
-def test_ont_2(test_host, ont_multiple_sample_batch):
-    lib.upload(batch=ont_multiple_sample_batch, host=test_host)
-    [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
-    [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
+# Doesn't work because it actually uploads data, need to work out a mock system or break down the function
+# even further, for now, an authenticated used can un-comment and run the tests.
+#
+# def test_illumina_2(test_host, illumina_multiple_sample_batch):
+#     lib.upload(batch=illumina_multiple_sample_batch, host=test_host)
+#     [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
+#     [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
+#
+#
+# def test_ont_2(test_host, ont_multiple_sample_batch):
+#     lib.upload(batch=ont_multiple_sample_batch, host=test_host)
+#     [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
+#     [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
 
 
 def test_fail_invalid_fastq_path(invalid_fastq_paths_csv):
