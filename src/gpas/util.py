@@ -259,9 +259,12 @@ def display_cli_version() -> None:
 
 
 def command_exists(command):
-    result = subprocess.run(
-        ["command", "-v", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    try:
+        result = subprocess.run(
+            ["command", "-v", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+    except FileNotFoundError:  # Catch Python parsing related errors
+        return False
     return result.returncode == 0
 
 
@@ -293,17 +296,11 @@ def reads_lines_from_gzip(file_path: Path) -> int:
     # gunzip offers a ~4x faster speed when opening GZip files, use it if we can.
     if command_exists("gunzip"):
         result = subprocess.run(
-            ["gunzip", "-c", file_path.as_posix()],
-            stdout=subprocess.PIPE,
-            text=True,
+            ["gunzip", "-c", file_path.as_posix()], stdout=subprocess.PIPE, text=True
         )
         line_count = result.stdout.count("\n")
-    if line_count == 0:  # Zcat didn't work, try the long method
-        try:
-            with gzip.open(file_path, "r") as contents:
-                line_count = sum(1 for _ in contents)
-        except gzip.BadGzipFile as e:
-            logging.error(f"Failed to open the Gzip file: {e}")
+    if line_count == 0:  # gunzip didn't work, try the long method
+        reads_lines_from_fastq(file_path)
     return line_count
 
 

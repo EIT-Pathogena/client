@@ -78,6 +78,11 @@ def illumina_sample_csv() -> Path:
 
 
 @pytest.fixture
+def illumina_gzipped_sample_csv() -> Path:
+    return Path("tests/data/illumina-gzipped.csv")
+
+
+@pytest.fixture
 def illumina_multiple_sample_csv() -> Path:
     return Path("tests/data/illumina-2.csv")
 
@@ -90,6 +95,11 @@ def illumina_mismatched_fastqs_csv() -> Path:
 @pytest.fixture
 def ont_sample_csv() -> Path:
     return Path("tests/data/ont.csv")
+
+
+@pytest.fixture
+def ont_gzipped_sample_csv() -> Path:
+    return Path("tests/data/ont-gzipped.csv")
 
 
 @pytest.fixture

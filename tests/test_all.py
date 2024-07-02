@@ -95,6 +95,16 @@ def test_ont_fastq_reads_in(ont_sample):
     assert ont_sample.reads_in == 1
 
 
+def test_gzipped_illumina_input(illumina_gzipped_sample_csv):
+    batch = models.create_batch_from_csv(illumina_gzipped_sample_csv)
+    assert batch.samples[0].reads_in == 2
+
+
+def test_gzipped_ont_input(ont_gzipped_sample_csv):
+    batch = models.create_batch_from_csv(ont_gzipped_sample_csv)
+    assert batch.samples[0].reads_in == 1
+
+
 def test_not_fastq_gz_match(illumina_mismatched_fastqs_csv):
     with pytest.raises(ValidationError) as excinfo:
         models.create_batch_from_csv(illumina_mismatched_fastqs_csv)
