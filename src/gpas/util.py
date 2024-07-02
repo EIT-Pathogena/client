@@ -261,7 +261,7 @@ def display_cli_version() -> None:
 def command_exists(command: str) -> bool:
     try:
         result = subprocess.run(
-            ["command", "-v", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ["type", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
     except FileNotFoundError:  # Catch Python parsing related errors
         return False
