@@ -21,4 +21,18 @@ def test_fail_command_exists():
 
 
 def test_command_exists():
-    assert util.command_exists("python")
+    assert util.command_exists("true")
+
+
+def test_find_duplicate_entries():
+    data = ["foo", "foo", "bar", "bar", "baz"]
+    expected = ["foo", "bar"]
+    duplicates = util.find_duplicate_entries(data)
+    assert duplicates == expected
+
+
+def test_find_no_duplicate_entries():
+    data = ["foo", "bar"]
+    expected = []
+    duplicates = util.find_duplicate_entries(data)
+    assert duplicates == expected

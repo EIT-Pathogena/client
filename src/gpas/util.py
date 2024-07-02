@@ -258,7 +258,7 @@ def display_cli_version() -> None:
     logging.info(f"GPAS client version {gpas.__version__}")
 
 
-def command_exists(command):
+def command_exists(command: str) -> bool:
     try:
         result = subprocess.run(
             ["command", "-v", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -300,7 +300,11 @@ def reads_lines_from_gzip(file_path: Path) -> int:
         )
         line_count = result.stdout.count("\n")
     if line_count == 0:  # gunzip didn't work, try the long method
-        reads_lines_from_fastq(file_path)
+        try:
+            with gzip.open(file_path, "r") as contents:
+                line_count = sum(1 for _ in contents)
+        except gzip.BadGzipFile as e:
+            logging.error(f"Failed to open the Gzip file: {e}")
     return line_count
 
 
@@ -319,3 +323,9 @@ def reads_lines_from_fastq(file_path: Path) -> int:
         logging.error(
             f"An unexpected error occurred trying to open {file_path.name}: {e}"
         )
+
+
+def find_duplicate_entries(inputs: list[str]) -> list[str]:
+    """Return a set of items that appear more than once in the input list."""
+    seen = set()
+    return [f for f in inputs if f in seen or seen.add(f)]

@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from gpas import util
+from gpas.util import find_duplicate_entries
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
@@ -14,11 +15,6 @@ def is_valid_file_extension(
     filename: str, allowed_extensions: tuple[str] = ALLOWED_EXTENSIONS
 ):
     return filename.endswith(allowed_extensions)
-
-
-def find_duplicate_entries(inputs: list[str]) -> set[str]:
-    seen = set()
-    return [f for f in inputs if f not in seen and not seen.add(f)]
 
 
 class UploadBase(BaseModel):
