@@ -90,7 +90,6 @@ class UploadSample(UploadBase):
     reads_removed: int = Field(
         description="Number of reads removed during decontamination", default=0
     )
-    skip_checks: bool = Field(description="Skip checking FastQ files", default=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -119,12 +118,6 @@ class UploadSample(UploadBase):
                 raise ValueError(
                     f"Invalid file extension for {file_path.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
                 )
-        if not self.skip_checks or self.reads_in > 0:
-            self.validate_reads_from_fastq()
-        else:
-            logging.warning(
-                f"Skipping additional FastQ file checks as requested (skip_checks = {self.skip_checks}"
-            )
         return self
 
     def check_fastq_paths_are_different(self):
@@ -141,6 +134,7 @@ class UploadSample(UploadBase):
         valid_lines_per_read = 4
         self.reads_in = 0
         for read in reads:
+            logging.info(f"Calculating read count in: {read}")
             if read.suffix == ".gz":
                 line_count = util.reads_lines_from_gzip(file_path=read)
             else:
@@ -150,6 +144,7 @@ class UploadSample(UploadBase):
                     f"FASTQ file {read.name} does not have a multiple of 4 lines"
                 )
             self.reads_in += line_count / valid_lines_per_read
+        logging.info(f"{self.reads_in} reads in FASTQ file")
         return
 
     def get_read_paths(self):
@@ -167,6 +162,9 @@ class UploadSample(UploadBase):
 
 class UploadBatch(BaseModel):
     samples: list[UploadSample]
+    skip_reading_fastqs: bool = Field(
+        description="Skip checking FastQ files", default=False
+    )
     ran_through_hostile: bool = False
     instrument_platform: str = None
 
@@ -212,7 +210,10 @@ class UploadBatch(BaseModel):
             metadata = {}
         for sample in self.samples:
             cleaned_sample_data = metadata.get(sample.sample_name, {})
-            sample.reads_out = cleaned_sample_data.get("reads_out", sample.reads_in)
+            sample.reads_in = cleaned_sample_data.get("reads_in", sample.reads_in)
+            sample.reads_out = cleaned_sample_data.get(
+                "reads_out", sample.reads_in
+            )  # Assume no change in default
             sample.reads_1_dirty_checksum = util.hash_file(sample.reads_1_resolved_path)
             if self.ran_through_hostile:
                 sample.reads_1_cleaned_path = Path(
@@ -233,6 +234,15 @@ class UploadBatch(BaseModel):
                         sample.reads_2_cleaned_path
                     )
 
+    def validate_all_sample_fastqs(self):
+        for sample in self.samples:
+            if not self.skip_reading_fastqs and sample.reads_in == 0:
+                sample.validate_reads_from_fastq()
+            else:
+                logging.warning(
+                    f"Skipping additional FastQ file checks as requested (skip_checks = {self.skip_reading_fastqs}"
+                )
+
     def is_ont(self):
         return self.instrument_platform == "ont"
 
@@ -249,8 +259,6 @@ class RemoteFile(BaseModel):
 def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> UploadBatch:
     records = util.parse_csv(upload_csv)
     return UploadBatch(  # Include upload_csv to enable relative fastq path validation
-        samples=[
-            UploadSample(**r, **dict(upload_csv=upload_csv, skip_checks=skip_checks))
-            for r in records
-        ]
+        samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records],
+        skip_reading_fastqs=skip_checks,
     )

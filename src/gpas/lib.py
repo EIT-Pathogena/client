@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import multiprocessing
+import shutil
 from getpass import getpass
 
 from pathlib import Path
@@ -190,7 +191,7 @@ def decontaminate_samples_with_hostile(
     threads: int,
     output_dir: Path = Path("."),
 ) -> dict:
-    """Run Hostile to remove human reads from a given CSV file of FastQ files."""
+    """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch"""
     logging.debug(f"decontaminate_samples_with_hostile() {threads=} {output_dir=}")
     logging.info(
         f"Removing human reads from {batch.instrument_platform.upper()} FastQ files and storing in {output_dir.absolute()}"
@@ -230,32 +231,6 @@ def decontaminate_samples_with_hostile(
         f"Human reads removed from input samples and can be found here: {output_dir.absolute()}"
     )
     return batch_metadata
-
-
-def validate(upload_csv: Path, host: str = DEFAULT_HOST) -> None:
-    """Validate a given upload CSV and exit.
-
-    Args:
-        upload_csv (Path): Path to the upload CSV
-        host (str, optional): Name of the host to validate against. Defaults to DEFAULT_HOST.
-    """
-    logging.debug("validate()")
-    upload_csv = Path(upload_csv)
-    batch = models.create_batch_from_csv(upload_csv)
-    validate_upload_permissions(batch=batch, protocol=get_protocol(), host=host)
-    logging.info(f"Successfully validated {upload_csv}!")
-
-
-def upload(
-    batch: models.UploadBatch,
-    save: bool = False,
-    host: str = DEFAULT_HOST,
-) -> None:
-    """Upload a batch of one or more samples to the GPAS platform"""
-    check_client_version(host)
-    check_authentication(host)
-    validate_upload_permissions(batch=batch, protocol=get_protocol(), host=host)
-    upload_batch(batch=batch, save=save, host=host)
 
 
 def upload_batch(
@@ -395,7 +370,6 @@ def query(
     host: str = DEFAULT_HOST,
 ) -> dict[str, dict]:
     """Query sample metadata returning a dict of metadata keyed by sample ID"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     check_client_version(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
@@ -531,7 +505,6 @@ def download(
     host: str = DEFAULT_HOST,
 ) -> None:
     """Download latest output files for a sample"""
-    logging.info(f"GPAS client version {gpas.__version__} ({host})")
     check_client_version(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
@@ -656,7 +629,9 @@ def prepare_upload_files(
             target_filepath.with_name(new_reads_filename)
         )
     else:
-        upload_filepath = target_filepath.with_name(new_reads_filename)
+        upload_filepath = shutil.copyfile(
+            target_filepath, target_filepath.with_name(new_reads_filename)
+        )
     if upload_filepath.suffix != ".gz":
         upload_filepath = util.gzip_file(target_filepath, f"{upload_filepath}.gz")
     return upload_filepath

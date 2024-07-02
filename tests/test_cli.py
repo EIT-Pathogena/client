@@ -1,6 +1,8 @@
 import os
 
 from click.testing import CliRunner
+from pydantic import ValidationError
+
 from gpas import __version__ as version
 from gpas.cli import main
 
@@ -33,9 +35,23 @@ def test_cli_decontaminate_illumina(illumina_sample_csv):
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
+def test_validation_fail_control(invalid_control_csv):
+    runner = CliRunner()
+    result = runner.invoke(main, ["validate", str(invalid_control_csv)])
+    assert result.exit_code == 1
+    assert result.exc_info[0] == ValidationError
+    assert "Input should be 'positive', 'negative' or ''" in str(result.exc_info)
+
+
 # Doesn't work because it actually uploads data, need to work out a mock system or break down the function
 # even further, for now, an authenticated used can un-comment and run the tests.
 # TODO: Re-implement with a mock upload somehow.
+# def test_validation(illumina_sample_csv):
+#     runner = CliRunner()
+#     result = runner.invoke(main, ["validate", str(illumina_sample_csv)])
+#     assert result.exit_code == 0
+#
+#
 # def test_cli_upload_ont(ont_sample_csv):
 #     runner = CliRunner()
 #     result = runner.invoke(main, ["upload", str(ont_sample_csv)])

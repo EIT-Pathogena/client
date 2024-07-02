@@ -295,11 +295,13 @@ def reads_lines_from_gzip(file_path: Path) -> int:
     line_count = 0
     # gunzip offers a ~4x faster speed when opening GZip files, use it if we can.
     if command_exists("gunzip"):
+        logging.debug("Reading lines using gunzip")
         result = subprocess.run(
             ["gunzip", "-c", file_path.as_posix()], stdout=subprocess.PIPE, text=True
         )
         line_count = result.stdout.count("\n")
     if line_count == 0:  # gunzip didn't work, try the long method
+        logging.debug("Using gunzip failed, using Python's gzip implementation")
         try:
             with gzip.open(file_path, "r") as contents:
                 line_count = sum(1 for _ in contents)

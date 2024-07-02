@@ -7,7 +7,6 @@ import sys
 
 import click
 
-import gpas.util
 from gpas import lib, util, models
 from gpas.create_upload_csv import build_upload_csv, UploadData
 
@@ -70,17 +69,22 @@ def autocomplete() -> None:
     default=None,
     help="Number of alignment threads used during decontamination",
 )
+@click.option(
+    "--skip-fastq-check", is_flag=True, help="Skip checking FASTQ files for validity"
+)
 def decontaminate(
     input_csv: Path,
     *,
     output_dir: Path = Path("."),
     threads: int = None,
+    skip_fastq_check: bool = False,
 ) -> None:
     """
     Decontaminate reads from a CSV file.
     """
-    batch = models.create_batch_from_csv(input_csv)
-    gpas.util.check_outdir(output_dir)
+    batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
+    batch.validate_all_sample_fastqs()
+    util.check_outdir(output_dir)
     cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
         input_csv, batch, threads, output_dir
     )
@@ -145,7 +149,9 @@ def upload(
         )
         skip_fastq_check = False
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
+    lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
     if skip_decontamination:
+        batch.validate_all_sample_fastqs()
         batch.update_sample_metadata()
     else:
         util.check_outdir(output_dir)
@@ -153,7 +159,7 @@ def upload(
             upload_csv, batch, threads, output_dir=output_dir
         )
         batch.update_sample_metadata(metadata=cleaned_batch_metadata)
-    lib.upload(batch=batch, host=host, save=save)
+    lib.upload_batch(batch=batch, host=host, save=save)
 
 
 @main.command()
@@ -274,7 +280,10 @@ def download_index() -> None:
 def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """Validate a given upload CSV."""
     host = lib.get_host(host)
-    lib.validate(upload_csv, host=host)
+    batch = models.create_batch_from_csv(upload_csv)
+    lib.validate_upload_permissions(batch=batch, protocol=lib.get_protocol(), host=host)
+    batch.validate_all_sample_fastqs()
+    logging.info(f"Successfully validated {upload_csv}")
 
 
 @main.command()
