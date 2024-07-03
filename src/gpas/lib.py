@@ -622,18 +622,21 @@ def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
 def prepare_upload_files(
     target_filepath: Path, sample_id: str, read_num: int, decontaminated: bool = False
 ) -> Path:
-    extension = "".join(target_filepath.suffixes)
-    new_reads_filename = f"{sample_id}.read_{read_num}{extension}"
+    """Rename the files to be compatible with what the server is expecting, which is `*_{1,2}.fastq.gz` and
+    gzip the file if it isn't already, which should only be if the files haven't been run through Hostile.
+    """
+    new_reads_filename = f"{sample_id}_{read_num}.fastq.gz"
     if decontaminated:
         upload_filepath = target_filepath.rename(
             target_filepath.with_name(new_reads_filename)
         )
     else:
-        upload_filepath = shutil.copyfile(
-            target_filepath, target_filepath.with_name(new_reads_filename)
-        )
-    if upload_filepath.suffix != ".gz":
-        upload_filepath = util.gzip_file(target_filepath, f"{upload_filepath}.gz")
+        if target_filepath.suffix != ".gz":
+            upload_filepath = util.gzip_file(target_filepath, new_reads_filename)
+        else:
+            upload_filepath = shutil.copyfile(
+                target_filepath, target_filepath.with_name(new_reads_filename)
+            )
     return upload_filepath
 
 

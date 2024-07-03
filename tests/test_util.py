@@ -21,7 +21,7 @@ def test_fail_command_exists():
 
 
 def test_command_exists():
-    assert util.command_exists("python")
+    assert util.command_exists("sh")
 
 
 def test_find_duplicate_entries():
