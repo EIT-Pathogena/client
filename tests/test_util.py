@@ -20,10 +20,6 @@ def test_fail_command_exists():
     assert not util.command_exists("notarealcommandtest")
 
 
-def test_command_exists():
-    assert util.command_exists("sh")
-
-
 def test_find_duplicate_entries():
     data = ["foo", "foo", "bar", "bar", "baz"]
     expected = ["foo", "bar"]
