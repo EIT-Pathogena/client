@@ -1,202 +1,118 @@
-import os
-
-import filecmp
 import pytest
-import logging
 
 from pydantic import ValidationError
-from datetime import datetime
 
-from gpas import lib, models
-from gpas.util import run
-from gpas.create_upload_csv import build_upload_csv, UploadData
+from gpas import models
 
-
-def test_cli_version():
-    run("gpas --version")
-
-
-def test_illumina_2():
-    lib.upload("tests/data/illumina-2.csv", dry_run=True)
-    [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
-    [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
-
-
-# # Slow
-# def test_ont_2():
-#     lib.upload("tests/data/ont-2.csv", dry_run=True)
+# Doesn't work because it actually uploads data, need to work out a mock system or break down the function
+# even further, for now, an authenticated used can un-comment and run the tests.
+#
+# def test_illumina_2(test_host, illumina_multiple_sample_batch):
+#     lib.upload_batch(batch=illumina_multiple_sample_batch, host=test_host)
+#     [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
+#     [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
+#
+#
+# def test_ont_2(test_host, ont_multiple_sample_batch):
+#     lib.upload_batch(batch=ont_multiple_sample_batch, host=test_host)
 #     [os.remove(f) for f in os.listdir(".") if f.endswith("fastq.gz")]
 #     [os.remove(f) for f in os.listdir(".") if f.endswith(".mapping.csv")]
 
 
-def test_fail_invalid_fastq_path():
+def test_fail_invalid_fastq_path(invalid_fastq_paths_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/invalid-fastq-path.csv", dry_run=True)
+        models.create_batch_from_csv(invalid_fastq_paths_csv)
 
 
-def test_fail_empty_sample_name():
+def test_fail_empty_sample_name(empty_sample_name_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/empty-sample-name.csv", dry_run=True)
+        models.create_batch_from_csv(empty_sample_name_csv)
 
 
-def test_fail_invalid_control():
+def test_fail_invalid_control(invalid_control_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/invalid-control.csv", dry_run=True)
+        models.create_batch_from_csv(invalid_control_csv)
 
 
-def test_fail_invalid_specimen_organism():
+def test_fail_invalid_specimen_organism(invalid_specimen_organism_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/invalid-specimen-organism.csv", dry_run=True)
+        models.create_batch_from_csv(invalid_specimen_organism_csv)
 
 
-def test_fail_mixed_instrument_platform():
+def test_fail_mixed_instrument_platform(invalid_mixed_platform_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/mixed-instrument-platform.csv", dry_run=True)
+        models.create_batch_from_csv(invalid_mixed_platform_csv)
 
 
-def test_fail_invalid_instrument_platform():
+def test_fail_invalid_instrument_platform(invalid_instrument_platform_csv):
     with pytest.raises(ValidationError):
-        lib.upload("tests/data/invalid/invalid-instrument-platform.csv", dry_run=True)
+        models.create_batch_from_csv(invalid_instrument_platform_csv)
 
 
-def test_validate_illumina_model():
-    models.parse_upload_csv("tests/data/illumina.csv")
-    models.parse_upload_csv("tests/data/illumina-2.csv")
+def test_validate_illumina_model(illumina_sample_csv, illumina_multiple_sample_csv):
+    models.create_batch_from_csv(illumina_sample_csv)
+    models.create_batch_from_csv(illumina_multiple_sample_csv)
 
 
-def test_validate_ont_model():
-    models.parse_upload_csv("tests/data/ont.csv")
+def test_validate_ont_model(ont_sample_csv):
+    models.create_batch_from_csv(ont_sample_csv)
 
 
-def test_validate_fail_invalid_control():
+def test_validate_fail_invalid_control(invalid_control_csv):
     with pytest.raises(ValidationError):
-        lib.validate("tests/data/invalid/invalid-control.csv")
+        models.create_batch_from_csv(invalid_control_csv)
 
 
-def test_validate_fail_invalid_specimen_organism():
+def test_validate_fail_invalid_specimen_organism(invalid_specimen_organism_csv):
     with pytest.raises(ValidationError):
-        lib.validate("tests/data/invalid/invalid-specimen-organism.csv")
+        models.create_batch_from_csv(invalid_specimen_organism_csv)
 
 
-def test_validate_fail_mixed_instrument_platform():
+def test_validate_fail_mixed_instrument_platform(invalid_mixed_platform_csv):
     with pytest.raises(ValidationError):
-        lib.validate("tests/data/invalid/mixed-instrument-platform.csv")
+        models.create_batch_from_csv(invalid_mixed_platform_csv)
 
 
-def test_validate_fail_invalid_instrument_platform():
+def test_validate_fail_invalid_instrument_platform(invalid_instrument_platform_csv):
     with pytest.raises(ValidationError):
-        lib.validate("tests/data/invalid/invalid-instrument-platform.csv")
+        models.create_batch_from_csv(invalid_instrument_platform_csv)
 
 
-def test_build_csv_illumina(tmp_path, caplog, upload_data):
-    caplog.set_level(logging.INFO)
-    build_upload_csv(
-        "tests/data/empty_files",
-        f"{tmp_path}/output.csv",
-        upload_data,
-    )
-
-    assert filecmp.cmp(
-        "tests/data/auto_upload_csvs/illumina.csv", f"{tmp_path}/output.csv"
-    )
-
-    assert "Created 1 CSV files: output.csv" in caplog.text
-    assert (
-        "You can use `gpas validate` to check the CSV files before uploading."
-        in caplog.text
-    )
+def test_illumina_fastq_reads_in(illumina_sample):
+    illumina_sample.validate_reads_from_fastq()
+    assert illumina_sample.reads_in == 2
 
 
-def test_build_csv_ont(tmp_path, caplog, upload_data):
-    caplog.set_level(logging.INFO)
-    upload_data.instrument_platform = "ont"
-    upload_data.district = "dis"
-    upload_data.subdivision = "sub"
-    upload_data.specimen_organism = "pipe"
-    upload_data.host_organism = "unicorn"
-    upload_data.ont_read_suffix = "_2.fastq.gz"
-    build_upload_csv(
-        "tests/data/empty_files",
-        f"{tmp_path}/output.csv",
-        upload_data,
-    )
-
-    assert filecmp.cmp("tests/data/auto_upload_csvs/ont.csv", f"{tmp_path}/output.csv")
-    assert "Created 1 CSV files: output.csv" in caplog.text
+def test_ont_fastq_reads_in(ont_sample):
+    ont_sample.validate_reads_from_fastq()
+    assert ont_sample.reads_in == 1
 
 
-def test_build_csv_batches(tmp_path, caplog, upload_data):
-    caplog.set_level(logging.INFO)
-    upload_data.max_batch_size = 3
-    build_upload_csv(
-        "tests/data/empty_files",
-        f"{tmp_path}/output.csv",
-        upload_data,
-    )
-
-    assert filecmp.cmp(
-        "tests/data/auto_upload_csvs/batch1.csv", f"{tmp_path}/output_1.csv"
-    )
-    assert filecmp.cmp(
-        "tests/data/auto_upload_csvs/batch2.csv", f"{tmp_path}/output_2.csv"
-    )
-    assert "Created 2 CSV files: output_1.csv, output_2.csv" in caplog.text
+def test_gzipped_illumina_input(illumina_gzipped_sample_csv):
+    batch = models.create_batch_from_csv(illumina_gzipped_sample_csv)
+    batch.validate_all_sample_fastqs()
+    assert batch.samples[0].reads_in == 2
 
 
-def test_build_csv_suffix_match(tmp_path, upload_data):
-    upload_data.illumina_read2_suffix = "_1.fastq.gz"
-    with pytest.raises(ValueError) as e_info:
-        build_upload_csv(
-            "tests/data/empty_files",
-            f"{tmp_path}/output.csv",
-            upload_data,
-        )
-    assert str(e_info.value) == "Must have different reads suffixes"
+def test_gzipped_ont_input(ont_gzipped_sample_csv):
+    batch = models.create_batch_from_csv(ont_gzipped_sample_csv)
+    batch.validate_all_sample_fastqs()
+    assert batch.samples[0].reads_in == 1
 
 
-def test_build_csv_unmatched_files(tmp_path, upload_data):
-    with pytest.raises(ValueError) as e_info:
-        build_upload_csv(
-            "tests/data/unmatched_files",
-            f"{tmp_path}/output.csv",
-            upload_data,
-        )
-    assert "Each sample must have two paired files" in str(e_info.value)
+def test_not_fastq_gz_match(illumina_mismatched_fastqs_csv):
+    with pytest.raises(ValidationError) as excinfo:
+        models.create_batch_from_csv(illumina_mismatched_fastqs_csv)
+    assert "reads_1 is not a valid file path" in str(excinfo)
 
 
-def test_build_csv_invalid_tech(tmp_path, upload_data):
-    # Note that this should be caught by the model validation
-    upload_data.instrument_platform = "invalid"
-    with pytest.raises(ValueError) as e_info:
-        build_upload_csv(
-            "tests/data/unmatched_files",
-            f"{tmp_path}/output.csv",
-            upload_data,
-        )
-    assert "Invalid instrument platform" in str(e_info.value)
+def test_fastq_empty(empty_fastq_csv):
+    with pytest.raises(ValidationError) as excinfo:
+        models.create_batch_from_csv(empty_fastq_csv)
+    assert "reads_1 is empty in sample empty-sample" in str(excinfo)
 
 
-def test_upload_data_model():
-    # Test that making model with invalid country makes error
-    with pytest.raises(ValidationError):
-        UploadData(
-            batch_name="batch_name",
-            instrument_platform="invalid",  # type: ignore
-            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
-            country="GBR",
-        )
-    with pytest.raises(ValidationError):
-        UploadData(
-            batch_name="batch_name",
-            instrument_platform="ont",
-            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
-            country="G",
-        )
-    with pytest.raises(ValidationError):
-        UploadData(
-            batch_name="batch_name",
-            instrument_platform="ont",
-            collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
-            country="GBR",
-            specimen_organism="invalid",  # type: ignore
-        )
+def test_skip_fastq_checks(illumina_sample_csv, caplog):
+    batch = models.create_batch_from_csv(illumina_sample_csv, skip_checks=True)
+    batch.validate_all_sample_fastqs()
+    assert "Skipping additional FastQ file checks" in caplog.text

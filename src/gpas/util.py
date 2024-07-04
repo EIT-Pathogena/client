@@ -1,8 +1,10 @@
 import csv
+import gzip
 import hashlib
 import json
 import logging
 import os
+import shutil
 import subprocess
 import uuid
 
@@ -13,6 +15,7 @@ from typing import Literal
 
 import httpx
 
+import gpas
 
 PLATFORMS = Literal["illumina", "ont"]
 DOMAINS = {
@@ -21,6 +24,19 @@ DOMAINS = {
     "staging": "staging.portal.gpas.world",
     "dev": "dev.portal.gpas.world",
 }
+
+
+class InvalidPathError(Exception):
+    """Custom exception for giving nice user errors around missing paths."""
+
+    def __init__(self, message: str):
+        """Constructor, used to pass a custom message to user.
+
+        Args:
+            message (str): Message about this path
+        """
+        self.message = message
+        super().__init__(self.message)
 
 
 class UnsupportedClientException(Exception):
@@ -87,6 +103,7 @@ class ServerSideError(Exception):
 def configure_debug_logging(debug: bool):
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Debug logging enabled")
     else:
         logging.getLogger().setLevel(logging.INFO)
 
@@ -108,6 +125,7 @@ def raise_for_status(response: httpx.Response):
     if response.is_error:
         response.read()
         if response.status_code == 401:
+            logging.error("Have you tried running `gpas auth`?")
             raise AuthorizationError()
         elif response.status_code == 403:
             raise PermissionError()
@@ -215,52 +233,6 @@ def upload_fastq(
     logging.info(f"  Uploaded {reads.name}")
 
 
-def upload_paired_fastqs(
-    sample_id: int,
-    sample_name: str,
-    reads_1: Path,
-    reads_2: Path,
-    host: str,
-    protocol: str,
-    dirty_checksum_1: str,
-    dirty_checksum_2: str,
-) -> None:
-    """Upload paired FASTQ files to server"""
-    reads_1, reads_2 = Path(reads_1), Path(reads_2)
-    logging.debug(
-        f"upload_paired_fastqs(): {sample_id=}, {sample_name=}, {reads_1=}, {reads_2=}"
-    )
-    logging.info(f"Uploading {sample_name}")
-    checksum1 = hash_file(reads_1)
-    checksum2 = hash_file(reads_2)
-    upload_file(
-        sample_id,
-        reads_1,
-        host=host,
-        protocol=protocol,
-        checksum=checksum1,
-        dirty_checksum=dirty_checksum_1,
-    )
-    logging.info(f"  Uploaded {reads_1.name}")
-    upload_file(
-        sample_id,
-        reads_2,
-        host=host,
-        protocol=protocol,
-        checksum=checksum2,
-        dirty_checksum=dirty_checksum_2,
-    )
-    logging.info(f"  Uploaded {reads_2.name}")
-
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as x:
-    #     futures = [
-    #         x.submit(upload_file, sample_id, reads_1),
-    #         x.submit(upload_file, sample_id, reads_2),
-    #     ]
-    #     for future in concurrent.futures.as_completed(futures):
-    #         future.result()
-
-
 def parse_comma_separated_string(string) -> set[str]:
     return set(string.strip(",").split(","))
 
@@ -280,3 +252,85 @@ def map_control_value(v: str) -> bool | None:
 
 def is_dev_mode() -> bool:
     return True if "GPAS_DEV_MODE" in os.environ else False
+
+
+def display_cli_version() -> None:
+    logging.info(f"GPAS client version {gpas.__version__}")
+
+
+def command_exists(command: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["type", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+    except FileNotFoundError:  # Catch Python parsing related errors
+        return False
+    return result.returncode == 0
+
+
+def check_outdir(path: Path) -> None:
+    """Given an outdir path, check that it exists (and is a directory).
+
+    Args:
+        path (Path): Outdir path
+    """
+    if path.exists():
+        if path.is_dir():
+            return
+        logging.error(f"Given out dir ({str(path)}) exists, but is a file!")
+        raise InvalidPathError(f"Given out dir ({str(path)}) exists, but is a file!")
+
+    logging.error(f"Given out dir ({str(path)}) does not exist!")
+    raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
+
+
+def gzip_file(input_file: Path, output_file: str) -> Path:
+    logging.info(
+        f"Gzipping file: {input_file.name} prior to upload. This may take a while depending on the size of the file."
+    )
+    with open(input_file, "rb") as f_in:
+        with gzip.open(output_file, "wb", compresslevel=6) as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    return Path(output_file)
+
+
+def reads_lines_from_gzip(file_path: Path) -> int:
+    line_count = 0
+    # gunzip offers a ~4x faster speed when opening GZip files, use it if we can.
+    if command_exists("gunzip"):
+        logging.debug("Reading lines using gunzip")
+        result = subprocess.run(
+            ["gunzip", "-c", file_path.as_posix()], stdout=subprocess.PIPE, text=True
+        )
+        line_count = result.stdout.count("\n")
+    if line_count == 0:  # gunzip didn't work, try the long method
+        logging.debug("Using gunzip failed, using Python's gzip implementation")
+        try:
+            with gzip.open(file_path, "r") as contents:
+                line_count = sum(1 for _ in contents)
+        except gzip.BadGzipFile as e:
+            logging.error(f"Failed to open the Gzip file: {e}")
+    return line_count
+
+
+def reads_lines_from_fastq(file_path: Path) -> int:
+    try:
+        with open(file_path, "r") as contents:
+            line_count = sum(1 for _ in contents)
+        return line_count
+    except PermissionError:
+        logging.error(
+            f"You do not have permission to access this file {file_path.name}."
+        )
+    except OSError as e:
+        logging.error(f"An OS error occurred trying to open {file_path.name}: {e}")
+    except Exception as e:
+        logging.error(
+            f"An unexpected error occurred trying to open {file_path.name}: {e}"
+        )
+
+
+def find_duplicate_entries(inputs: list[str]) -> list[str]:
+    """Return a set of items that appear more than once in the input list."""
+    seen = set()
+    return [f for f in inputs if f in seen or seen.add(f)]

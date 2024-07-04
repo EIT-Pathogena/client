@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 
 from gpas.create_upload_csv import UploadData
-from gpas.models import parse_upload_csv, UploadBatch
+from gpas.models import create_batch_from_csv, UploadBatch, UploadSample
 from datetime import datetime
 
 
@@ -15,6 +15,11 @@ def upload_data():
         country="GBR",
         host_organism="homo sapiens",
     )
+
+
+@pytest.fixture()
+def test_host():
+    return "dev.portal.gpas.world"
 
 
 @pytest.fixture
@@ -63,30 +68,116 @@ def empty_fastq_gz_2() -> Path:
 
 
 @pytest.fixture
-def illumina_2_samples_csv() -> Path:
+def invalid_fastq_paths_csv() -> Path:
+    return Path("tests/data/invalid/invalid-fastq-path.csv")
+
+
+@pytest.fixture
+def illumina_sample_csv() -> Path:
+    return Path("tests/data/illumina.csv")
+
+
+@pytest.fixture
+def illumina_gzipped_sample_csv() -> Path:
+    return Path("tests/data/illumina-gzipped.csv")
+
+
+@pytest.fixture
+def illumina_multiple_sample_csv() -> Path:
     return Path("tests/data/illumina-2.csv")
 
 
 @pytest.fixture
-def illumina_2_samples_batch(illumina_2_samples_csv) -> UploadBatch:
-    return parse_upload_csv(illumina_2_samples_csv)
+def illumina_mismatched_fastqs_csv() -> Path:
+    return Path("tests/data/invalid/mismatched-fastqs.csv")
 
 
 @pytest.fixture
-def illumina_2_mismatch_csv() -> Path:
-    return Path("tests/data/mismatched-fastqs.csv")
+def ont_sample_csv() -> Path:
+    return Path("tests/data/ont.csv")
 
 
 @pytest.fixture
-def illumina_2_mismatch_batch(illumina_2_mismatch_csv) -> UploadBatch:
-    return parse_upload_csv(illumina_2_mismatch_csv)
+def ont_gzipped_sample_csv() -> Path:
+    return Path("tests/data/ont-gzipped.csv")
 
 
 @pytest.fixture
-def ont_2_samples_csv() -> Path:
+def ont_multiple_sample_csv() -> Path:
     return Path("tests/data/ont-2.csv")
 
 
 @pytest.fixture
-def ont_2_samples_batch(ont_2_samples_csv) -> UploadBatch:
-    return parse_upload_csv(ont_2_samples_csv)
+def empty_sample_name_csv() -> Path:
+    return Path("tests/data/invalid/empty-sample-name.csv")
+
+
+@pytest.fixture
+def empty_fastq_csv() -> Path:
+    return Path("tests/data/invalid/empty-fastq.csv")
+
+
+@pytest.fixture
+def invalid_control_csv() -> Path:
+    return Path("tests/data/invalid/invalid-control.csv")
+
+
+@pytest.fixture
+def invalid_specimen_organism_csv() -> Path:
+    return Path("tests/data/invalid/invalid-specimen-organism.csv")
+
+
+@pytest.fixture
+def invalid_mixed_platform_csv() -> Path:
+    return Path("tests/data/invalid/mixed-instrument-platform.csv")
+
+
+@pytest.fixture
+def invalid_instrument_platform_csv() -> Path:
+    return Path("tests/data/invalid/invalid-instrument-platform.csv")
+
+
+# Batches
+
+
+@pytest.fixture
+def ont_sample_batch(ont_sample_csv) -> UploadBatch:
+    return create_batch_from_csv(ont_sample_csv)
+
+
+@pytest.fixture
+def ont_multiple_sample_batch(ont_multiple_sample_csv) -> UploadBatch:
+    return create_batch_from_csv(ont_multiple_sample_csv)
+
+
+@pytest.fixture
+def illumina_sample_batch(illumina_sample_csv) -> UploadBatch:
+    return create_batch_from_csv(illumina_sample_csv)
+
+
+@pytest.fixture
+def illumina_multiple_sample_batch(illumina_multiple_sample_csv) -> UploadBatch:
+    return create_batch_from_csv(illumina_multiple_sample_csv)
+
+
+@pytest.fixture
+def invalid_fastq_paths_batch(invalid_fastq_paths_csv) -> Path:
+    return create_batch_from_csv(invalid_fastq_paths_csv)
+
+
+@pytest.fixture
+def illumina_2_mismatch_batch(illumina_mismatched_fastqs_csv) -> UploadBatch:
+    return create_batch_from_csv(illumina_mismatched_fastqs_csv)
+
+
+# Samples
+
+
+@pytest.fixture
+def ont_sample(ont_sample_batch) -> UploadSample:
+    return ont_sample_batch.samples[0]
+
+
+@pytest.fixture
+def illumina_sample(illumina_sample_batch) -> UploadSample:
+    return illumina_sample_batch.samples[0]
