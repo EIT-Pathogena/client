@@ -136,7 +136,7 @@ def create_sample(
         "client_decontamination_reads_removed_proportion": sample.reads_removed,
         "client_decontamination_reads_in": sample.reads_in,
         "client_decontamination_reads_out": sample.reads_out,
-        "checksum": sample.reads_1_clean_checksum,
+        "checksum": sample.reads_1_pre_upload_checksum,
         "instrument_platform": sample.instrument_platform,
         "specimen_organism": sample.specimen_organism,
         "host_organism": sample.host_organism,

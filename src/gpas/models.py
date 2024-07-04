@@ -71,10 +71,10 @@ class UploadSample(UploadBase):
     reads_2_cleaned_path: Path = Field(
         description="Path of second FASTQ file after decontamination", default=None
     )
-    reads_1_clean_checksum: str = Field(
+    reads_1_pre_upload_checksum: str = Field(
         description="Checksum of first FASTQ file after decontamination", default=None
     )
-    reads_2_clean_checksum: str = Field(
+    reads_2_pre_upload_checksum: str = Field(
         description="Checksum of second FASTQ file after decontamination", default=None
     )
     reads_1_upload_file: Path = Field(
@@ -219,9 +219,11 @@ class UploadBatch(BaseModel):
                 sample.reads_1_cleaned_path = Path(
                     cleaned_sample_data.get("fastq1_out_path")
                 )
-                sample.reads_1_clean_checksum = util.hash_file(
+                sample.reads_1_pre_upload_checksum = util.hash_file(
                     sample.reads_1_cleaned_path
                 )
+            else:
+                sample.reads_1_pre_upload_checksum = sample.reads_1_dirty_checksum
             if sample.is_illumina():
                 sample.reads_2_dirty_checksum = util.hash_file(
                     sample.reads_2_resolved_path
@@ -230,9 +232,11 @@ class UploadBatch(BaseModel):
                     sample.reads_2_cleaned_path = Path(
                         cleaned_sample_data.get("fastq2_out_path")
                     )
-                    sample.reads_2_clean_checksum = util.hash_file(
+                    sample.reads_2_pre_upload_checksum = util.hash_file(
                         sample.reads_2_cleaned_path
                     )
+                else:
+                    sample.reads_2_pre_upload_checksum = sample.reads_2_dirty_checksum
 
     def validate_all_sample_fastqs(self):
         for sample in self.samples:
