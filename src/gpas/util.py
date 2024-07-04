@@ -285,8 +285,11 @@ def check_outdir(path: Path) -> None:
 
 
 def gzip_file(input_file: Path, output_file: str) -> Path:
+    logging.info(
+        f"Gzipping file: {input_file.name} prior to upload. This may take a while depending on the size of the file."
+    )
     with open(input_file, "rb") as f_in:
-        with gzip.open(output_file, "wb") as f_out:
+        with gzip.open(output_file, "wb", compresslevel=6) as f_out:
             shutil.copyfileobj(f_in, f_out)
     return Path(output_file)
 
