@@ -85,7 +85,7 @@ pathogena --version
 
 2. The stateful way (no need to use `--host` with each command):
    ```bash
-   export pathogena_HOST="dev.portal.gpas.world"
+   export PATHOGENA_HOST="dev.portal.gpas.world"
    ```
 
    Then, as usual:
