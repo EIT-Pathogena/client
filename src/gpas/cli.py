@@ -18,6 +18,7 @@ from gpas.create_upload_csv import build_upload_csv, UploadData
 )
 def main(*, debug: bool = False):
     """GPAS command line interface."""
+    lib.check_for_newer_version()
     util.display_cli_version()
     util.configure_debug_logging(debug)
 
