@@ -370,7 +370,7 @@ def query(
     host: str = DEFAULT_HOST,
 ) -> dict[str, dict]:
     """Query sample metadata returning a dict of metadata keyed by sample ID"""
-    check_client_version(host)
+    check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
         guids_samples = {guid: None for guid in guids}
@@ -397,7 +397,7 @@ def status(
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
     """Query sample status"""
-    check_client_version(host)
+    check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
         guids_samples = {guid: None for guid in guids}
@@ -477,8 +477,11 @@ def parse_csv(path: Path):
         return [row for row in reader]
 
 
-def check_client_version(host: str) -> None:
-    """Raise exception if the client is outdated"""
+def check_version_compatibility(host: str) -> None:
+    """
+    Check the client version expected by the server (Portal) and raise an exception if the client version is not
+    compatible
+    """
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=2),
@@ -487,12 +490,37 @@ def check_client_version(host: str) -> None:
         response = client.get(
             f"{get_protocol()}://{host}/cli-version",
         )
-    server_version = response.json()["version"]
+    lowest_cli_version = response.json()["version"]
     logging.debug(
-        f"Client version {gpas.__version__}, server version: {server_version})"
+        f"Client version {gpas.__version__}, server version: {lowest_cli_version})"
     )
-    if Version(server_version) > Version(gpas.__version__):
-        raise util.UnsupportedClientException(gpas.__version__, server_version)
+    if Version(gpas.__version__) < Version(lowest_cli_version):
+        raise util.UnsupportedClientException(gpas.__version__, lowest_cli_version)
+
+
+# noinspection PyBroadException
+def check_for_newer_version() -> None:
+    """Check whether there is a new version of the CLI available on Pypi and advise the user to upgrade."""
+    try:
+        gpas_pypi_url = "https://pypi.org/pypi/gpas/json"
+        with httpx.Client(transport=httpx.HTTPTransport(retries=2)) as client:
+            response = client.get(
+                gpas_pypi_url,
+                headers={"Accept": "application/json"},
+            )
+            if response.status_code == 200:
+                latest_version = Version(
+                    response.json().get("info", {}).get("version", gpas.__version__)
+                )
+                if Version(gpas.__version__) < latest_version:
+                    logging.info(
+                        f"A new version of the GPAS CLI ({latest_version}) is available to install, "
+                        f"please follow the installation steps in the README.md file to upgrade."
+                    )
+    except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException):
+        pass
+    except Exception:  # Errors in this check should never prevent further CLI usage, ignore all errors.
+        pass
 
 
 def download(
@@ -505,7 +533,7 @@ def download(
     host: str = DEFAULT_HOST,
 ) -> None:
     """Download latest output files for a sample"""
-    check_client_version(host)
+    check_version_compatibility(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
