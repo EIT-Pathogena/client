@@ -79,8 +79,8 @@ pathogena --version
 
 1. The stateless way (use `--host` with every command):
    ```bash
-   pathogena auth --host dev.portal.pathogena.world
-   pathogena upload samples.csv --host dev.portal.pathogena.world
+   pathogena auth --host dev.portal.gpas.world
+   pathogena upload samples.csv --host dev.portal.gpas.world
    ```
 
 2. The stateful way (no need to use `--host` with each command):
