@@ -143,6 +143,7 @@ def upload(
     file which can be used to download output files with original sample names.
     """
     host = lib.get_host(host)
+    lib.check_version_compatibility(host=host)
     if skip_fastq_check and skip_decontamination:
         logging.warning(
             "Cannot skip FastQ checks and decontamination due to metadata requirements for upload, continuing with"
