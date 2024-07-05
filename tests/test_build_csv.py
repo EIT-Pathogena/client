@@ -5,7 +5,7 @@ import logging
 from pydantic import ValidationError
 from datetime import datetime
 
-from gpas.create_upload_csv import build_upload_csv, UploadData
+from pathogena.create_upload_csv import build_upload_csv, UploadData
 
 
 def test_build_csv_illumina(tmp_path, caplog, upload_data):
@@ -22,7 +22,7 @@ def test_build_csv_illumina(tmp_path, caplog, upload_data):
 
     assert "Created 1 CSV files: output.csv" in caplog.text
     assert (
-        "You can use `gpas validate` to check the CSV files before uploading."
+        "You can use `pathogena validate` to check the CSV files before uploading."
         in caplog.text
     )
 

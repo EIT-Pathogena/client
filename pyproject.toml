@@ -3,8 +3,11 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "gpas"
-authors = [{name = "Bede Constantinides", email = "bedeabc@gmail.com"}]
+name = "pathogena"
+authors = [
+    {name = "Bede Constantinides", email = "bedeabc@gmail.com"},
+    {name = "Jay Dhillon", email = "jdhillon@eit.org"}
+]
 license = {file = "LICENSE"}
 readme = "README_pypi.md"
 dynamic = ["version", "description"]
@@ -20,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gpas = "gpas.cli:main"
+pathogena = "pathogena.cli:main"
 
 [project.optional-dependencies]
 dev = [

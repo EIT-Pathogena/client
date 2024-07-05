@@ -1,8 +1,8 @@
 from pathlib import Path
 import pytest
 
-from gpas.create_upload_csv import UploadData
-from gpas.models import create_batch_from_csv, UploadBatch, UploadSample
+from pathogena.create_upload_csv import UploadData
+from pathogena.models import create_batch_from_csv, UploadBatch, UploadSample
 from datetime import datetime
 
 
@@ -19,7 +19,7 @@ def upload_data():
 
 @pytest.fixture()
 def test_host():
-    return "dev.portal.gpas.world"
+    return "dev.portal.pathogena.world"
 
 
 @pytest.fixture

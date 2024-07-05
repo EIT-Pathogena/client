@@ -3,7 +3,7 @@ import logging
 import csv
 
 from pydantic import Field
-from gpas.models import UploadBase
+from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
@@ -84,7 +84,9 @@ def build_upload_csv(
     logging.info(
         f"Created {len(output_csvs)} CSV files: {', '.join([csv.name for csv in output_csvs])}"
     )
-    logging.info("You can use `gpas validate` to check the CSV files before uploading.")
+    logging.info(
+        "You can use `pathogena validate` to check the CSV files before uploading."
+    )
 
 
 def chunks(lst: list, n: int) -> list[list]:
@@ -100,7 +102,7 @@ def _write_csv(
     upload_data: UploadData,
 ):
     """
-    Build a CSV file for upload to the Genomic Pathogen Analysis System (GPAS).
+    Build a CSV file for upload to EIT Pathogena.
     """
     # Note that csv module uses CRLF line endings
     with open(filename, "w", newline="", encoding="utf-8") as outfile:

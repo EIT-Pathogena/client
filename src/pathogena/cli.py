@@ -7,17 +7,17 @@ import sys
 
 import click
 
-from gpas import lib, util, models
-from gpas.create_upload_csv import build_upload_csv, UploadData
+from pathogena import lib, util, models
+from pathogena.create_upload_csv import build_upload_csv, UploadData
 
 
-@click.group(name="GPAS", context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(name="Pathogena", context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
 @click.option(
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
 def main(*, debug: bool = False):
-    """GPAS command line interface."""
+    """Pathogena command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
     util.configure_debug_logging(debug)
@@ -35,7 +35,7 @@ def auth(
     host: str | None = None,
 ) -> None:
     """
-    Authenticate with the GPAS platform.
+    Authenticate with EIT Pathogena.
     """
     host = lib.get_host(host)
     lib.authenticate(host=host)
@@ -45,11 +45,11 @@ def auth(
 def autocomplete() -> None:
     """Activate shell completion."""
     shell = environ.get("SHELL", "/bin/bash").split("/")[-1]
-    single_use_command = f'eval "$(_GPAS_COMPLETE={shell}_source gpas)"'
+    single_use_command = f'eval "$(_PATHOGENA_COMPLETE={shell}_source pathogena)"'
     print(f"Run this command to enable autocompletion:\n    {single_use_command}")
     print(
         f"Add this to your ~/.{shell}rc file to enable this permanently:\n"
-        f"    command -v gpas > /dev/null 2>&1 && {single_use_command}"
+        f"    command -v pathogena > /dev/null 2>&1 && {single_use_command}"
     )
 
 
@@ -139,7 +139,7 @@ def upload(
     output_dir: Path = Path("."),
 ) -> None:
     """
-    Validate, decontaminate and upload reads to the GPAS platform. Creates a mapping CSV
+    Validate, decontaminate and upload reads to EIT Pathogena. Creates a mapping CSV
     file which can be used to download output files with original sample names.
     """
     host = lib.get_host(host)

@@ -1,4 +1,4 @@
-# GPAS client
+# EIT Pathogena client
 
 The command line interface for the GPAS mycobacterial platform. The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM running Linux or MacOS is recommended.
 
@@ -44,14 +44,14 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-  conda activate gpas
-  pip install --upgrade gpas
+  conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+  conda activate pathogena
+  pip install --upgrade pathogena
   ```
 
 - Test:
   ```
-  gpas --version
+  pathogena --version
   ```
 
 
@@ -71,7 +71,7 @@ pre-commit install
 
 ```bash
 git pull origin main
-gpas --version
+pathogena --version
 ```
 
 
@@ -79,30 +79,30 @@ gpas --version
 
 1. The stateless way (use `--host` with every command):
    ```bash
-   gpas auth --host dev.portal.gpas.world
-   gpas upload samples.csv --host dev.portal.gpas.world
+   pathogena auth --host dev.portal.pathogena.world
+   pathogena upload samples.csv --host dev.portal.pathogena.world
    ```
 
 2. The stateful way (no need to use `--host` with each command):
    ```bash
-   export GPAS_HOST="dev.portal.gpas.world"
+   export pathogena_HOST="dev.portal.gpas.world"
    ```
 
    Then, as usual:
    ```bash
-   gpas auth
-   gpas upload samples.csv
+   pathogena auth
+   pathogena upload samples.csv
    ```
 
    To reset:
    ```bash
-   unset GPAS_HOST
+   unset PATHOGENA_HOST
    ```
 
 ### Tab completion
 
 Tab completion can optionally be enabled by adding the following lines to your shell source files. 
-This will enable the ability to press tab after writing `gpas ` to list possible sub-commands. It can also be used
+This will enable the ability to press tab after writing `pathogena ` to list possible sub-commands. It can also be used
 for sub-command options, if `--` is entered prior to pressing tab.
 
 #### Example usage
@@ -117,20 +117,20 @@ environment. More information and instructions for other shells can be found in 
 [Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
 
 ```bash
-$ gpas autocomplete
+$ pathogena autocomplete
 Run this command to enable autocompletion:
-    eval "$(_GPAS_COMPLETE=zsh_source gpas)"
+    eval "$(_PATHOGENA_COMPLETE=zsh_source pathogena)"
 Add this to your ~/.zshrc file to enable this permanently:
-    command -v gpas > /dev/null 2>&1 && eval "$(_GPAS_COMPLETE=zsh_source gpas)"
+    command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=zsh_source pathogena)"
 ```
 
 
 ### Installing a pre-release version
 
 ```bash
-conda create --yes -n gpas -c conda-forge -c bioconda hostile==1.1.0
-conda activate gpas
-pip install --pre gpas
+conda create --yes -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --pre pathogena
 ```
 
 
@@ -138,13 +138,13 @@ pip install --pre gpas
 ### Using a local development server
 
 ```bash
-export GPAS_HOST="localhost:8000"
-export GPAS_PROTOCOL="http"
+export PATHOGENA_HOST="localhost:8000"
+export PATHOGENA_PROTOCOL="http"
 ```
 To unset:
 ```bash
-unset GPAS_HOST
-unset GPAS_PROTOCOL
+unset PATHOGENA_HOST
+unset PATHOGENA_PROTOCOL
 ```
 
 
@@ -155,12 +155,12 @@ Having installed an editable [development environment](https://github.com/Global
 
 ```bash
 pytest
-# Bump version strings inside src/gpas/__init__.py AND Dockerfile
+# Bump version strings inside src/pathogena/__init__.py AND Dockerfile
 # Use format e.g. 1.0.0a1 for pre-releases (following example of Pydantic)
 git tag 0.0.0. # e.g.
 git push origin main --tags
 flit build  # Build package
 flit publish  # Authenticate and upload package to PyPI
 # Announce in Slack CLI channel
-# PR gpas/gpas/settings.py with new version
+# PR pathogena/pathogena/settings.py with new version
 ```
