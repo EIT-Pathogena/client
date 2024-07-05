@@ -17,7 +17,7 @@ from pathogena.create_upload_csv import build_upload_csv, UploadData
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
 def main(*, debug: bool = False):
-    """Pathogena command line interface."""
+    """EIT Pathogena command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
     util.configure_debug_logging(debug)

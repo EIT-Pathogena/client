@@ -128,8 +128,8 @@ A 4GB human genome index is downloaded the first time you run `pathogena upload`
 simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity
 check. You may optionally download the index ahead of time using the command `pathogena download-index`.
 
-To retain the decontaminated FASTQ files uploaded to GPAS, include the optional `--save` flag. To perform decontamination
-without uploading anything, use the optional `--dry-run` flag.
+To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform 
+decontamination without uploading anything, use the `pathogena decontaminate` command.
 
 Adding the `--skip-fastq-check` flag will prevent basic validity checks from being done on the contents of FASTQ files,
 saving time.
