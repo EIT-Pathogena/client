@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 1.0.3rc1 (2024-07-15)
+
 ### Feat
 
 - Check for a new version in PyPi.
