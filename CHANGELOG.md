@@ -1,5 +1,11 @@
 ## Unreleased
 
+## 2.0.0rc1 (2024-07-18)
+
+### Feat
+
+- Changed GPAS references to Pathogena, URLs will be updated closer to EIT Pathogena release.
+
 ## 1.0.3rc1 (2024-07-15)
 
 ### Feat
