@@ -119,9 +119,9 @@ environment. More information and instructions for other shells can be found in 
 ```bash
 $ pathogena autocomplete
 Run this command to enable autocompletion:
-    eval "$(_PATHOGENA_COMPLETE=zsh_source pathogena)"
-Add this to your ~/.zshrc file to enable this permanently:
-    command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=zsh_source pathogena)"
+    eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
+Add this to your `~/.bashrc` file to enable this permanently:
+    command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
 ```
 
 
