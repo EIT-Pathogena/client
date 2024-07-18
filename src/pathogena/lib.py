@@ -18,12 +18,12 @@ from hostile.util import BUCKET_URL, CACHE_DIR, choose_default_thread_count
 from packaging.version import Version
 from tqdm import tqdm
 
-import gpas
+import pathogena
 import hostile
 
-from gpas import util, models
-from gpas.models import UploadBatch, UploadSample
-from gpas.util import DOMAINS, MissingError, check_outdir
+from pathogena import util, models
+from pathogena.models import UploadBatch, UploadSample
+from pathogena.util import DOMAINS, MissingError, check_outdir
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -47,20 +47,22 @@ HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 def get_host(cli_host: str | None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
     return (
-        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
+        cli_host
+        if cli_host is not None
+        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
     )
 
 
 def get_protocol() -> str:
-    if "GPAS_PROTOCOL" in os.environ:
-        protocol = os.environ["GPAS_PROTOCOL"]
+    if "PATHOGENA_PROTOCOL" in os.environ:
+        protocol = os.environ["PATHOGENA_PROTOCOL"]
         return protocol
     else:
         return DEFAULT_PROTOCOL
 
 
 def authenticate(host: str = DEFAULT_HOST) -> None:
-    """Requests a user auth token, writes to ~/.config/gpas/tokens/<host>.json"""
+    """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json"""
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password: ")
@@ -70,7 +72,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
             json={"username": username, "password": password},
         )
     data = response.json()
-    conf_dir = Path.home() / ".config" / "gpas"
+    conf_dir = Path.home() / ".config" / "pathogena"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
     token_path = token_dir / f"{host}.json"
@@ -88,7 +90,7 @@ def check_authentication(host: str) -> None:
     if response.is_error:
         logging.error(f"Authentication failed for host {host}")
         raise RuntimeError(
-            "Authentication failed. You may need to re-authenticate with `gpas auth`"
+            "Authentication failed. You may need to re-authenticate with `pathogena auth`"
         )
 
 
@@ -96,8 +98,8 @@ def create_batch_on_server(host: str) -> tuple[str, str]:
     """Create batch on server, return batch id"""
     telemetry_data = {
         "client": {
-            "name": "gpas-client",
-            "version": gpas.__version__,
+            "name": "pathogena-client",
+            "version": pathogena.__version__,
         },
         "decontamination": {
             "name": "hostile",
@@ -492,16 +494,17 @@ def check_version_compatibility(host: str) -> None:
         )
     lowest_cli_version = response.json()["version"]
     logging.debug(
-        f"Client version {gpas.__version__}, server version: {lowest_cli_version})"
+        f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
-    if Version(gpas.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientException(gpas.__version__, lowest_cli_version)
+    if Version(pathogena.__version__) < Version(lowest_cli_version):
+        raise util.UnsupportedClientException(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
 def check_for_newer_version() -> None:
     """Check whether there is a new version of the CLI available on Pypi and advise the user to upgrade."""
     try:
+        # TODO: Update this URL to Github when the repo is made public, or change the reference when the name changes.
         gpas_pypi_url = "https://pypi.org/pypi/gpas/json"
         with httpx.Client(transport=httpx.HTTPTransport(retries=2)) as client:
             response = client.get(
@@ -510,12 +513,14 @@ def check_for_newer_version() -> None:
             )
             if response.status_code == 200:
                 latest_version = Version(
-                    response.json().get("info", {}).get("version", gpas.__version__)
+                    response.json()
+                    .get("info", {})
+                    .get("version", pathogena.__version__)
                 )
-                if Version(gpas.__version__) < latest_version:
+                if Version(pathogena.__version__) < latest_version:
                     logging.info(
-                        f"A new version of the GPAS CLI ({latest_version}) is available to install, "
-                        f"please follow the installation steps in the README.md file to upgrade."
+                        f"A new version of the EIT Pathogena CLI ({latest_version}) is available to install,"
+                        f" please follow the installation steps in the README.md file to upgrade."
                     )
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException):
         pass

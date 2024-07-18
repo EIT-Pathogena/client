@@ -15,7 +15,7 @@ from typing import Literal
 
 import httpx
 
-import gpas
+import pathogena
 
 PLATFORMS = Literal["illumina", "ont"]
 DOMAINS = {
@@ -51,7 +51,7 @@ class UnsupportedClientException(Exception):
         self.message = (
             f"\n\nThe installed client version ({this_version}) is no longer supported."
             " To update the client, please run:\n\n"
-            "conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0 && conda activate gpas && pip install --upgrade gpas"
+            "conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0 && conda activate pathogena && pip install --upgrade pathogena"
         )
         super().__init__(self.message)
 
@@ -61,8 +61,8 @@ class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401"""
 
     def __init__(self):
-        self.message = "Authorization failed! Please re-authenticate with `gpas auth` and try again.\n"
-        "If the problem persists please contact support (support@gpas.global)."
+        self.message = "Authorization failed! Please re-authenticate with `pathogena auth` and try again.\n"
+        "If the problem persists please contact support (pathogena.support@eit.org)."
         super().__init__(self.message)
 
 
@@ -72,7 +72,7 @@ class PermissionError(Exception):
     def __init__(self):
         self.message = (
             "You don't have access to this resource! Check logs for more details.\n"
-            "Please contact support if you think you should be able to access this resource (support@gpas.global)."
+            "Please contact support if you think you should be able to access this resource (pathogena.support@eit.org)."
         )
         super().__init__(self.message)
 
@@ -95,7 +95,7 @@ class ServerSideError(Exception):
     def __init__(self):
         self.message = (
             "We had some trouble with the server, please double check your command and try again in a moment.\n"
-            "If the problem persists, please contact support (support@gpas.global)."
+            "If the problem persists, please contact support (pathogena.support@eit.org)."
         )
         super().__init__(self.message)
 
@@ -125,7 +125,7 @@ def raise_for_status(response: httpx.Response):
     if response.is_error:
         response.read()
         if response.status_code == 401:
-            logging.error("Have you tried running `gpas auth`?")
+            logging.error("Have you tried running `pathogena auth`?")
             raise AuthorizationError()
         elif response.status_code == 403:
             raise PermissionError()
@@ -148,8 +148,8 @@ def run(cmd: str, cwd: Path = Path()):
 
 
 def get_access_token(host: str) -> str:
-    """Reads token from ~/.config/gpas/tokens/<host>"""
-    token_path = Path.home() / ".config" / "gpas" / "tokens" / f"{host}.json"
+    """Reads token from ~/.config/pathogena/tokens/<host>"""
+    token_path = Path.home() / ".config" / "pathogena" / "tokens" / f"{host}.json"
     logging.debug(f"{token_path=}")
     try:
         data = json.loads((token_path).read_text())
@@ -251,11 +251,11 @@ def map_control_value(v: str) -> bool | None:
 
 
 def is_dev_mode() -> bool:
-    return True if "GPAS_DEV_MODE" in os.environ else False
+    return True if "PATHOGENA_DEV_MODE" in os.environ else False
 
 
 def display_cli_version() -> None:
-    logging.info(f"GPAS client version {gpas.__version__}")
+    logging.info(f"EIT Pathogena client version {pathogena.__version__}")
 
 
 def command_exists(command: str) -> bool:

@@ -3,8 +3,8 @@ import os
 from click.testing import CliRunner
 from pydantic import ValidationError
 
-from gpas import __version__ as version
-from gpas.cli import main
+from pathogena import __version__ as version
+from pathogena.cli import main
 
 
 def test_cli_help_override():

@@ -1,8 +1,10 @@
-# GPAS client
+# EIT Pathogena client
 
-The command line interface for the GPAS mycobacterial platform. The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM running Linux or MacOS is recommended.
+The command line interface for the EIT Pathogena mycobacterial platform. The client enables privacy-preserving sequence
+data submission and retrieval of analytical output files. 
 
-
+Prior to upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB 
+of RAM running Linux or MacOS is recommended.
 
 ## Install
 
@@ -20,7 +22,8 @@ If a conda package manager is already installed, skip to [Installing the client]
 
 **MacOS**
 
-The client requires an `x86_64` conda installation. If your Mac has an Apple processor, disable or delete existing `arm64` conda installations before continuing.
+The client requires an `x86_64` conda installation. If your Mac has an Apple processor, disable or delete existing
+`arm64` conda installations before continuing.
 
 - If your Mac has an Apple processor, using Terminal, firstly run:
   ```bash
@@ -44,20 +47,20 @@ The client requires an `x86_64` conda installation. If your Mac has an Apple pro
 
 - Perform the installation/upgrade:
   ```bash
-  conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-  conda activate gpas
-  pip install --upgrade gpas
+  conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+  conda activate pathogena
+  pip install --upgrade pathogena
   ```
 
 - Test:
   ```
-  gpas --version
+  pathogena --version
   ```
 
 ### Tab completion
 
 Tab completion can optionally be enabled by adding the following lines to your shell source files. 
-This will enable the ability to press tab after writing `gpas ` to list possible sub-commands. It can also be used
+This will enable the ability to press tab after writing `pathogena ` to list possible sub-commands. It can also be used
 for sub-command options, if `--` is entered prior to pressing tab.
 
 #### Example usage
@@ -72,11 +75,11 @@ environment. More information and instructions for other shells can be found in 
 [Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
 
 ```bash
-$ gpas autocomplete
+$ pathogena autocomplete
 Run this command to enable autocompletion:
-    eval "$(_GPAS_COMPLETE=zsh_source gpas)"
-Add this to your ~/.zshrc file to enable this permanently:
-    command -v gpas > /dev/null 2>&1 && eval "$(_GPAS_COMPLETE=zsh_source gpas)"
+    eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
+Add this to your ~/.bashrc file to enable this permanently:
+    command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
 ```
 
 
@@ -85,111 +88,125 @@ Add this to your ~/.zshrc file to enable this permanently:
 Ensure that the conda environment is active:
 
 ```bash
-conda activate gpas
+conda activate pathogena
 ```
 
 
 
 #### Help
 
-Run `gpas --help` for an overview of CLI subcommands. For help with a specific subcommand, use e.g. `gpas auth --help`
+Run `pathogena --help` for an overview of CLI subcommands. For help with a specific subcommand, use e.g. 
+`pathogena auth --help`
 
 
+#### Authentication (`pathogena auth`)
 
-#### Authentication (`gpas auth`)
-
-You will need to authenticate the first time you use the client. Do this by running `gpas auth` and entering your username and password. A token will be saved automatically inside your home directory.
+You will need to authenticate the first time you use the client. Do this by running `pathogena auth` and entering your 
+username and password. A token will be saved automatically inside your home directory.
 
 ```
-gpas auth
+pathogena auth
 Enter your username: bede.constantinides@ndm.ox.ac.uk
 Enter your password: ***************
 ```
 
 
 
-#### Uploading samples (`gpas upload`)
+#### Uploading samples (`pathogena upload`)
 
-The upload subcommand performs metadata validation and client-side removal of human reads for each of your samples, before uploading sequences to the GPAS platform for analysis.
+The upload subcommand performs metadata validation and client-side removal of human reads for each of your samples, 
+before uploading sequences to EIT Pathogena for analysis.
 
 ```bash
-gpas upload tests/data/illumina.csv
+pathogena upload tests/data/illumina.csv
 ```
 
-During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly generated remote names. Keep this file safe, as it is useful for downloading and relinking results later.
+During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly
+generated remote names. Keep this file safe, as it is useful for downloading and relinking results later.
 
-A 4GB human genome index is downloaded the first time you run `gpas upload`. If for any reason this is interrupted, simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity check. You may optionally download the index ahead of time using the command `gpas download-index`.
+A 4GB human genome index is downloaded the first time you run `pathogena upload`. If for any reason this is interrupted,
+simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity
+check. You may optionally download the index ahead of time using the command `pathogena download-index`.
 
-To retain the decontaminated FASTQ files uploaded to GPAS, include the optional `--save` flag. To perform decontamination without uploading anything, use the optional `--dry-run` flag.
+To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform 
+decontamination without uploading anything, use the `pathogena decontaminate` command.
 
-Adding the `--skip-fastq-check` flag will prevent basic validity checks from being done on the contents of FASTQ files, saving time.
+Adding the `--skip-fastq-check` flag will prevent basic validity checks from being done on the contents of FASTQ files,
+saving time.
 
 
-#### Downloading files (`gpas download`)
+#### Downloading files (`pathogena download`)
 
-The download subcommand retrieves the output (and/or input) files associated with a batch of samples given a mapping CSV generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are prefixed with the sample names provided at upload. Otherwise downloaded files are prefixed with the sample GUID.
+The download subcommand retrieves the output (and/or input) files associated with a batch of samples given a mapping CSV
+generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are
+prefixed with the sample names provided at upload. Otherwise downloaded files are prefixed with the sample GUID.
 
 ```bash
 # Download the main reports for all samples in a5w2e8.mapping.csv
-gpas download a5w2e8.mapping.csv
+pathogena download a5w2e8.mapping.csv
 
 # Download the main and speciation reports for all samples in a5w2e8.mapping.csv
-gpas download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
+pathogena download a5w2e8.mapping.csv --filenames main_report.json,speciation_report.json
 
 # Download the main report for one sample
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 
 # Download the final assembly for one M. tuberculosis sample
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
 
 # Download the main report for two samples
-gpas download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
+pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
 
 # Save downloaded files to a specific directory
-gpas download a5w2e8.mapping.csv --out-dir results
+pathogena download a5w2e8.mapping.csv --out-dir results
 
 # Download only input fastqs
-gpas download a5w2e8.mapping.csv --inputs --filenames ""
+pathogena download a5w2e8.mapping.csv --inputs --filenames ""
 ```
 
-The complete list of `--filenames` available for download varies by sample, and can be found in the Downloads section of sample view pages in the GPAS web portal.
+The complete list of `--filenames` available for download varies by sample, and can be found in the Downloads section of
+sample view pages in EIT Pathogena.
 
 
-#### Generating Upload CSV (`gpas build-csv`)
+#### Generating Upload CSV (`pathogena build-csv`)
 
-If you have a folder containing all the reads you would like to upload, then `gpas build-csv` can be used to help generate the upload csv. See the GPAS User Guide for detailed descriptions of all the fields.
+If you have a folder containing all the reads you would like to upload, then `pathogena build-csv` can be used to help
+generate the upload csv. See the Pathogena User Guide for detailed descriptions of all the fields.
 You'll need to fill in some of the required parameters.
 
 ```bash
-gpas build-csv --output-csv upload.csv --batch-name test_batch --collection-date 2024-04-15 --country GBR --max-batch-size 25 my_folder
+pathogena build-csv --output-csv upload.csv --batch-name test_batch --collection-date 2024-04-15 --country GBR --max-batch-size 25 my_folder
 ```
 
-You can then go through the csv and manually mark samples as positive/negative controls, or give them sample names (by default they are named based on the filename).
+You can then go through the csv and manually mark samples as positive/negative controls, or give them sample names
+(by default they are named based on the filename).
 
 
-#### Querying sample metadata (`gpas query`)
+#### Querying sample metadata (`pathogena query`)
 
-The query subcommand fetches either the processing status (`gpas query status`) or raw metadata (`gpas query raw`) of one more samples given a mapping CSV generated during upload, or one or more sample GUIDs.
+The query subcommand fetches either the processing status (`pathogena query status`) or raw metadata 
+(`pathogena query raw`) of one more samples given a mapping CSV generated during upload, or one or more sample GUIDs.
 
 ```bash
 # Query the processing status of all samples in a5w2e8.mapping.csv
-gpas query status a5w2e8.mapping.csv
+pathogena query status a5w2e8.mapping.csv
 
 # Query the processing status of a single sample
-gpas query status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
+pathogena query status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 
 # Query all available metadata in JSON format
-gpas query raw a5w2e8.mapping.csv
+pathogena query raw a5w2e8.mapping.csv
 ```
 
 
 
-#### Downloading decontamination indexes (`gpas download-index`)
+#### Downloading decontamination indexes (`pathogena download-index`)
 
-The human genome index used for host decontamination is downloaded automatically when running `gpas upload` for the first time. You may trigger this manually ahead of upload with `gpas download-index`.
+The human genome index used for host decontamination is downloaded automatically when running `pathogena upload`
+for the first time. You may trigger this manually ahead of upload with `pathogena download-index`.
 
 
 
 ## Support
 
-For technical support, please open an issue or contact `support@gpas.global`
+For technical support, please open an issue or contact `pathogena.support@eit.org`

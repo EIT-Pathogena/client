@@ -5,8 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from gpas import util
-from gpas.util import find_duplicate_entries
+from pathogena import util
+from pathogena.util import find_duplicate_entries
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
