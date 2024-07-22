@@ -35,7 +35,7 @@ DEFAULT_METADATA = {
     "district": "",
     "subdivision": "",
     "instrument_platform": "illumina",
-    "pipeline": "mycobacterium",
+    "pipeline": "mycobacteria",
     "ont_read_suffix": ".fastq.gz",
     "illumina_read1_suffix": "_1.fastq.gz",
     "illumina_read2_suffix": "_2.fastq.gz",

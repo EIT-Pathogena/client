@@ -4,6 +4,7 @@
 
 - Update authors so that we appear as the contact on PyPi instead of Bede.
 - PyPi URL now points to new Pathogena project.
+- Default pipeline entry incorrectly set to `mycobacterium` instead of `mycobacteria` during refactor.
 
 ## 2.0.0rc1 (2024-07-18)
 
