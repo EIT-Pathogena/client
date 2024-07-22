@@ -35,7 +35,7 @@ DEFAULT_METADATA = {
     "district": "",
     "subdivision": "",
     "instrument_platform": "illumina",
-    "pipeline": "mycobacterium",
+    "pipeline": "mycobacteria",
     "ont_read_suffix": ".fastq.gz",
     "illumina_read1_suffix": "_1.fastq.gz",
     "illumina_read2_suffix": "_2.fastq.gz",
@@ -504,11 +504,10 @@ def check_version_compatibility(host: str) -> None:
 def check_for_newer_version() -> None:
     """Check whether there is a new version of the CLI available on Pypi and advise the user to upgrade."""
     try:
-        # TODO: Update this URL to Github when the repo is made public, or change the reference when the name changes.
-        gpas_pypi_url = "https://pypi.org/pypi/gpas/json"
+        pathogena_pypi_url = "https://pypi.org/pypi/pathogena/json"
         with httpx.Client(transport=httpx.HTTPTransport(retries=2)) as client:
             response = client.get(
-                gpas_pypi_url,
+                pathogena_pypi_url,
                 headers={"Accept": "application/json"},
             )
             if response.status_code == 200:
