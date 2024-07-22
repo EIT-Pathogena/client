@@ -35,6 +35,41 @@ def test_cli_decontaminate_illumina(illumina_sample_csv):
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
+def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv):
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["decontaminate", str(illumina_sample_csv), "--output-dir", "."]
+    )
+    assert result.exit_code == 0
+    [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
+
+
+def test_cli_fail_decontaminate_output_dir(illumina_sample_csv):
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["decontaminate", str(illumina_sample_csv), "--output-dir", "totallyfakedir"],
+    )
+    assert result.exit_code != 0
+    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+
+
+def test_cli_fail_upload_output_dir(illumina_sample_csv):
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["upload", str(illumina_sample_csv), "--output-dir", "totallyfakedir"]
+    )
+    assert result.exit_code != 0
+    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+
+
+def test_cli_fail_download_output_dir(illumina_sample_csv):
+    runner = CliRunner()
+    result = runner.invoke(main, ["download", "--output-dir", "totallyfakedir"])
+    assert result.exit_code != 0
+    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+
+
 def test_validation_fail_control(invalid_control_csv):
     runner = CliRunner()
     result = runner.invoke(main, ["validate", str(invalid_control_csv)])

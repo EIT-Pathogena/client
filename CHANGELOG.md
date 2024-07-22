@@ -2,9 +2,14 @@
 
 ### Fix
 
+- Move `--output-dir` validation to use Click's in-built checks to notify the user earlier.
 - Update authors so that we appear as the contact on PyPi instead of Bede.
 - PyPi URL now points to new Pathogena project.
 - Default pipeline entry incorrectly set to `mycobacterium` instead of `mycobacteria` during refactor.
+
+### Chore 
+
+- Update `--out-dir` to `--output-dir` in the `download` sub-command to be consistent with other commands.
 
 ## 2.0.0rc1 (2024-07-18)
 
