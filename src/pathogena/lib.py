@@ -23,7 +23,7 @@ import hostile
 
 from pathogena import util, models
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import DOMAINS, MissingError, check_outdir
+from pathogena.util import DOMAINS, MissingError
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -620,7 +620,6 @@ def download_single(
     out_dir: Path,
 ):
     logging.info(f"Downloading {filename}")
-    check_outdir(out_dir)
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
         progress = tqdm(

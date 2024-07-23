@@ -268,22 +268,6 @@ def command_exists(command: str) -> bool:
     return result.returncode == 0
 
 
-def check_outdir(path: Path) -> None:
-    """Given an outdir path, check that it exists (and is a directory).
-
-    Args:
-        path (Path): Outdir path
-    """
-    if path.exists():
-        if path.is_dir():
-            return
-        logging.error(f"Given out dir ({str(path)}) exists, but is a file!")
-        raise InvalidPathError(f"Given out dir ({str(path)}) exists, but is a file!")
-
-    logging.error(f"Given out dir ({str(path)}) does not exist!")
-    raise InvalidPathError(f"Given out dir ({str(path)}) does not exist!")
-
-
 def gzip_file(input_file: Path, output_file: str) -> Path:
     logging.info(
         f"Gzipping file: {input_file.name} prior to upload. This may take a while depending on the size of the file."

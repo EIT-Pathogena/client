@@ -60,9 +60,11 @@ def autocomplete() -> None:
 )
 @click.option(
     "--output-dir",
-    type=click.Path(exists=True, dir_okay=True, readable=True, path_type=Path),
-    default=Path("."),
-    help="Output directory for cleaned FASTQ files, lib.DEFAULT_METADATA to the current working directory.",
+    type=click.Path(
+        file_okay=False, dir_okay=True, writable=True, exists=True, path_type=Path
+    ),
+    default=".",
+    help="Output directory for the cleaned FastQ files, defaults to the current working directory.",
 )
 @click.option(
     "--threads",
@@ -85,7 +87,6 @@ def decontaminate(
     """
     batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
     batch.validate_all_sample_fastqs()
-    util.check_outdir(output_dir)
     cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
         input_csv, batch, threads, output_dir
     )
@@ -124,9 +125,11 @@ def decontaminate(
 )
 @click.option(
     "--output-dir",
-    type=click.Path(exists=True, dir_okay=True, readable=True, path_type=Path),
-    default=Path("."),
-    help="Output directory for cleaned FASTQ files, lib.DEFAULT_METADATA to the current working directory.",
+    type=click.Path(
+        file_okay=False, dir_okay=True, writable=True, exists=True, path_type=Path
+    ),
+    default=".",
+    help="Output directory for the cleaned FastQ files, defaults to the current working directory.",
 )
 def upload(
     upload_csv: Path,
@@ -156,7 +159,6 @@ def upload(
         batch.validate_all_sample_fastqs()
         batch.update_sample_metadata()
     else:
-        util.check_outdir(output_dir)
         cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
             upload_csv, batch, threads, output_dir=output_dir
         )
@@ -176,7 +178,12 @@ def upload(
     "--inputs", is_flag=True, help="Also download decontaminated input FASTQ file(s)"
 )
 @click.option(
-    "--out-dir", type=click.Path(file_okay=False), default=".", help="Output directory"
+    "--output-dir",
+    type=click.Path(
+        file_okay=False, dir_okay=True, writable=True, exists=True, path_type=Path
+    ),
+    default=".",
+    help="Output directory for the downloaded files.",
 )
 @click.option(
     "--rename/--no-rename",
@@ -189,7 +196,7 @@ def download(
     *,
     filenames: str = "main_report.json",
     inputs: bool = False,
-    out_dir: Path = Path(),
+    output_dir: Path = Path(),
     rename: bool = True,
     host: str | None = None,
 ) -> None:
@@ -203,7 +210,7 @@ def download(
             samples=samples,
             filenames=filenames,
             inputs=inputs,
-            out_dir=out_dir,
+            out_dir=output_dir,
             host=host,
         )
     elif Path(samples).is_file():
@@ -211,7 +218,7 @@ def download(
             mapping_csv=samples,
             filenames=filenames,
             inputs=inputs,
-            out_dir=out_dir,
+            out_dir=output_dir,
             rename=rename,
             host=host,
         )
