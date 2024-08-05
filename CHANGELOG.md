@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Feat
+
+- Added `balance` sub-command to retrieve a user's balance.
+- Number of samples it passed to the server on batch creation to create a batch transaction.
+
 ### Fix
 
 - Move `--output-dir` validation to use Click's in-built checks to notify the user earlier.
@@ -10,6 +15,7 @@
 ### Chore 
 
 - Update `--out-dir` to `--output-dir` in the `download` sub-command to be consistent with other commands.
+- Tracebacks are suppressed when debug isn't set to true so that errors are clearer to users.
 
 ## 2.0.0rc1 (2024-07-18)
 

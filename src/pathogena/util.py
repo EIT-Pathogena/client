@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import uuid
+import sys
 
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
@@ -100,12 +101,29 @@ class ServerSideError(Exception):
         super().__init__(self.message)
 
 
+class InsufficientFundsError(Exception):
+    """Custom exception for insufficient funds."""
+
+    def __init__(self):
+        self.message = (
+            "Your account doesn't have enough credits to fulfil the number of Samples in your Batch. "
+            "You can request more credits by contacting support (pathogena.support@eit.org)."
+        )
+        super().__init__(self.message)
+
+
 def configure_debug_logging(debug: bool):
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Debug logging enabled")
     else:
         logging.getLogger().setLevel(logging.INFO)
+        # Supress tracebacks on exceptions unless in debug mode.
+        sys.excepthook = exception_handler
+
+
+def exception_handler(exception_type, exception, traceback):
+    logging.error(f"{exception_type.__name__}: {exception}")
 
 
 def log_request(request):
@@ -116,9 +134,9 @@ def log_response(response):
     if response.is_error:
         request = response.request
         response.read()
-        logging.error(
-            f"{request.method} {request.url} ({response.status_code}) response:\n{json.dumps(response.json(), indent=4)}"
-        )
+        message = response.json().get("message")
+        logging.error(f"{request.method} {request.url} ({response.status_code})")
+        logging.error(message)
 
 
 def raise_for_status(response: httpx.Response):
@@ -131,6 +149,8 @@ def raise_for_status(response: httpx.Response):
             raise PermissionError()
         elif response.status_code == 404:
             raise MissingError()
+        elif response.status_code == 413:
+            raise InsufficientFundsError()
         elif response.status_code // 100 == 5:
             raise ServerSideError()
 

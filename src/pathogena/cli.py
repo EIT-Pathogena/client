@@ -42,6 +42,24 @@ def auth(
 
 
 @main.command()
+@click.option(
+    "--host",
+    type=click.Choice(util.DOMAINS.values()),
+    default=None,
+    help="API hostname (for development)",
+)
+def balance(
+    *,
+    host: str | None = None,
+) -> None:
+    """
+    Check your EIT Pathogena account balance.
+    """
+    host = lib.get_host(host)
+    lib.check_balance(host=host)
+
+
+@main.command()
 def autocomplete() -> None:
     """Activate shell completion."""
     shell = environ.get("SHELL", "/bin/bash").split("/")[-1]
@@ -88,7 +106,7 @@ def decontaminate(
     batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
     batch.validate_all_sample_fastqs()
     cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
-        input_csv, batch, threads, output_dir
+        batch, threads, output_dir
     )
     batch.update_sample_metadata(metadata=cleaned_batch_metadata)
 
@@ -160,7 +178,7 @@ def upload(
         batch.update_sample_metadata()
     else:
         cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
-            upload_csv, batch, threads, output_dir=output_dir
+            batch, threads, output_dir=output_dir
         )
         batch.update_sample_metadata(metadata=cleaned_batch_metadata)
     lib.upload_batch(batch=batch, host=host, save=save)

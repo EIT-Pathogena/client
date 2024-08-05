@@ -94,8 +94,22 @@ def check_authentication(host: str) -> None:
         )
 
 
-def create_batch_on_server(host: str) -> tuple[str, str]:
-    """Create batch on server, return batch id"""
+def check_balance(host: str) -> int:
+    with httpx.Client(
+        event_hooks=util.httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=60,
+    ) as client:
+        response = client.get(
+            f"{get_protocol()}://{host}/api/v1/credits/balance",
+            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+        )
+    logging.info(f"Your current account balance is {response.text} credits")
+
+
+def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
+    """Create batch on server, return batch id, a transaction will be created at this point for the expected
+    total samples in the BatchModel."""
     telemetry_data = {
         "client": {
             "name": "pathogena-client",
@@ -106,7 +120,10 @@ def create_batch_on_server(host: str) -> tuple[str, str]:
             "version": hostile.__version__,
         },
     }
-    data = {"telemetry_data": telemetry_data}
+    data = {
+        "telemetry_data": telemetry_data,
+        "expected_sample_count": number_of_samples,
+    }
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -188,7 +205,6 @@ def run_sample(sample_id: str, host: str) -> str:
 
 
 def decontaminate_samples_with_hostile(
-    input_csv: Path,
     batch: models.UploadBatch,
     threads: int,
     output_dir: Path = Path("."),
@@ -241,7 +257,9 @@ def upload_batch(
     host: str = DEFAULT_HOST,
 ):
     # Generate and submit metadata
-    batch_id, batch_name = create_batch_on_server(host=host)
+    batch_id, batch_name = create_batch_on_server(
+        host=host, number_of_samples=len(batch.samples)
+    )
     mapping_csv_records = []
     upload_meta = []
     for sample in batch.samples:
