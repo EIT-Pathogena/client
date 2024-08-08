@@ -144,12 +144,12 @@ def raise_for_status(response: httpx.Response):
         if response.status_code == 401:
             logging.error("Have you tried running `pathogena auth`?")
             raise AuthorizationError()
+        elif response.status_code == 402:
+            raise InsufficientFundsError()
         elif response.status_code == 403:
             raise PermissionError()
         elif response.status_code == 404:
             raise MissingError()
-        elif response.status_code == 413:
-            raise InsufficientFundsError()
         elif response.status_code // 100 == 5:
             raise ServerSideError()
 
