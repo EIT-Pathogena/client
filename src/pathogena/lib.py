@@ -23,7 +23,7 @@ import hostile
 
 from pathogena import util, models
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import DOMAINS, MissingError
+from pathogena.util import DOMAINS, get_access_token, MissingError
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -103,7 +103,7 @@ def get_credit_balance(host: str):
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/credits/balance",
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            headers={"Authorization": f"Bearer {get_access_token(host)}"},
         )
         if response.status_code == 200:
             logging.info(f"Your remaining account balance is {response.text} credits")
