@@ -95,16 +95,20 @@ def check_authentication(host: str) -> None:
 
 
 def get_credit_balance(host: str):
+    logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
-        timeout=60,
+        timeout=15,
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/credits/balance",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
         )
-    logging.info(f"Your remaining account balance is {response.text} credits")
+        if response.status_code == 200:
+            logging.info(f"Your remaining account balance is {response.text} credits")
+        elif response.status_code == 402:
+            logging.error("Your account doesn't have enough credits to fulfil the number of Samples in your Batch.")
 
 
 def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
