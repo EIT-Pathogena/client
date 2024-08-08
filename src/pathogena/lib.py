@@ -94,7 +94,7 @@ def check_authentication(host: str) -> None:
         )
 
 
-def check_balance(host: str) -> int:
+def get_credit_balance(host: str):
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -104,7 +104,7 @@ def check_balance(host: str) -> int:
             f"{get_protocol()}://{host}/api/v1/credits/balance",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
         )
-    logging.info(f"Your current account balance is {response.text} credits")
+    logging.info(f"Your remaining account balance is {response.text} credits")
 
 
 def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:

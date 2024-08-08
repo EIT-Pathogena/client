@@ -56,7 +56,7 @@ def balance(
     Check your EIT Pathogena account balance.
     """
     host = lib.get_host(host)
-    lib.check_balance(host=host)
+    lib.get_credit_balance(host=host)
 
 
 @main.command()
@@ -172,6 +172,7 @@ def upload(
         )
         skip_fastq_check = False
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
+    lib.get_credit_balance(host=host)
     lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
     if skip_decontamination:
         batch.validate_all_sample_fastqs()
@@ -182,6 +183,7 @@ def upload(
         )
         batch.update_sample_metadata(metadata=cleaned_batch_metadata)
     lib.upload_batch(batch=batch, host=host, save=save)
+    lib.get_credit_balance(host=host)
 
 
 @main.command()

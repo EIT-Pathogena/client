@@ -84,8 +84,7 @@ class MissingError(Exception):
     def __init__(self):
         self.message = (
             "Resource not found! It's possible you asked for something which doesn't exist. "
-            "Please double check that the resource exists.\n"
-            "Note that not all samples have all available output files!"
+            "Please double check that the resource exists."
         )
         super().__init__(self.message)
 
