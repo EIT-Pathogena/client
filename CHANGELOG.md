@@ -3,7 +3,7 @@
 ### Feat
 
 - Added `balance` sub-command to retrieve a user's balance.
-- Number of samples it passed to the server on batch creation to create a batch transaction.
+- Number of samples it passed to the server on batch creation.
 
 ### Fix
 
