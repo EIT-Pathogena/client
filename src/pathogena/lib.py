@@ -76,7 +76,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
 
     token_path = get_token_path(host)
 
-    # Normalise the expiry date
+    # Convert the expiry in seconds into a readable date, default token should be 7 days.
     one_week_in_seconds = 604800
     expires_in = data.get("expires_in", one_week_in_seconds)
     expiry = datetime.now() + timedelta(seconds=expires_in)
