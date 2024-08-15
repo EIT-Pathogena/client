@@ -1,9 +1,9 @@
 ## `pathogena query-status`
 
 ```text
-pathogena query-raw -h
+pathogena query-status -h
 15:36:39 INFO: EIT Pathogena client version 2.0.0rc1
-Usage: pathogena query-raw [OPTIONS] SAMPLES
+Usage: pathogena query-status [OPTIONS] SAMPLES
 
   Fetch processing status for one or more SAMPLES in JSON format.
   SAMPLES should be command separated list of GUIDs or path to mapping CSV.

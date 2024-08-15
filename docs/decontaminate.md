@@ -17,7 +17,7 @@ Options:
 This command will attempt to remove human reads from a given input CSV file, in the same structure as the input CSV that
 would be used for uploading to EIT Pathogena, an [example can be found here](assets/example-input.csv).
 
-By default, the processed files will be output in the same directory that the command is ran in, but you can choose a
+By default, the processed files will be output in the same directory that the command is run in, but you can choose a
 different directory with the `--output-dir` argument.
 
 ### Usage

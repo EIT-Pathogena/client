@@ -15,6 +15,6 @@ Add this to your ~/.bashrc file to enable this permanently:
     command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
 ```
 
-Tab completion can optionally be enabled by adding the following lines to your shell source files. 
+Tab completion can optionally be enabled by adding the lines output by the command to your shell source files. 
 This will enable the ability to press tab after writing `pathogena ` to list possible sub-commands. It can also be used
 for sub-command options, if `--` is entered prior to pressing tab.

@@ -20,5 +20,5 @@ generated during upload, or one or more sample GUIDs.
 
 ```bash
 # Query all available metadata in JSON format
-pathogena query raw a5w2e8.mapping.csv
+pathogena query-raw a5w2e8.mapping.csv
 ```

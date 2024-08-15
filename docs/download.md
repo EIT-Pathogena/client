@@ -41,7 +41,7 @@ pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
 pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
 
 # Save downloaded files to a specific directory
-pathogena download a5w2e8.mapping.csv --out-dir results
+pathogena download a5w2e8.mapping.csv --output-dir results
 
 # Download only input fastqs
 pathogena download a5w2e8.mapping.csv --inputs --filenames ""

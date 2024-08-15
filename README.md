@@ -4,7 +4,7 @@ The command line interface for the EIT Pathogena mycobacterial platform.
 
 The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
 upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM
-running Linux or MacOS is recommended.
+running Linux or MacOS is required.
 
 See the documentation in `/docs` for details for using the client.
 
