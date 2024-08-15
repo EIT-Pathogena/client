@@ -318,9 +318,10 @@ def upload_batch(
             }
         )
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
+    logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"https://{host}/batches?search={batch_name}"
+        f"https://{host}/batches/{batch_id}"
     )
 
     # Upload reads
