@@ -3,7 +3,7 @@
 ### Development install
 
 ```bash
-git clone https://github.com/GlobalPathogenAnalysisService/cli.git
+git clone https://github.com/EIT-Pathogena/client.git
 cd cli
 conda env create -y -f environment.yml
 pip install --editable '.[dev]'
