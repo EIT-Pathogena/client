@@ -5,6 +5,7 @@ import os
 import multiprocessing
 import shutil
 from getpass import getpass
+from datetime import datetime, timedelta
 
 from pathlib import Path
 
@@ -23,7 +24,7 @@ import hostile
 
 from pathogena import util, models
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import DOMAINS, get_access_token, MissingError
+from pathogena.util import DOMAINS, get_access_token, MissingError, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -65,17 +66,22 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json"""
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
-    password = getpass(prompt="Enter your password: ")
+    password = getpass(prompt="Enter your password (hidden): ")
     with httpx.Client(event_hooks=util.httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
         )
     data = response.json()
-    conf_dir = Path.home() / ".config" / "pathogena"
-    token_dir = conf_dir / "tokens"
-    token_dir.mkdir(parents=True, exist_ok=True)
-    token_path = token_dir / f"{host}.json"
+
+    token_path = get_token_path(host)
+
+    # Normalise the expiry date
+    one_week_in_seconds = 604800
+    expires_in = data.get("expires_in", one_week_in_seconds)
+    expiry = datetime.now() + timedelta(seconds=expires_in)
+    data["expiry"] = expiry.isoformat()
+
     with token_path.open(mode="w") as fh:
         json.dump(data, fh)
     logging.info(f"Authenticated ({token_path})")
@@ -108,7 +114,9 @@ def get_credit_balance(host: str):
         if response.status_code == 200:
             logging.info(f"Your remaining account balance is {response.text} credits")
         elif response.status_code == 402:
-            logging.error("Your account doesn't have enough credits to fulfil the number of Samples in your Batch.")
+            logging.error(
+                "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
+            )
 
 
 def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
@@ -310,6 +318,10 @@ def upload_batch(
             }
         )
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
+    logging.info(
+        "You can monitor the progress of your batch in EIT Pathogena here: "
+        f"https://{host}/batches?search={batch_name}"
+    )
 
     # Upload reads
     for (

@@ -30,14 +30,24 @@ def main(*, debug: bool = False):
     default=None,
     help="API hostname (for development)",
 )
-def auth(
-    *,
-    host: str | None = None,
-) -> None:
+@click.option(
+    "--check-expiry",
+    is_flag=True,
+    default=False,
+    help="Check for a current token and print the expiry if exists",
+)
+def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
     """
     Authenticate with EIT Pathogena.
     """
     host = lib.get_host(host)
+    if check_expiry:
+        expiry = util.get_token_expiry(host)
+        if expiry and util.is_auth_token_live(host):
+            logging.info(f"Current token for {host} expires at {expiry}")
+            return
+        else:
+            logging.info(f"You do not have a valid token for {host}")
     lib.authenticate(host=host)
 
 
@@ -134,7 +144,6 @@ def decontaminate(
 @click.option(
     "--skip-fastq-check", is_flag=True, help="Skip checking FASTQ files for validity"
 )
-@click.option("--host", type=str, default=None, help="API hostname (for development)")
 @click.option(
     "--skip-decontamination",
     is_flag=True,
@@ -172,18 +181,22 @@ def upload(
         )
         skip_fastq_check = False
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
-    lib.get_credit_balance(host=host)
-    lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
-    if skip_decontamination:
-        batch.validate_all_sample_fastqs()
-        batch.update_sample_metadata()
+
+    if util.is_auth_token_live(host):
+        lib.get_credit_balance(host=host)
+        lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
+        if skip_decontamination:
+            batch.validate_all_sample_fastqs()
+            batch.update_sample_metadata()
+        else:
+            cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
+                batch, threads, output_dir=output_dir
+            )
+            batch.update_sample_metadata(metadata=cleaned_batch_metadata)
+        lib.upload_batch(batch=batch, host=host, save=save)
+        lib.get_credit_balance(host=host)
     else:
-        cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
-            batch, threads, output_dir=output_dir
-        )
-        batch.update_sample_metadata(metadata=cleaned_batch_metadata)
-    lib.upload_batch(batch=batch, host=host, save=save)
-    lib.get_credit_balance(host=host)
+        raise util.AuthorizationError()
 
 
 @main.command()
@@ -225,27 +238,30 @@ def download(
     created during upload.
     """
     host = lib.get_host(host)
-    if util.validate_guids(util.parse_comma_separated_string(samples)):
-        lib.download(
-            samples=samples,
-            filenames=filenames,
-            inputs=inputs,
-            out_dir=output_dir,
-            host=host,
-        )
-    elif Path(samples).is_file():
-        lib.download(
-            mapping_csv=samples,
-            filenames=filenames,
-            inputs=inputs,
-            out_dir=output_dir,
-            rename=rename,
-            host=host,
-        )
+    if util.is_auth_token_live(host):
+        if util.validate_guids(util.parse_comma_separated_string(samples)):
+            lib.download(
+                samples=samples,
+                filenames=filenames,
+                inputs=inputs,
+                out_dir=output_dir,
+                host=host,
+            )
+        elif Path(samples).is_file():
+            lib.download(
+                mapping_csv=samples,
+                filenames=filenames,
+                inputs=inputs,
+                out_dir=output_dir,
+                rename=rename,
+                host=host,
+            )
+        else:
+            raise ValueError(
+                f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
+            )
     else:
-        raise ValueError(
-            f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
-        )
+        raise util.AuthorizationError()
 
 
 @main.command()
