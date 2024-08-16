@@ -21,6 +21,7 @@
 
 - Update `--out-dir` to `--output-dir` in the `download` sub-command to be consistent with other commands.
 - Tracebacks are suppressed when debug isn't set to true so that errors are clearer to users.
+- Change license from MIT to GPL3 for better compatibility.
 
 ## 2.0.0rc1 (2024-07-18)
 
