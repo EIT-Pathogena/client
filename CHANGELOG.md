@@ -4,6 +4,11 @@
 
 - Added `balance` sub-command to retrieve a user's balance.
 - Number of samples it passed to the server on batch creation.
+- Refactor documentation so make it easier to manage going forward.
+- Token expiry date is now added to the token file as an offline method of checking validity.
+- `pathogena auth --check-expiry` will get the new expiry value from the token file or prompt login
+  if the token is expired.
+- Give the user a link to their batch when sample upload is finished.
 
 ### Fix
 

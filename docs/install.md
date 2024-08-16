@@ -1,0 +1,66 @@
+## Install
+
+There are two recommended methods for installing the Pathogena Client, either by using the popular package and
+environment manager Conda or by using our publicly available Docker container which we build at release time.
+
+### Installing Miniconda
+
+If a Conda package manager is already installed, skip to [Installing the client]
+(##installing-or-updating-the-client-with-miniconda),
+otherwise the following instructions have been taken from the [Miniconda install process documentation]
+(https://docs.anaconda.com/miniconda/miniconda-install/)
+
+#### Installing Miniconda on Linux
+
+In a terminal console, install Miniconda with the following instructions and accepting default options:
+
+    ```bash
+    mkdir -p ~/miniconda3
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    rm -rf ~/miniconda3/miniconda.sh
+    ```
+
+#### Installing Miniconda on MacOS
+
+The client requires the Conda platform to be using `x86_64` when creating the environment.
+
+- If your Mac has an Apple processor, using Terminal, firstly run:
+    ```bash
+    mkdir -p ~/miniconda3
+    curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    rm -rf ~/miniconda3/miniconda.sh
+    ```
+
+- Initialise Miniconda using either of the following commands depending on your Shell (Bash|ZSH)
+    ```bash
+    ~/miniconda3/bin/conda init bash
+    ~/miniconda3/bin/conda init zsh
+    ```
+
+### Installing or updating the client with Miniconda
+
+#### Linux
+
+```bash
+conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --upgrade pathogena
+```
+  
+#### MacOS
+
+Please note the additional argument `--platform osx-64` in this command, compared to the above.
+
+```bash
+conda create --platform osx-64 -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --upgrade pathogena
+```
+
+A simple test to verify installation would be to run a version check:
+
+```bash
+pathogena --version
+```

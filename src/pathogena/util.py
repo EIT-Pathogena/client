@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import uuid
 import sys
+from datetime import datetime
+from json import JSONDecodeError
 
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
@@ -62,7 +64,7 @@ class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401"""
 
     def __init__(self):
-        self.message = "Authorization failed! Please re-authenticate with `pathogena auth` and try again.\n"
+        self.message = "Authorization checks failed! Please re-authenticate with `pathogena auth` and try again.\n"
         "If the problem persists please contact support (pathogena.support@eit.org)."
         super().__init__(self.message)
 
@@ -168,10 +170,10 @@ def run(cmd: str, cwd: Path = Path()):
 
 def get_access_token(host: str) -> str:
     """Reads token from ~/.config/pathogena/tokens/<host>"""
-    token_path = Path.home() / ".config" / "pathogena" / "tokens" / f"{host}.json"
+    token_path = get_token_path(host)
     logging.debug(f"{token_path=}")
     try:
-        data = json.loads((token_path).read_text())
+        data = json.loads(token_path.read_text())
     except FileNotFoundError:
         raise FileNotFoundError(
             f"Token not found at {token_path}, have you authenticated?"
@@ -337,3 +339,33 @@ def find_duplicate_entries(inputs: list[str]) -> list[str]:
     """Return a set of items that appear more than once in the input list."""
     seen = set()
     return [f for f in inputs if f in seen or seen.add(f)]
+
+
+def get_token_path(host: str) -> Path:
+    conf_dir = Path.home() / ".config" / "pathogena"
+    token_dir = conf_dir / "tokens"
+    token_dir.mkdir(parents=True, exist_ok=True)
+    token_path = token_dir / f"{host}.json"
+    return token_path
+
+
+def get_token_expiry(host: str) -> datetime | None:
+    token_path = get_token_path(host)
+    if token_path.exists():
+        try:
+            with open(token_path, "r") as token:
+                token = json.load(token)
+                expiry = token.get("expiry", False)
+                if expiry:
+                    return datetime.fromisoformat(expiry)
+        except JSONDecodeError:
+            return None
+    return None
+
+
+def is_auth_token_live(host: str) -> bool:
+    expiry = get_token_expiry(host)
+    if expiry:
+        logging.debug(f"Token expires: {expiry}")
+        return expiry > datetime.now()
+    return False

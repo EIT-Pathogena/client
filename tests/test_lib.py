@@ -63,4 +63,7 @@ def test_get_balance_failure(mock_token, mock_client_get, caplog):
     mock_token.return_value = "fake_token"
     mock_client_get.return_value = httpx.Response(status_code=402)
     lib.get_credit_balance(host="fake_host")
-    assert "Your account doesn't have enough credits to fulfil the number of Samples in your Batch." in caplog.text
+    assert (
+        "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
+        in caplog.text
+    )
