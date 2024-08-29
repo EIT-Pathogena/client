@@ -177,7 +177,7 @@ The upload command performs metadata validation and client-side removal of human
 before uploading sequences to EIT Pathogena for analysis.
 
 A 4GB human genome index is downloaded the first time you run `pathogena upload`. If for any reason this is interrupted,
-simply run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity
+run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity
 check. You may optionally download the index ahead of time using the command `pathogena download-index`.
 
 By default, the upload command will first run `pathogena decontaminate` to attempt to remove human reads prior to
@@ -209,7 +209,7 @@ Options:
 This command will attempt to remove human reads from a given input CSV file, in the same structure as the input CSV that
 would be used for uploading to EIT Pathogena, an [example can be found here](assets/example-input.csv).
 
-By default, the processed files will be output in the same directory that the command is ran in, but you can choose a
+By default, the processed files will be output in the same directory that the command is run in, but you can choose a
 different directory with the `--output-dir` argument.
 
 ### Usage
@@ -271,7 +271,7 @@ pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6 --filenames final.fasta
 pathogena download 3bf7d6f9-c883-4273-adc0-93bb96a499f6,6f004868-096b-4587-9d50-b13e09d01882
 
 # Save downloaded files to a specific directory
-pathogena download a5w2e8.mapping.csv --out-dir results
+pathogena download a5w2e8.mapping.csv --output-dir results
 
 # Download only input fastqs
 pathogena download a5w2e8.mapping.csv --inputs --filenames ""
@@ -319,14 +319,14 @@ generated during upload, or one or more sample GUIDs.
 
 ```bash
 # Query all available metadata in JSON format
-pathogena query raw a5w2e8.mapping.csv
+pathogena query-raw a5w2e8.mapping.csv
 ```
 ## `pathogena query-status`
 
 ```text
-pathogena query-raw -h
+pathogena query-status -h
 15:36:39 INFO: EIT Pathogena client version 2.0.0rc1
-Usage: pathogena query-raw [OPTIONS] SAMPLES
+Usage: pathogena query-status [OPTIONS] SAMPLES
 
   Fetch processing status for one or more SAMPLES in JSON format.
   SAMPLES should be command separated list of GUIDs or path to mapping CSV.
@@ -336,7 +336,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `query-raw` command fetches either the raw metadata of one more samples given a mapping CSV 
+The `query-status` command fetches the current processing status of one or more samples in a mapping CSV 
 generated during upload, or one or more sample GUIDs.
 
 ### Usage
@@ -365,7 +365,7 @@ Add this to your ~/.bashrc file to enable this permanently:
     command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
 ```
 
-Tab completion can optionally be enabled by adding the following lines to your shell source files. 
+Tab completion can optionally be enabled by adding the lines output by the command to your shell source files. 
 This will enable the ability to press tab after writing `pathogena ` to list possible sub-commands. It can also be used
 for sub-command options, if `--` is entered prior to pressing tab.
 
