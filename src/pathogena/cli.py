@@ -26,7 +26,7 @@ def main(*, debug: bool = False):
 @main.command()
 @click.option(
     "--host",
-    type=click.Choice(util.DOMAINS.values()),
+    type=str,
     default=None,
     help="API hostname (for development)",
 )
@@ -54,7 +54,7 @@ def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
 @main.command()
 @click.option(
     "--host",
-    type=click.Choice(util.DOMAINS.values()),
+    type=str,
     default=None,
     help="API hostname (for development)",
 )
@@ -137,7 +137,7 @@ def decontaminate(
 )
 @click.option(
     "--host",
-    type=click.Choice(util.DOMAINS.values()),
+    type=str,
     default=None,
     help="API hostname (for development)",
 )

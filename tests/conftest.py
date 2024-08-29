@@ -19,7 +19,7 @@ def upload_data():
 
 @pytest.fixture()
 def test_host():
-    return "dev.portal.gpas.world"
+    return "portal.eit-pathogena.com"
 
 
 @pytest.fixture

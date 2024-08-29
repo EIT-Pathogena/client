@@ -148,7 +148,7 @@ You can check the expiry of your token with the following command:
 ```bash
 $ pathogena auth --check-expiry
 14:05:52 INFO: EIT Pathogena client version 2.0.0rc1
-14:05:52 INFO: Current token for portal-dev.eit-pathogena.com expires at 2024-08-13 14:04:50.672085
+14:05:52 INFO: Current token for portal.eit-pathogena.com expires at 2024-08-13 14:04:50.672085
 ```
 ## `pathogena upload`
 
