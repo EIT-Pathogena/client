@@ -1,11 +1,12 @@
 # Development Install Information
 
-### Development install
+## Development install
 
 ```bash
 git clone https://github.com/EIT-Pathogena/client.git
 cd cli
 conda env create -y -f environment.yml
+conda activate pathogena
 pip install --editable '.[dev]'
 pre-commit install
 ```
@@ -19,15 +20,18 @@ pathogena --version
 
 ## Using an alternate host
 
+You will most likely need to specify a different host to the default if you're developing, below are details on how
+to do so.
+
 1. The stateless way (use `--host` with every command):
    ```bash
-   pathogena auth --host dev.portal.gpas.world
-   pathogena upload samples.csv --host dev.portal.gpas.world
+   pathogena auth --host "portal.eit-pathogena.com"
+   pathogena upload samples.csv --host "portal.eit-pathogena.com"
    ```
 
 2. The stateful way (no need to use `--host` with each command):
    ```bash
-   export PATHOGENA_HOST="dev.portal.gpas.world"
+   export PATHOGENA_HOST="portal.eit-pathogena.com"
    ```
 
    Then, as usual:
@@ -55,8 +59,10 @@ pip install --pre pathogena
 export PATHOGENA_HOST="localhost:8000"
 export PATHOGENA_PROTOCOL="http"
 ```
+
 To unset:
+
 ```bash
 unset PATHOGENA_HOST
 unset PATHOGENA_PROTOCOL
-```Development install
+```

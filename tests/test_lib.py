@@ -32,18 +32,18 @@ def test_check_no_new_version_available(mock_get, caplog):
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.1")
-def test_check_version_compatibility(mock_get):
+def test_check_version_compatibility(mock_get, test_host):
     mock_get.return_value = httpx.Response(status_code=200, json={"version": "1.0.0"})
-    lib.check_version_compatibility(host="dev.portal.gpas.world")
+    lib.check_version_compatibility(host=test_host)
 
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.0")
-def test_fail_check_version_compatibility(mock_get, caplog):
+def test_fail_check_version_compatibility(mock_get, test_host, caplog):
     caplog.set_level(logging.INFO)
     mock_get.return_value = httpx.Response(status_code=200, json={"version": "1.0.1"})
     with pytest.raises(UnsupportedClientException):
-        lib.check_version_compatibility(host="dev.portal.gpas.world")
+        lib.check_version_compatibility(host=test_host)
         assert "is no longer supported" in caplog.text
 
 

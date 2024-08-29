@@ -9,6 +9,7 @@
 - `pathogena auth --check-expiry` will get the new expiry value from the token file or prompt login
   if the token is expired.
 - Give the user a link to their batch when sample upload is finished.
+- Update default host to be Pathogena production URL.
 
 ### Fix
 

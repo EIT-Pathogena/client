@@ -24,12 +24,12 @@ import hostile
 
 from pathogena import util, models
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import DOMAINS, get_access_token, MissingError, get_token_path
+from pathogena.util import get_access_token, MissingError, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 CPU_COUNT = multiprocessing.cpu_count()
-DEFAULT_HOST = DOMAINS.get("research", "research.portal.gpas.world")
+DEFAULT_HOST = "portal.eit-pathogena.com"
 DEFAULT_PROTOCOL = "https"
 DEFAULT_METADATA = {
     "country": None,
