@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 2.0.0rc2 (2024-08-29)
+
 ### Feat
 
 - Added `balance` sub-command to retrieve a user's balance.
