@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 2.0.0 (2024-09-09)
+
 ### Feat
 
 - Added documentation for the `balance` subcommand.
@@ -7,6 +9,7 @@
 ### Chore
 
 - Updated `upload` subcommand documentation with credits info and usage.
+- Swap maintainers ordering to show in PyPI.
 
 ## 2.0.0rc2 (2024-08-29)
 
