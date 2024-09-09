@@ -5,10 +5,8 @@ environment manager Conda or by using our publicly available Docker container wh
 
 ### Installing Miniconda
 
-If a Conda package manager is already installed, skip to [Installing the client]
-(##installing-or-updating-the-client-with-miniconda),
-otherwise the following instructions have been taken from the [Miniconda install process documentation]
-(https://docs.anaconda.com/miniconda/miniconda-install/)
+If a Conda package manager is already installed, skip to [Installing the client](#installing-or-updating-the-client-with-miniconda),
+otherwise the following instructions have been taken from the [Miniconda install process documentation](https://docs.anaconda.com/miniconda/miniconda-install/)
 
 #### Installing Miniconda on Linux
 

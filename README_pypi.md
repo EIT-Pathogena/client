@@ -3,9 +3,9 @@
 The command line interface for the EIT Pathogena platform.
 
 The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
-upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM
-running Linux or MacOS is recommended.
-
+upload, sample identifiers are anonymised and human host sequences are removed. A computer with Linux or MacOS is
+required to use the client. When running human read removal prior to upload a computer with a modern multi-core
+processor and at least 16GB of RAM is recommended.
 
 ## Install
 
@@ -14,10 +14,8 @@ environment manager Conda or by using our publicly available Docker container wh
 
 ### Installing Miniconda
 
-If a Conda package manager is already installed, skip to [Installing the client]
-(##installing-or-updating-the-client-with-miniconda),
-otherwise the following instructions have been taken from the [Miniconda install process documentation]
-(https://docs.anaconda.com/miniconda/miniconda-install/)
+If a Conda package manager is already installed, skip to [Installing the client](#installing-or-updating-the-client-with-miniconda),
+otherwise the following instructions have been taken from the [Miniconda install process documentation](https://docs.anaconda.com/miniconda/miniconda-install/)
 
 #### Installing Miniconda on Linux
 
@@ -150,6 +148,31 @@ $ pathogena auth --check-expiry
 14:05:52 INFO: EIT Pathogena client version 2.0.0rc1
 14:05:52 INFO: Current token for portal.eit-pathogena.com expires at 2024-08-13 14:04:50.672085
 ```
+## `pathogena balance`
+
+```bash balance help
+pathogena balance -h
+15:55:36 INFO: EIT Pathogena client version 2.0.0
+Usage: pathogena balance [OPTIONS]
+
+  Check your EIT Pathogena account balance.
+
+Options:
+  --host TEXT  API hostname (for development)
+  -h, --help   Show this message and exit.
+```
+
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
+header of the Pathogena Portal or by using the `pathogena balance` command when logged in.
+
+### Usage
+
+```bash balance usage
+pathogena balance
+15:56:56 INFO: EIT Pathogena client version 2.0.0
+15:56:56 INFO: Getting credit balance for portal.eit-pathogena.com
+15:56:57 INFO: Your remaining account balance is 1000 credits
+```
 ## `pathogena upload`
 
 ```text
@@ -176,6 +199,18 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples, 
 before uploading sequences to EIT Pathogena for analysis.
 
+### Credits
+
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
+header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the 
+`pathogena balance` section.
+
+Each sample for Mycobacterium genomic sequencing will require 10 credits. During the upload command process,
+a balance check is performed to ensure the user has enough credits for the number of samples in the batch. Credits are
+then deducted when sample files are successfully uploaded and ready for processing.
+
+### Human Read Removal
+
 A 4GB human genome index is downloaded the first time you run `pathogena upload`. If for any reason this is interrupted,
 run the upload command again. Upload will not proceed until the index has been downloaded and passed an integrity
 check. You may optionally download the index ahead of time using the command `pathogena download-index`.
@@ -190,6 +225,54 @@ decontamination without uploading anything, use the `pathogena decontaminate` co
 During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly
 generated remote names. Keep this file safe, as it is useful for downloading and relinking results later, it cannot be
 recreated after this step without re-uploading the same samples again.
+
+### Usage
+
+```bash Upload with running human read removal
+pathogena upload my-first-batch.csv
+15:41:57 INFO: EIT Pathogena client version 2.0.0
+15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com
+15:41:59 INFO: Your remaining account balance is 1000 credits
+15:41:59 INFO: Performing FastQ checks and gathering total reads
+15:41:59 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_1.fastq.gz
+15:42:00 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_2.fastq.gz
+15:42:02 INFO: 3958206.0 reads in FASTQ file
+15:42:02 INFO: Removing human reads from ILLUMINA FastQ files and storing in /Users/jdhillon/code/pathogena/client
+15:42:02 INFO: Hostile version 1.1.0. Mode: paired short read (Bowtie2)
+15:42:02 INFO: Found cached standard index human-t2t-hla-argos985-mycob140
+15:42:02 INFO: Cleaning...
+15:43:39 INFO: Cleaning complete
+15:43:39 INFO: The mapping file gx5y5p.mapping.csv has been created.
+15:43:39 INFO: You can monitor the progress of your batch in EIT Pathogena here: "..."
+15:43:39 INFO: Uploading my-first-sample
+15:45:27 INFO:   Uploaded 66433ffc-3c10-4576-8502-56b4805c7ecc_1.fastq.gz
+15:45:27 INFO: Uploading my-first-sample
+15:49:20 INFO:   Uploaded 66433ffc-3c10-4576-8502-56b4805c7ecc_2.fastq.gz
+15:49:21 INFO: Upload complete. Created gx5y5p.mapping.csv (keep this safe)
+15:49:21 INFO: Getting credit balance for portal.eit-pathogena.com
+15:49:23 INFO: Your remaining account balance is 990 credits
+```
+
+```bash Upload without human read removal
+pathogena upload --skip-decontamination my-first-batch.csv
+15:41:57 INFO: EIT Pathogena client version 2.0.0
+15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com
+15:41:59 INFO: Your remaining account balance is 1000 credits
+15:41:59 INFO: Performing FastQ checks and gathering total reads
+15:41:59 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_1.fastq.gz
+15:42:00 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_2.fastq.gz
+15:42:02 INFO: 3958206.0 reads in FASTQ file
+15:42:02 INFO: Removing human reads from ILLUMINA FastQ files and storing in /Users/jdhillon/code/pathogena/client
+15:43:39 INFO: The mapping file gx5y5p.mapping.csv has been created.
+15:43:39 INFO: You can monitor the progress of your batch in EIT Pathogena here: "..."
+15:43:39 INFO: Uploading my-first-sample
+15:45:27 INFO:   Uploaded 66433ffc-3c10-4576-8502-56b4805c7ecc_1.fastq.gz
+15:45:27 INFO: Uploading my-first-sample
+15:49:20 INFO:   Uploaded 66433ffc-3c10-4576-8502-56b4805c7ecc_2.fastq.gz
+15:49:21 INFO: Upload complete. Created gx5y5p.mapping.csv (keep this safe)
+15:49:21 INFO: Getting credit balance for portal.eit-pathogena.com
+15:49:23 INFO: Your remaining account balance is 990 credits
+```
 ## `pathogena decontaminate`
 
 ```text
