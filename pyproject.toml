@@ -8,8 +8,8 @@ authors = [
     {name = "Jay Dhillon", email = "jdhillon@eit.org"},
 ]
 maintainers = [
-    {name = "Jay Dhillon", email = "jdhillon@eit.org"},
-    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"}
+    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"},
+    {name = "Jay Dhillon", email = "jdhillon@eit.org"}
 ]
 license = {file = "LICENSE"}
 readme = "README_pypi.md"

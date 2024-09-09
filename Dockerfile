@@ -1,6 +1,6 @@
 # Bioconda-based build against latest PyPI release
 # Created for a specific user. Not part of the pypi release process
 FROM condaforge/miniforge3:latest
-ENV PATHOGENA_CLIENT_VERSION=2.0.0rc2
+ENV PATHOGENA_CLIENT_VERSION=2.0.0
 RUN mamba install -c bioconda hostile==1.1.0
 RUN pip install https://pypi.io/packages/source/g/pathogena/pathogena-${PATHOGENA_CLIENT_VERSION}.tar.gz
