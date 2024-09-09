@@ -53,7 +53,7 @@ recreated after this step without re-uploading the same samples again.
 
 ### Usage
 
-```bash Upload without running human read removal
+```bash Upload with running human read removal
 pathogena upload my-first-batch.csv
 15:41:57 INFO: EIT Pathogena client version 2.0.0
 15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com

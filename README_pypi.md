@@ -3,9 +3,9 @@
 The command line interface for the EIT Pathogena platform.
 
 The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
-upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM
-running Linux or MacOS is recommended when running human read removal prior to upload.
-
+upload, sample identifiers are anonymised and human host sequences are removed. A computer with Linux or MacOS is
+required to use the client. When running human read removal prior to upload a computer with a modern multi-core
+processor and at least 16GB of RAM is recommended.
 
 ## Install
 
@@ -14,10 +14,8 @@ environment manager Conda or by using our publicly available Docker container wh
 
 ### Installing Miniconda
 
-If a Conda package manager is already installed, skip to [Installing the client]
-(##installing-or-updating-the-client-with-miniconda),
-otherwise the following instructions have been taken from the [Miniconda install process documentation]
-(https://docs.anaconda.com/miniconda/miniconda-install/)
+If a Conda package manager is already installed, skip to [Installing the client](#installing-or-updating-the-client-with-miniconda),
+otherwise the following instructions have been taken from the [Miniconda install process documentation](https://docs.anaconda.com/miniconda/miniconda-install/)
 
 #### Installing Miniconda on Linux
 
@@ -230,7 +228,7 @@ recreated after this step without re-uploading the same samples again.
 
 ### Usage
 
-```bash Upload without running human read removal
+```bash Upload with running human read removal
 pathogena upload my-first-batch.csv
 15:41:57 INFO: EIT Pathogena client version 2.0.0
 15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com
