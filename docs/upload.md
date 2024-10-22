@@ -24,6 +24,10 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples, 
 before uploading sequences to EIT Pathogena for analysis.
 
+If trying to upload files in fastq.gz format it is worth cloning the [gpas-user-tools](https://github.com/GlobalPathogenAnalysisService/gpas-user-tools) repo. Following the documentaion, the upload.csv file required for the pathogena upload command can be generated. 
+
+Once the upload.csv file is generated it can be used with the above upload command. Note: the upload csv must be located in the same directory as the sample.fastq.gz files. 
+
 ### Credits
 
 Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
