@@ -39,6 +39,11 @@ The client requires the Conda platform to be using `x86_64` when creating the en
 
 ### Installing or updating the client with Miniconda
 
+The client has at least one dependency that requires `bioconda`, which itself
+depends on `conda-forge`. Note that for the `conda create` step (see below), installation can be very slow,
+so please leave it running. For more verbose output, you can add the `-v` or `-vv` flags, though
+it is not recommended to show the full debug output with `-vvv` as this has been seen to lead to OOM errors.
+
 #### Linux
 
 ```bash

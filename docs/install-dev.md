@@ -2,9 +2,13 @@
 
 ## Development install
 
+Installation of the client requires the `conda` package manager, as well as
+`conda-forge` and `bioconda`, in order to install the required libraries. For more
+information on how to install that, please refer to [this section](install.md#installing-miniconda).
+
 ```bash
 git clone https://github.com/EIT-Pathogena/client.git
-cd cli
+cd client
 conda env create -y -f environment.yml
 conda activate pathogena
 pip install --editable '.[dev]'
