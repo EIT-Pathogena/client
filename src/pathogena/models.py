@@ -130,7 +130,6 @@ class UploadSample(UploadBase):
     def validate_reads_from_fastq(self) -> None:
         reads = self.get_read_paths()
         logging.info("Performing FastQ checks and gathering total reads")
-        line_count = 0
         valid_lines_per_read = 4
         self.reads_in = 0
         for read in reads:
