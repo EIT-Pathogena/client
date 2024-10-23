@@ -25,7 +25,7 @@ def build_upload_csv(
     samples_folder: Path | str,
     output_csv: Path | str,
     upload_data: UploadData,
-):
+) -> None:
     """Create upload csv based on folder of fastq files."""
     samples_folder = Path(samples_folder)
     output_csv = Path(output_csv)
@@ -100,7 +100,7 @@ def _write_csv(
     filename: Path,
     read_files: list[tuple[str, str, str]],
     upload_data: UploadData,
-):
+) -> None:
     """
     Build a CSV file for upload to EIT Pathogena.
     """
