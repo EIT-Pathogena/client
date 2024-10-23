@@ -657,9 +657,6 @@ def download_single(
     logging.info(f"Downloading {filename}")
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
-        progress = tqdm(
-            total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
-        )
         chunk_size = 262_144
         with (
             Path(out_dir).joinpath(f"{filename}").open("wb") as fh,
