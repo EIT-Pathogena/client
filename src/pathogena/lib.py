@@ -100,7 +100,7 @@ def check_authentication(host: str) -> None:
         )
 
 
-def get_credit_balance(host: str):
+def get_credit_balance(host: str) -> None:
     logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -267,7 +267,7 @@ def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
     host: str = DEFAULT_HOST,
-):
+) -> None:
     # Generate and submit metadata
     batch_id, batch_name = create_batch_on_server(
         host=host, number_of_samples=len(batch.samples)
@@ -653,7 +653,7 @@ def download_single(
     filename: str,
     headers: dict[str, str],
     out_dir: Path,
-):
+) -> None:
     logging.info(f"Downloading {filename}")
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
