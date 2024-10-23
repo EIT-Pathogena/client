@@ -10,6 +10,7 @@ import uuid
 import sys
 from datetime import datetime
 from json import JSONDecodeError
+from types import TracebackType
 
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
@@ -107,7 +108,7 @@ class InsufficientFundsError(Exception):
         super().__init__(self.message)
 
 
-def configure_debug_logging(debug: bool):
+def configure_debug_logging(debug: bool) -> None:
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Debug logging enabled")
@@ -117,15 +118,15 @@ def configure_debug_logging(debug: bool):
         sys.excepthook = exception_handler
 
 
-def exception_handler(exception_type, exception, traceback):
+def exception_handler(exception_type: type[BaseException], exception: Exception, traceback: TracebackType) -> None:
     logging.error(f"{exception_type.__name__}: {exception}")
 
 
-def log_request(request):
+def log_request(request: httpx.Request) -> None:
     logging.debug(f"Request: {request.method} {request.url}")
 
 
-def log_response(response):
+def log_response(response: httpx.Response) -> None:
     if response.is_error:
         request = response.request
         response.read()
@@ -134,7 +135,7 @@ def log_response(response):
         logging.error(message)
 
 
-def raise_for_status(response: httpx.Response):
+def raise_for_status(response: httpx.Response) -> None:
     if response.is_error:
         response.read()
         if response.status_code == 401:
@@ -156,7 +157,7 @@ def raise_for_status(response: httpx.Response):
 httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
 
 
-def run(cmd: str, cwd: Path = Path()):
+def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
     return subprocess.run(
         cmd, cwd=cwd, shell=True, check=True, text=True, capture_output=True
     )
