@@ -16,7 +16,7 @@ from pathogena.create_upload_csv import build_upload_csv, UploadData
 @click.option(
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
-def main(*, debug: bool = False):
+def main(*, debug: bool = False) -> None:
     """EIT Pathogena command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
@@ -416,7 +416,7 @@ def build_csv(
     illumina_read1_suffix: str = lib.DEFAULT_METADATA["illumina_read1_suffix"],
     illumina_read2_suffix: str = lib.DEFAULT_METADATA["illumina_read2_suffix"],
     max_batch_size: int = lib.DEFAULT_METADATA["max_batch_size"],
-):
+) -> None:
     """
     Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
     Use max_batch_size to split into multiple separate upload csvs.\n
