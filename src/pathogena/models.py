@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self, Dict, Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -13,7 +13,7 @@ ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 def is_valid_file_extension(
     filename: str, allowed_extensions: tuple[str] = ALLOWED_EXTENSIONS
-):
+) -> bool:
     return filename.endswith(allowed_extensions)
 
 
@@ -95,7 +95,7 @@ class UploadSample(UploadBase):
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_fastq_files(self):
+    def validate_fastq_files(self) -> Self:
         self.reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
         self.reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
         self.check_fastq_paths_are_different()
@@ -120,14 +120,14 @@ class UploadSample(UploadBase):
                 )
         return self
 
-    def check_fastq_paths_are_different(self):
+    def check_fastq_paths_are_different(self) -> Self:
         if self.reads_1 == self.reads_2:
             raise ValueError(
                 f"reads_1 and reads_2 paths must be different in sample {self.sample_name}"
             )
         return self
 
-    def validate_reads_from_fastq(self):
+    def validate_reads_from_fastq(self) -> None:
         reads = self.get_read_paths()
         logging.info("Performing FastQ checks and gathering total reads")
         line_count = 0
@@ -147,16 +147,16 @@ class UploadSample(UploadBase):
         logging.info(f"{self.reads_in} reads in FASTQ file")
         return
 
-    def get_read_paths(self):
+    def get_read_paths(self) -> list[Path]:
         reads = [self.reads_1_resolved_path]
         if self.is_illumina():
             reads.append(self.reads_2_resolved_path)
         return reads
 
-    def is_ont(self):
+    def is_ont(self) -> bool:
         return self.instrument_platform == "ont"
 
-    def is_illumina(self):
+    def is_illumina(self) -> bool:
         return self.instrument_platform == "illumina"
 
 
@@ -172,7 +172,7 @@ class UploadBatch(BaseModel):
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_unique_sample_names(self):
+    def validate_unique_sample_names(self) -> Self:
         names = [sample.sample_name for sample in self.samples]
         if len(names) != len(set(names)):
             duplicates = find_duplicate_entries(names)
@@ -180,7 +180,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_unique_file_names(self):
+    def validate_unique_file_names(self) -> Self:
         reads = []
         reads.append([str(sample.reads_1.name) for sample in self.samples])
         if self.is_illumina():
@@ -194,7 +194,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_single_instrument_platform(self):
+    def validate_single_instrument_platform(self) -> Self:
         instrument_platforms = [sample.instrument_platform for sample in self.samples]
         if len(set(instrument_platforms)) != 1:
             raise ValueError(
@@ -204,7 +204,7 @@ class UploadBatch(BaseModel):
         logging.debug(f"{self.instrument_platform=}")
         return self
 
-    def update_sample_metadata(self, metadata=None) -> None:
+    def update_sample_metadata(self, metadata: Dict[str, Any] = None) -> None:
         """Update sample metadata with output from decontamination process, or defaults if decontamination is skipped"""
         if metadata is None:
             metadata = {}
@@ -238,7 +238,7 @@ class UploadBatch(BaseModel):
                 else:
                     sample.reads_2_pre_upload_checksum = sample.reads_2_dirty_checksum
 
-    def validate_all_sample_fastqs(self):
+    def validate_all_sample_fastqs(self) -> None:
         for sample in self.samples:
             if not self.skip_reading_fastqs and sample.reads_in == 0:
                 sample.validate_reads_from_fastq()
@@ -247,10 +247,10 @@ class UploadBatch(BaseModel):
                     f"Skipping additional FastQ file checks as requested (skip_checks = {self.skip_reading_fastqs}"
                 )
 
-    def is_ont(self):
+    def is_ont(self) -> bool:
         return self.instrument_platform == "ont"
 
-    def is_illumina(self):
+    def is_illumina(self) -> bool:
         return self.instrument_platform == "illumina"
 
 
