@@ -185,7 +185,6 @@ class UploadSample(UploadBase):
                 )
             self.reads_in += line_count / valid_lines_per_read
         logging.info(f"{self.reads_in} reads in FASTQ file")
-        return
 
     def get_read_paths(self) -> list[Path]:
         """
