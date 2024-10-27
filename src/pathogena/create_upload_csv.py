@@ -29,7 +29,7 @@ def build_upload_csv(
     """Create upload csv based on folder of fastq files."""
     samples_folder = Path(samples_folder)
     output_csv = Path(output_csv)
-    assert samples_folder.is_dir()  # This should be dealth with by Click
+    assert samples_folder.is_dir()  # This should be dealt with by Click
 
     if upload_data.instrument_platform == "illumina":
         if upload_data.illumina_read1_suffix == upload_data.illumina_read2_suffix:
