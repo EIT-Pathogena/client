@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Literal, Self, Dict, Any
+from typing import Literal, Dict, Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -95,7 +95,7 @@ class UploadSample(UploadBase):
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_fastq_files(self) -> Self:
+    def validate_fastq_files(self):
         self.reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
         self.reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
         self.check_fastq_paths_are_different()
@@ -120,7 +120,7 @@ class UploadSample(UploadBase):
                 )
         return self
 
-    def check_fastq_paths_are_different(self) -> Self:
+    def check_fastq_paths_are_different(self):
         if self.reads_1 == self.reads_2:
             raise ValueError(
                 f"reads_1 and reads_2 paths must be different in sample {self.sample_name}"
@@ -171,7 +171,7 @@ class UploadBatch(BaseModel):
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_unique_sample_names(self) -> Self:
+    def validate_unique_sample_names(self):
         names = [sample.sample_name for sample in self.samples]
         if len(names) != len(set(names)):
             duplicates = find_duplicate_entries(names)
@@ -179,7 +179,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_unique_file_names(self) -> Self:
+    def validate_unique_file_names(self):
         reads = []
         reads.append([str(sample.reads_1.name) for sample in self.samples])
         if self.is_illumina():
@@ -193,7 +193,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_single_instrument_platform(self) -> Self:
+    def validate_single_instrument_platform(self):
         instrument_platforms = [sample.instrument_platform for sample in self.samples]
         if len(set(instrument_platforms)) != 1:
             raise ValueError(
