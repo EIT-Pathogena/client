@@ -9,12 +9,22 @@ from pathogena.cli import main
 
 
 def test_cli_help_override() -> None:
+    """
+    Test the CLI help command.
+
+    This test ensures that the help message for the 'upload' command is displayed correctly.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["upload", "-h"])
     assert result.exit_code == 0
 
 
 def test_cli_version() -> None:
+    """
+    Test the CLI version command.
+
+    This test ensures that the version of the CLI is displayed correctly.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
@@ -30,6 +40,12 @@ def test_cli_version() -> None:
 
 
 def test_cli_decontaminate_illumina(illumina_sample_csv: Path) -> None:
+    """
+    Test the CLI decontaminate command for Illumina samples.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["decontaminate", str(illumina_sample_csv)])
     assert result.exit_code == 0
@@ -37,6 +53,12 @@ def test_cli_decontaminate_illumina(illumina_sample_csv: Path) -> None:
 
 
 def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv: Path) -> None:
+    """
+    Test the CLI decontaminate command for Illumina samples with an output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main, ["decontaminate", str(illumina_sample_csv), "--output-dir", "."]
@@ -46,6 +68,12 @@ def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv: Path) -
 
 
 def test_cli_fail_decontaminate_output_dir(illumina_sample_csv: Path) -> None:
+    """
+    Test the CLI decontaminate command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main,
@@ -56,6 +84,12 @@ def test_cli_fail_decontaminate_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_cli_fail_upload_output_dir(illumina_sample_csv: Path) -> None:
+    """
+    Test the CLI upload command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main, ["upload", str(illumina_sample_csv), "--output-dir", "totallyfakedir"]
@@ -65,6 +99,12 @@ def test_cli_fail_upload_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_cli_fail_download_output_dir(illumina_sample_csv: Path) -> None:
+    """
+    Test the CLI download command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["download", "--output-dir", "totallyfakedir"])
     assert result.exit_code != 0
@@ -72,6 +112,12 @@ def test_cli_fail_download_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_validation_fail_control(invalid_control_csv: Path) -> None:
+    """
+    Test validation failure for control CSV.
+
+    Args:
+        invalid_control_csv (Path): Path to the invalid control CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["validate", str(invalid_control_csv)])
     assert result.exit_code == 1
