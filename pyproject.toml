@@ -38,5 +38,6 @@ pathogena = "pathogena.cli:main"
 dev = [
     "pytest>=8.0.2",
     "pre-commit>=3.6.2",
-    "flit>=3.9.0"
+    "flit>=3.9.0",
+    "ruff>=0.0.282"
 ]
