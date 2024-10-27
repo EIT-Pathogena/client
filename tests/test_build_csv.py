@@ -9,7 +9,9 @@ from datetime import datetime
 from pathogena.create_upload_csv import build_upload_csv, UploadData
 
 
-def test_build_csv_illumina(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
+def test_build_csv_illumina(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
+) -> None:
     """
     Test building CSV for Illumina platform.
 
@@ -39,7 +41,9 @@ def test_build_csv_illumina(tmp_path: Path, caplog: pytest.LogCaptureFixture, up
     )
 
 
-def test_build_csv_ont(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
+def test_build_csv_ont(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
+) -> None:
     """
     Test building CSV for ONT platform.
 
@@ -68,7 +72,9 @@ def test_build_csv_ont(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_
     assert "Created 1 CSV files: output.csv" in caplog.text
 
 
-def test_build_csv_batches(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
+def test_build_csv_batches(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
+) -> None:
     """
     Test building CSV in batches.
 

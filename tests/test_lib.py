@@ -10,7 +10,9 @@ from pathogena.util import UnsupportedClientException
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.0")
-def test_check_new_version_available(mock_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_check_new_version_available(
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test to check that a new version is available if it exists.
 
@@ -28,7 +30,9 @@ def test_check_new_version_available(mock_get: MagicMock, caplog: pytest.LogCapt
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.0")
-def test_check_no_new_version_available(mock_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_check_no_new_version_available(
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test that no new version is available if request is latest.
 
@@ -46,7 +50,9 @@ def test_check_no_new_version_available(mock_get: MagicMock, caplog: pytest.LogC
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.1")
-def test_check_version_compatibility(mock_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_check_version_compatibility(
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test to check whether two minor versions are compatible.
 
@@ -60,7 +66,9 @@ def test_check_version_compatibility(mock_get: MagicMock, caplog: pytest.LogCapt
 
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.0")
-def test_fail_check_version_compatibility(mock_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_fail_check_version_compatibility(
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test failure of version compatibility check.
 
@@ -77,7 +85,9 @@ def test_fail_check_version_compatibility(mock_get: MagicMock, caplog: pytest.Lo
 
 @patch("httpx.Client.get")
 @patch("pathogena.lib.get_access_token")
-def test_get_balance(mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_get_balance(
+    mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test successfully getting the balance for a given account.
 
@@ -95,7 +105,9 @@ def test_get_balance(mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.
 
 @patch("httpx.Client.get")
 @patch("pathogena.lib.get_access_token")
-def test_get_balance_failure(mock_token: MagicMock, mock_client_get: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_get_balance_failure(
+    mock_token: MagicMock, mock_client_get: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test failure to get the account balance.
 

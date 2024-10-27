@@ -78,7 +78,9 @@ def test_fail_mixed_instrument_platform(invalid_mixed_platform_csv: Path) -> Non
         models.create_batch_from_csv(invalid_mixed_platform_csv)
 
 
-def test_fail_invalid_instrument_platform(invalid_instrument_platform_csv: Path) -> None:
+def test_fail_invalid_instrument_platform(
+    invalid_instrument_platform_csv: Path,
+) -> None:
     """
     Test failure for invalid instrument platform values.
 
@@ -89,7 +91,9 @@ def test_fail_invalid_instrument_platform(invalid_instrument_platform_csv: Path)
         models.create_batch_from_csv(invalid_instrument_platform_csv)
 
 
-def test_validate_illumina_model(illumina_sample_csv: Path, illumina_multiple_sample_csv: Path) -> None:
+def test_validate_illumina_model(
+    illumina_sample_csv: Path, illumina_multiple_sample_csv: Path
+) -> None:
     """
     Test validation of Illumina model.
 
@@ -126,7 +130,9 @@ def test_validate_fail_invalid_control(invalid_control_csv: Path) -> None:
         models.create_batch_from_csv(invalid_control_csv)
 
 
-def test_validate_fail_invalid_specimen_organism(invalid_specimen_organism_csv: Path) -> None:
+def test_validate_fail_invalid_specimen_organism(
+    invalid_specimen_organism_csv: Path,
+) -> None:
     """
     Test validation failure for invalid specimen organism values.
 
@@ -137,7 +143,9 @@ def test_validate_fail_invalid_specimen_organism(invalid_specimen_organism_csv: 
         models.create_batch_from_csv(invalid_specimen_organism_csv)
 
 
-def test_validate_fail_mixed_instrument_platform(invalid_mixed_platform_csv: Path) -> None:
+def test_validate_fail_mixed_instrument_platform(
+    invalid_mixed_platform_csv: Path,
+) -> None:
     """
     Test validation failure for mixed instrument platform csvs.
 
@@ -148,7 +156,9 @@ def test_validate_fail_mixed_instrument_platform(invalid_mixed_platform_csv: Pat
         models.create_batch_from_csv(invalid_mixed_platform_csv)
 
 
-def test_validate_fail_invalid_instrument_platform(invalid_instrument_platform_csv: Path) -> None:
+def test_validate_fail_invalid_instrument_platform(
+    invalid_instrument_platform_csv: Path,
+) -> None:
     """
     Test validation failure for invalid instrument platform values.
 
@@ -229,7 +239,9 @@ def test_fastq_empty(empty_fastq_csv: Path) -> None:
     assert "reads_1 is empty in sample empty-sample" in str(excinfo)
 
 
-def test_skip_fastq_checks(illumina_sample_csv: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_skip_fastq_checks(
+    illumina_sample_csv: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """
     Test skipping of FASTQ file checks.
 

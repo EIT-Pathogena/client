@@ -10,6 +10,7 @@ class UploadData(UploadBase):
     """
     Model for upload data with additional fields for read suffixes and batch size.
     """
+
     ont_read_suffix: str = Field(
         default=".fastq.gz", description="Suffix for ONT reads"
     )

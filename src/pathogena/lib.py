@@ -362,18 +362,22 @@ def upload_batch(
         )
         logging.debug(f"{sample_id=}")
         sample.reads_1_upload_file = prepare_upload_files(
-            target_filepath=sample.reads_1_cleaned_path
-            if batch.ran_through_hostile
-            else sample.reads_1_resolved_path,
+            target_filepath=(
+                sample.reads_1_cleaned_path
+                if batch.ran_through_hostile
+                else sample.reads_1_resolved_path
+            ),
             sample_id=sample_id,
             decontaminated=batch.ran_through_hostile,
             read_num=1,
         )
         if sample.is_illumina():
             sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=sample.reads_2_cleaned_path
-                if batch.ran_through_hostile
-                else sample.reads_2_resolved_path,
+                target_filepath=(
+                    sample.reads_2_cleaned_path
+                    if batch.ran_through_hostile
+                    else sample.reads_2_resolved_path
+                ),
                 sample_id=sample_id,
                 decontaminated=batch.ran_through_hostile,
                 read_num=2,

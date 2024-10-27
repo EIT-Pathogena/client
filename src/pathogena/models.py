@@ -31,6 +31,7 @@ class UploadBase(BaseModel):
     """
     Base model for any uploaded data.
     """
+
     batch_name: str = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
