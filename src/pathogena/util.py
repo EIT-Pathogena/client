@@ -28,7 +28,8 @@ class InvalidPathError(Exception):
     """Custom exception for giving nice user errors around missing paths."""
 
     def __init__(self, message: str):
-        """Constructor, used to pass a custom message to user.
+        """
+        Constructor, used to pass a custom message to user.
 
         Args:
             message (str): Message about this path
@@ -41,7 +42,9 @@ class UnsupportedClientException(Exception):
     """Exception raised for unsupported client versions"""
 
     def __init__(self, this_version: str, current_version: str):
-        """Raise this exception with a sensible message
+        """
+        Raise this exception with a sensible message.
+
         Args:
             this_version (str): The version of installed version
             current_version (str): The version returned by the API
@@ -59,6 +62,7 @@ class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401"""
 
     def __init__(self):
+        """Initialize the AuthorizationError with a custom message."""
         self.message = "Authorization checks failed! Please re-authenticate with `pathogena auth` and try again.\n"
         "If the problem persists please contact support (pathogena.support@eit.org)."
         super().__init__(self.message)
@@ -68,6 +72,7 @@ class PermissionError(Exception):
     """Custom exception for permission issues. 403"""
 
     def __init__(self):
+        """Initialize the PermissionError with a custom message."""
         self.message = (
             "You don't have access to this resource! Check logs for more details.\n"
             "Please contact support if you think you should be able to access this resource (pathogena.support@eit.org)."
@@ -76,7 +81,7 @@ class PermissionError(Exception):
 
 
 class MissingError(Exception):
-    """Custom exception for missing issues. 404"""
+    """Custom exception for missing issues. (HTTP Status 404)"""
 
     def __init__(self):
         self.message = (
@@ -87,7 +92,7 @@ class MissingError(Exception):
 
 
 class ServerSideError(Exception):
-    """Custom exception for all other server side errors. 5xx"""
+    """Custom exception for all other server side errors. (HTTP Status 5xx)"""
 
     def __init__(self):
         self.message = (
@@ -109,6 +114,12 @@ class InsufficientFundsError(Exception):
 
 
 def configure_debug_logging(debug: bool) -> None:
+    """
+    Configure logging for debug mode.
+
+    Args:
+        debug (bool): Whether to enable debug logging.
+    """
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Debug logging enabled")
@@ -121,14 +132,34 @@ def configure_debug_logging(debug: bool) -> None:
 def exception_handler(
     exception_type: type[BaseException], exception: Exception, traceback: TracebackType
 ) -> None:
+    """
+    Handle uncaught exceptions by logging them.
+
+    Args:
+        exc_type (type): Exception type.
+        exc_value (BaseException): Exception instance.
+        exc_traceback (TracebackType): Traceback object.
+    """
     logging.error(f"{exception_type.__name__}: {exception}")
 
 
 def log_request(request: httpx.Request) -> None:
+    """
+    Log HTTP request details.
+
+    Args:
+        request (httpx.Request): The HTTP request object.
+    """
     logging.debug(f"Request: {request.method} {request.url}")
 
 
 def log_response(response: httpx.Response) -> None:
+    """
+    Log HTTP response details.
+
+    Args:
+        response (httpx.Response): The HTTP response object.
+    """
     if response.is_error:
         request = response.request
         response.read()
@@ -138,6 +169,15 @@ def log_response(response: httpx.Response) -> None:
 
 
 def raise_for_status(response: httpx.Response) -> None:
+    """
+    Raise an exception for HTTP error responses.
+
+    Args:
+        response (httpx.Response): The HTTP response object.
+
+    Raises:
+        httpx.HTTPStatusError: If the response contains an HTTP error status.
+    """
     if response.is_error:
         response.read()
         if response.status_code == 401:
@@ -160,13 +200,31 @@ httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_st
 
 
 def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
+    """
+    Wrapper for running shell command subprocesses.
+
+    Args:
+        cmd (str): The command to run.
+        cwd (Path, optional): The working directory. Defaults to Path().
+
+    Returns:
+        subprocess.CompletedProcess: The result of the command execution.
+    """
     return subprocess.run(
         cmd, cwd=cwd, shell=True, check=True, text=True, capture_output=True
     )
 
 
 def get_access_token(host: str) -> str:
-    """Reads token from ~/.config/pathogena/tokens/<host>"""
+    """
+    Reads token from ~/.config/pathogena/tokens/<host>.
+
+    Args:
+        host (str): The host for which to retrieve the token.
+
+    Returns:
+        str: The access token.
+    """
     token_path = get_token_path(host)
     logging.debug(f"{token_path=}")
     try:
@@ -179,14 +237,28 @@ def get_access_token(host: str) -> str:
 
 
 def parse_csv(csv_path: Path) -> list[dict]:
-    """Parse CSV returning a list of dictionaries"""
+    """
+    Parse a CSV file into a list of dictionaries.
+
+    Args:
+        csv_path (Path): The path to the CSV file.
+
+    Returns:
+        list[dict]: A list of dictionaries representing the CSV rows.
+    """
     with open(csv_path, "r") as fh:
         reader = csv.DictReader(fh)
         return [row for row in reader]
 
 
 def write_csv(records: list[dict], file_name: Path | str) -> None:
-    """Write a list of dictionaries to a CSV file"""
+    """
+    Write a list of dictionaries to a CSV file.
+
+    Args:
+        records (list[dict]): The data to write.
+        file_name (Path | str): The path to the output CSV file.
+    """
     with open(file_name, "w", newline="") as fh:
         fieldnames = records[0].keys()
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
@@ -196,6 +268,15 @@ def write_csv(records: list[dict], file_name: Path | str) -> None:
 
 
 def hash_file(file_path: Path) -> str:
+    """
+    Compute the SHA-256 hash of a file.
+
+    Args:
+        file_path (Path): The path to the file.
+
+    Returns:
+        str: The SHA-256 hash of the file.
+    """
     hasher = hashlib.sha256()
     CHUNK_SIZE = 1_048_576  # 2**20, 1MiB
     with open(Path(file_path), "rb") as fh:
@@ -213,6 +294,17 @@ def upload_file(
     checksum: str,
     dirty_checksum: str,
 ) -> None:
+    """
+    Upload a file to the server with retries.
+
+    Args:
+        sample_id (int): The ID of the sample.
+        file_path (Path): The path to the file to be uploaded.
+        host (str): The host server.
+        protocol (str): The protocol to use (e.g., 'http', 'https').
+        checksum (str): The checksum of the file.
+        dirty_checksum (str): The dirty checksum of the file.
+    """
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -235,7 +327,17 @@ def upload_fastq(
     protocol: str,
     dirty_checksum: str,
 ) -> None:
-    """Upload FASTQ file to server"""
+    """
+    Upload a FASTQ file to the server.
+
+    Args:
+        sample_id (int): The ID of the sample.
+        sample_name (str): The name of the sample.
+        reads (Path): The path to the FASTQ file.
+        host (str): The host server.
+        protocol (str): The protocol to use (e.g., 'http', 'https').
+        dirty_checksum (str): The dirty checksum of the file.
+    """
     reads = Path(reads)
     logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
     logging.info(f"Uploading {sample_name}")
@@ -252,10 +354,28 @@ def upload_fastq(
 
 
 def parse_comma_separated_string(string) -> set[str]:
+    """
+    Parse a comma-separated string into a set of strings.
+
+    Args:
+        string (str): The comma-separated string.
+
+    Returns:
+        set[str]: A set of parsed strings.
+    """
     return set(string.strip(",").split(","))
 
 
 def validate_guids(guids: list[str]) -> bool:
+    """
+    Validate a list of GUIDs.
+
+    Args:
+        guids (list[str]): The list of GUIDs to validate.
+
+    Returns:
+        bool: True if all GUIDs are valid, False otherwise.
+    """
     for guid in guids:
         try:
             uuid.UUID(str(guid))
@@ -265,18 +385,45 @@ def validate_guids(guids: list[str]) -> bool:
 
 
 def map_control_value(v: str) -> bool | None:
+    """
+    Map a control value string to a boolean or None.
+
+    Args:
+        v (str): The control value string.
+
+    Returns:
+        bool | None: The mapped boolean value or None.
+    """
     return {"positive": True, "negative": False, "": None}.get(v)
 
 
 def is_dev_mode() -> bool:
+    """
+    Check if the application is running in development mode.
+
+    Returns:
+        bool: True if running in development mode, False otherwise.
+    """
     return True if "PATHOGENA_DEV_MODE" in os.environ else False
 
 
 def display_cli_version() -> None:
+    """
+    Display the CLI version information.
+    """
     logging.info(f"EIT Pathogena client version {pathogena.__version__}")
 
 
 def command_exists(command: str) -> bool:
+    """
+    Check if a command exists in the system.
+
+    Args:
+        command (str): The command to check.
+
+    Returns:
+        bool: True if the command exists, False otherwise.
+    """
     try:
         result = subprocess.run(
             ["type", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -287,6 +434,16 @@ def command_exists(command: str) -> bool:
 
 
 def gzip_file(input_file: Path, output_file: str) -> Path:
+    """
+    Gzip a file and save it with a new name.
+
+    Args:
+        input_file (Path): The path to the input file.
+        output_file (str): The name of the output gzipped file.
+
+    Returns:
+        Path: The path to the gzipped file.
+    """
     logging.info(
         f"Gzipping file: {input_file.name} prior to upload. This may take a while depending on the size of the file."
     )
@@ -297,6 +454,15 @@ def gzip_file(input_file: Path, output_file: str) -> Path:
 
 
 def reads_lines_from_gzip(file_path: Path) -> int:
+    """
+    Count the number of lines in a gzipped file.
+
+    Args:
+        file_path (Path): The path to the gzipped file.
+
+    Returns:
+        int: The number of lines in the file.
+    """
     line_count = 0
     # gunzip offers a ~4x faster speed when opening GZip files, use it if we can.
     if command_exists("gunzip"):
@@ -316,6 +482,15 @@ def reads_lines_from_gzip(file_path: Path) -> int:
 
 
 def reads_lines_from_fastq(file_path: Path) -> int:
+    """
+    Count the number of lines in a FASTQ file.
+
+    Args:
+        file_path (Path): The path to the FASTQ file.
+
+    Returns:
+        int: The number of lines in the file.
+    """
     try:
         with open(file_path, "r") as contents:
             line_count = sum(1 for _ in contents)
@@ -333,12 +508,29 @@ def reads_lines_from_fastq(file_path: Path) -> int:
 
 
 def find_duplicate_entries(inputs: list[str]) -> list[str]:
-    """Return a set of items that appear more than once in the input list."""
+    """
+    Return a list of items that appear more than once in the input list.
+
+    Args:
+        inputs (list[str]): The input list.
+
+    Returns:
+        list[str]: A list of duplicate items.
+    """
     seen = set()
     return [f for f in inputs if f in seen or seen.add(f)]
 
 
 def get_token_path(host: str) -> Path:
+    """
+    Get the path to the token file for a given host.
+
+    Args:
+        host (str): The host for which to get the token path.
+
+    Returns:
+        Path: The path to the token file.
+    """
     conf_dir = Path.home() / ".config" / "pathogena"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
@@ -347,6 +539,15 @@ def get_token_path(host: str) -> Path:
 
 
 def get_token_expiry(host: str) -> datetime | None:
+    """
+    Get the expiry date of the token for a given host.
+
+    Args:
+        host (str): The host for which to get the token expiry date.
+
+    Returns:
+        datetime | None: The expiry date of the token, or None if the token does not exist.
+    """
     token_path = get_token_path(host)
     if token_path.exists():
         try:
@@ -361,6 +562,15 @@ def get_token_expiry(host: str) -> datetime | None:
 
 
 def is_auth_token_live(host: str) -> bool:
+    """
+    Check if the authentication token for a given host is still valid.
+
+    Args:
+        host (str): The host for which to check the token validity.
+
+    Returns:
+        bool: True if the token is still valid, False otherwise.
+    """
     expiry = get_token_expiry(host)
     if expiry:
         logging.debug(f"Token expires: {expiry}")
