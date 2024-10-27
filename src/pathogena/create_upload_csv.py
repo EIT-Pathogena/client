@@ -7,6 +7,9 @@ from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
+    """
+    Model for upload data with additional fields for read suffixes and batch size.
+    """
     ont_read_suffix: str = Field(
         default=".fastq.gz", description="Suffix for ONT reads"
     )
@@ -26,7 +29,14 @@ def build_upload_csv(
     output_csv: Path | str,
     upload_data: UploadData,
 ) -> None:
-    """Create upload csv based on folder of fastq files."""
+    """
+    Create upload csv based on folder of fastq files.
+
+    Args:
+        samples_folder (Path | str): The folder containing the FASTQ files.
+        output_csv (Path | str): The path to the output CSV file.
+        upload_data (UploadData): The upload data containing read suffixes and batch size.
+    """
     samples_folder = Path(samples_folder)
     output_csv = Path(output_csv)
     assert samples_folder.is_dir()  # This should be dealt with by Click
@@ -92,6 +102,13 @@ def build_upload_csv(
 def chunks(lst: list, n: int) -> list[list]:
     """
     Yield successive n-sized chunks from provided list.
+
+    Args:
+        lst (list): The list to split.
+        n (int): The size of each chunk.
+
+    Returns:
+        list[list]: A list of chunks.
     """
     return [lst[i : i + n] for i in range(0, len(lst), n)]
 
@@ -103,6 +120,10 @@ def _write_csv(
 ) -> None:
     """
     Build a CSV file for upload to EIT Pathogena.
+
+    Args:
+        data (list[dict]): The data to write.
+        output_csv (Path): The path to the output CSV file.
     """
     # Note that csv module uses CRLF line endings
     with open(filename, "w", newline="", encoding="utf-8") as outfile:
