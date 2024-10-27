@@ -42,3 +42,7 @@ dev = [
     "ruff>=0.0.282",
     "black>=23.3.0"
 ]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
