@@ -118,7 +118,9 @@ def configure_debug_logging(debug: bool) -> None:
         sys.excepthook = exception_handler
 
 
-def exception_handler(exception_type: type[BaseException], exception: Exception, traceback: TracebackType) -> None:
+def exception_handler(
+    exception_type: type[BaseException], exception: Exception, traceback: TracebackType
+) -> None:
     logging.error(f"{exception_type.__name__}: {exception}")
 
 

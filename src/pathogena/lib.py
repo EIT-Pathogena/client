@@ -558,7 +558,9 @@ def check_for_newer_version() -> None:
                     )
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException):
         pass
-    except Exception:  # Errors in this check should never prevent further CLI usage, ignore all errors.
+    except (
+        Exception
+    ):  # Errors in this check should never prevent further CLI usage, ignore all errors.
         pass
 
 
