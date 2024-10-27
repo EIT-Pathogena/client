@@ -2,13 +2,14 @@ import filecmp
 import pytest
 import logging
 
+from pathlib import Path
 from pydantic import ValidationError
 from datetime import datetime
 
 from pathogena.create_upload_csv import build_upload_csv, UploadData
 
 
-def test_build_csv_illumina(tmp_path, caplog, upload_data):
+def test_build_csv_illumina(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
     caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
@@ -27,7 +28,7 @@ def test_build_csv_illumina(tmp_path, caplog, upload_data):
     )
 
 
-def test_build_csv_ont(tmp_path, caplog, upload_data):
+def test_build_csv_ont(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
     caplog.set_level(logging.INFO)
     upload_data.instrument_platform = "ont"
     upload_data.district = "dis"
@@ -45,7 +46,7 @@ def test_build_csv_ont(tmp_path, caplog, upload_data):
     assert "Created 1 CSV files: output.csv" in caplog.text
 
 
-def test_build_csv_batches(tmp_path, caplog, upload_data):
+def test_build_csv_batches(tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData) -> None:
     caplog.set_level(logging.INFO)
     upload_data.max_batch_size = 3
     build_upload_csv(
@@ -63,7 +64,7 @@ def test_build_csv_batches(tmp_path, caplog, upload_data):
     assert "Created 2 CSV files: output_1.csv, output_2.csv" in caplog.text
 
 
-def test_build_csv_suffix_match(tmp_path, upload_data):
+def test_build_csv_suffix_match(tmp_path: Path, upload_data: UploadData) -> None:
     upload_data.illumina_read2_suffix = "_1.fastq.gz"
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
@@ -74,7 +75,7 @@ def test_build_csv_suffix_match(tmp_path, upload_data):
     assert str(e_info.value) == "Must have different reads suffixes"
 
 
-def test_build_csv_unmatched_files(tmp_path, upload_data):
+def test_build_csv_unmatched_files(tmp_path: Path, upload_data: UploadData) -> None:
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/unmatched_files",
@@ -84,7 +85,7 @@ def test_build_csv_unmatched_files(tmp_path, upload_data):
     assert "Each sample must have two paired files" in str(e_info.value)
 
 
-def test_build_csv_invalid_tech(tmp_path, upload_data):
+def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None:
     # Note that this should be caught by the model validation
     upload_data.instrument_platform = "invalid"
     with pytest.raises(ValueError) as e_info:
@@ -96,7 +97,7 @@ def test_build_csv_invalid_tech(tmp_path, upload_data):
     assert "Invalid instrument platform" in str(e_info.value)
 
 
-def test_upload_data_model():
+def test_upload_data_model() -> None:
     # Test that making model with invalid country makes error
     with pytest.raises(ValidationError):
         UploadData(
