@@ -6,18 +6,16 @@ import logging
 import os
 import shutil
 import subprocess
-import uuid
 import sys
+import uuid
 from datetime import datetime
 from json import JSONDecodeError
-from types import TracebackType
-
-from tenacity import retry, wait_random_exponential, stop_after_attempt
-
 from pathlib import Path
+from types import TracebackType
 from typing import Literal
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 import pathogena
 
@@ -28,8 +26,7 @@ class InvalidPathError(Exception):
     """Custom exception for giving nice user errors around missing paths."""
 
     def __init__(self, message: str):
-        """
-        Constructor, used to pass a custom message to user.
+        """Constructor, used to pass a custom message to user.
 
         Args:
             message (str): Message about this path
@@ -38,12 +35,11 @@ class InvalidPathError(Exception):
         super().__init__(self.message)
 
 
-class UnsupportedClientException(Exception):
-    """Exception raised for unsupported client versions"""
+class UnsupportedClientError(Exception):
+    """Exception raised for unsupported client versions."""
 
     def __init__(self, this_version: str, current_version: str):
-        """
-        Raise this exception with a sensible message.
+        """Raise this exception with a sensible message.
 
         Args:
             this_version (str): The version of installed version
@@ -59,7 +55,7 @@ class UnsupportedClientException(Exception):
 
 # Python errors for neater client errors
 class AuthorizationError(Exception):
-    """Custom exception for authorization issues. 401"""
+    """Custom exception for authorization issues. 401."""
 
     def __init__(self):
         """Initialize the AuthorizationError with a custom message."""
@@ -68,8 +64,8 @@ class AuthorizationError(Exception):
         super().__init__(self.message)
 
 
-class PermissionError(Exception):
-    """Custom exception for permission issues. 403"""
+class PermissionError(Exception):  # noqa: A001
+    """Custom exception for permission issues. 403."""
 
     def __init__(self):
         """Initialize the PermissionError with a custom message."""
@@ -81,7 +77,7 @@ class PermissionError(Exception):
 
 
 class MissingError(Exception):
-    """Custom exception for missing issues. (HTTP Status 404)"""
+    """Custom exception for missing issues. (HTTP Status 404)."""
 
     def __init__(self):
         self.message = (
@@ -92,7 +88,7 @@ class MissingError(Exception):
 
 
 class ServerSideError(Exception):
-    """Custom exception for all other server side errors. (HTTP Status 5xx)"""
+    """Custom exception for all other server side errors. (HTTP Status 5xx)."""
 
     def __init__(self):
         self.message = (
@@ -114,8 +110,7 @@ class InsufficientFundsError(Exception):
 
 
 def configure_debug_logging(debug: bool) -> None:
-    """
-    Configure logging for debug mode.
+    """Configure logging for debug mode.
 
     Args:
         debug (bool): Whether to enable debug logging.
@@ -132,8 +127,7 @@ def configure_debug_logging(debug: bool) -> None:
 def exception_handler(
     exception_type: type[BaseException], exception: Exception, traceback: TracebackType
 ) -> None:
-    """
-    Handle uncaught exceptions by logging them.
+    """Handle uncaught exceptions by logging them.
 
     Args:
         exc_type (type): Exception type.
@@ -144,8 +138,7 @@ def exception_handler(
 
 
 def log_request(request: httpx.Request) -> None:
-    """
-    Log HTTP request details.
+    """Log HTTP request details.
 
     Args:
         request (httpx.Request): The HTTP request object.
@@ -154,8 +147,7 @@ def log_request(request: httpx.Request) -> None:
 
 
 def log_response(response: httpx.Response) -> None:
-    """
-    Log HTTP response details.
+    """Log HTTP response details.
 
     Args:
         response (httpx.Response): The HTTP response object.
@@ -169,8 +161,7 @@ def log_response(response: httpx.Response) -> None:
 
 
 def raise_for_status(response: httpx.Response) -> None:
-    """
-    Raise an exception for HTTP error responses.
+    """Raise an exception for HTTP error responses.
 
     Args:
         response (httpx.Response): The HTTP response object.
@@ -200,8 +191,7 @@ httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_st
 
 
 def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
-    """
-    Wrapper for running shell command subprocesses.
+    """Wrapper for running shell command subprocesses.
 
     Args:
         cmd (str): The command to run.
@@ -216,8 +206,7 @@ def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
 
 
 def get_access_token(host: str) -> str:
-    """
-    Reads token from ~/.config/pathogena/tokens/<host>.
+    """Reads token from ~/.config/pathogena/tokens/<host>.
 
     Args:
         host (str): The host for which to retrieve the token.
@@ -229,16 +218,15 @@ def get_access_token(host: str) -> str:
     logging.debug(f"{token_path=}")
     try:
         data = json.loads(token_path.read_text())
-    except FileNotFoundError:
+    except FileNotFoundError as fne:
         raise FileNotFoundError(
             f"Token not found at {token_path}, have you authenticated?"
-        )
+        ) from fne
     return data["access_token"].strip()
 
 
 def parse_csv(csv_path: Path) -> list[dict]:
-    """
-    Parse a CSV file into a list of dictionaries.
+    """Parse a CSV file into a list of dictionaries.
 
     Args:
         csv_path (Path): The path to the CSV file.
@@ -246,14 +234,13 @@ def parse_csv(csv_path: Path) -> list[dict]:
     Returns:
         list[dict]: A list of dictionaries representing the CSV rows.
     """
-    with open(csv_path, "r") as fh:
+    with open(csv_path) as fh:
         reader = csv.DictReader(fh)
-        return [row for row in reader]
+        return list(reader)
 
 
 def write_csv(records: list[dict], file_name: Path | str) -> None:
-    """
-    Write a list of dictionaries to a CSV file.
+    """Write a list of dictionaries to a CSV file.
 
     Args:
         records (list[dict]): The data to write.
@@ -268,8 +255,7 @@ def write_csv(records: list[dict], file_name: Path | str) -> None:
 
 
 def hash_file(file_path: Path) -> str:
-    """
-    Compute the SHA-256 hash of a file.
+    """Compute the SHA-256 hash of a file.
 
     Args:
         file_path (Path): The path to the file.
@@ -278,9 +264,9 @@ def hash_file(file_path: Path) -> str:
         str: The SHA-256 hash of the file.
     """
     hasher = hashlib.sha256()
-    CHUNK_SIZE = 1_048_576  # 2**20, 1MiB
+    chunk_size = 1_048_576  # 2**20, 1MiB
     with open(Path(file_path), "rb") as fh:
-        while chunk := fh.read(CHUNK_SIZE):
+        while chunk := fh.read(chunk_size):
             hasher.update(chunk)
     return hasher.hexdigest()
 
@@ -294,8 +280,7 @@ def upload_file(
     checksum: str,
     dirty_checksum: str,
 ) -> None:
-    """
-    Upload a file to the server with retries.
+    """Upload a file to the server with retries.
 
     Args:
         sample_id (int): The ID of the sample.
@@ -305,18 +290,20 @@ def upload_file(
         checksum (str): The checksum of the file.
         dirty_checksum (str): The dirty checksum of the file.
     """
-    with httpx.Client(
-        event_hooks=httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=7200,  # 2 hours
-    ) as client:
-        with open(file_path, "rb") as fh:
-            client.post(
-                f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
-                headers={"Authorization": f"Bearer {get_access_token(host)}"},
-                files={"file": fh},
-                data={"checksum": checksum, "dirty_checksum": dirty_checksum},
-            )
+    with (
+        httpx.Client(
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=7200,  # 2 hours
+        ) as client,
+        open(file_path, "rb") as fh,
+    ):
+        client.post(
+            f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
+            headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            files={"file": fh},
+            data={"checksum": checksum, "dirty_checksum": dirty_checksum},
+        )
 
 
 def upload_fastq(
@@ -327,8 +314,7 @@ def upload_fastq(
     protocol: str,
     dirty_checksum: str,
 ) -> None:
-    """
-    Upload a FASTQ file to the server.
+    """Upload a FASTQ file to the server.
 
     Args:
         sample_id (int): The ID of the sample.
@@ -354,8 +340,7 @@ def upload_fastq(
 
 
 def parse_comma_separated_string(string) -> set[str]:
-    """
-    Parse a comma-separated string into a set of strings.
+    """Parse a comma-separated string into a set of strings.
 
     Args:
         string (str): The comma-separated string.
@@ -367,8 +352,7 @@ def parse_comma_separated_string(string) -> set[str]:
 
 
 def validate_guids(guids: list[str]) -> bool:
-    """
-    Validate a list of GUIDs.
+    """Validate a list of GUIDs.
 
     Args:
         guids (list[str]): The list of GUIDs to validate.
@@ -385,8 +369,7 @@ def validate_guids(guids: list[str]) -> bool:
 
 
 def map_control_value(v: str) -> bool | None:
-    """
-    Map a control value string to a boolean or None.
+    """Map a control value string to a boolean or None.
 
     Args:
         v (str): The control value string.
@@ -398,25 +381,21 @@ def map_control_value(v: str) -> bool | None:
 
 
 def is_dev_mode() -> bool:
-    """
-    Check if the application is running in development mode.
+    """Check if the application is running in development mode.
 
     Returns:
         bool: True if running in development mode, False otherwise.
     """
-    return True if "PATHOGENA_DEV_MODE" in os.environ else False
+    return "PATHOGENA_DEV_MODE" in os.environ
 
 
 def display_cli_version() -> None:
-    """
-    Display the CLI version information.
-    """
+    """Display the CLI version information."""
     logging.info(f"EIT Pathogena client version {pathogena.__version__}")
 
 
 def command_exists(command: str) -> bool:
-    """
-    Check if a command exists in the system.
+    """Check if a command exists in the system.
 
     Args:
         command (str): The command to check.
@@ -425,17 +404,14 @@ def command_exists(command: str) -> bool:
         bool: True if the command exists, False otherwise.
     """
     try:
-        result = subprocess.run(
-            ["type", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        result = subprocess.run(["type", command], capture_output=True)
     except FileNotFoundError:  # Catch Python parsing related errors
         return False
     return result.returncode == 0
 
 
 def gzip_file(input_file: Path, output_file: str) -> Path:
-    """
-    Gzip a file and save it with a new name.
+    """Gzip a file and save it with a new name.
 
     Args:
         input_file (Path): The path to the input file.
@@ -447,15 +423,16 @@ def gzip_file(input_file: Path, output_file: str) -> Path:
     logging.info(
         f"Gzipping file: {input_file.name} prior to upload. This may take a while depending on the size of the file."
     )
-    with open(input_file, "rb") as f_in:
-        with gzip.open(output_file, "wb", compresslevel=6) as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    with (
+        open(input_file, "rb") as f_in,
+        gzip.open(output_file, "wb", compresslevel=6) as f_out,
+    ):
+        shutil.copyfileobj(f_in, f_out)
     return Path(output_file)
 
 
 def reads_lines_from_gzip(file_path: Path) -> int:
-    """
-    Count the number of lines in a gzipped file.
+    """Count the number of lines in a gzipped file.
 
     Args:
         file_path (Path): The path to the gzipped file.
@@ -482,8 +459,7 @@ def reads_lines_from_gzip(file_path: Path) -> int:
 
 
 def reads_lines_from_fastq(file_path: Path) -> int:
-    """
-    Count the number of lines in a FASTQ file.
+    """Count the number of lines in a FASTQ file.
 
     Args:
         file_path (Path): The path to the FASTQ file.
@@ -492,7 +468,7 @@ def reads_lines_from_fastq(file_path: Path) -> int:
         int: The number of lines in the file.
     """
     try:
-        with open(file_path, "r") as contents:
+        with open(file_path) as contents:
             line_count = sum(1 for _ in contents)
         return line_count
     except PermissionError:
@@ -508,8 +484,7 @@ def reads_lines_from_fastq(file_path: Path) -> int:
 
 
 def find_duplicate_entries(inputs: list[str]) -> list[str]:
-    """
-    Return a list of items that appear more than once in the input list.
+    """Return a list of items that appear more than once in the input list.
 
     Args:
         inputs (list[str]): The input list.
@@ -522,8 +497,7 @@ def find_duplicate_entries(inputs: list[str]) -> list[str]:
 
 
 def get_token_path(host: str) -> Path:
-    """
-    Get the path to the token file for a given host.
+    """Get the path to the token file for a given host.
 
     Args:
         host (str): The host for which to get the token path.
@@ -539,8 +513,7 @@ def get_token_path(host: str) -> Path:
 
 
 def get_token_expiry(host: str) -> datetime | None:
-    """
-    Get the expiry date of the token for a given host.
+    """Get the expiry date of the token for a given host.
 
     Args:
         host (str): The host for which to get the token expiry date.
@@ -551,7 +524,7 @@ def get_token_expiry(host: str) -> datetime | None:
     token_path = get_token_path(host)
     if token_path.exists():
         try:
-            with open(token_path, "r") as token:
+            with open(token_path) as token:
                 token = json.load(token)
                 expiry = token.get("expiry", False)
                 if expiry:
@@ -562,8 +535,7 @@ def get_token_expiry(host: str) -> datetime | None:
 
 
 def is_auth_token_live(host: str) -> bool:
-    """
-    Check if the authentication token for a given host is still valid.
+    """Check if the authentication token for a given host is still valid.
 
     Args:
         host (str): The host for which to check the token validity.

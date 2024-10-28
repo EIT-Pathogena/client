@@ -1,9 +1,10 @@
+from datetime import datetime
 from pathlib import Path
+
 import pytest
 
 from pathogena.create_upload_csv import UploadData
-from pathogena.models import create_batch_from_csv, UploadBatch, UploadSample
-from datetime import datetime
+from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
 
 
 @pytest.fixture
@@ -17,7 +18,7 @@ def upload_data() -> UploadData:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_host() -> str:
     return "portal.eit-pathogena.com"
 
@@ -138,8 +139,6 @@ def invalid_instrument_platform_csv() -> Path:
 
 
 # Batches
-
-
 @pytest.fixture
 def ont_sample_batch(ont_sample_csv: Path) -> UploadBatch:
     return create_batch_from_csv(ont_sample_csv)
@@ -171,8 +170,6 @@ def illumina_2_mismatch_batch(illumina_mismatched_fastqs_csv: Path) -> UploadBat
 
 
 # Samples
-
-
 @pytest.fixture
 def ont_sample(ont_sample_batch) -> UploadSample:
     return ont_sample_batch.samples[0]

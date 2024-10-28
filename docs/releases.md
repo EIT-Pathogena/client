@@ -2,7 +2,7 @@
 
 ### Creating a new release version
 
-Having installed an editable [development environment](./install-dev.md#development-install) 
+Having installed an editable [development environment](./install-dev.md#development-install)
 (with pre-commit, pytest and flit):
 
 ```bash

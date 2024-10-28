@@ -13,7 +13,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `query-status` command fetches the current processing status of one or more samples in a mapping CSV 
+The `query-status` command fetches the current processing status of one or more samples in a mapping CSV
 generated during upload, or one or more sample GUIDs.
 
 ### Usage

@@ -1,11 +1,11 @@
 import logging
+from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
-from unittest.mock import patch, MagicMock
+import pytest
 
 from pathogena import lib
-from pathogena.util import UnsupportedClientException
+from pathogena.util import UnsupportedClientError
 
 
 @patch("httpx.Client.get")
@@ -13,8 +13,7 @@ from pathogena.util import UnsupportedClientException
 def test_check_new_version_available(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """
-    Test to check that a new version is available if it exists.
+    """Test to check that a new version is available if it exists.
 
     Args:
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
@@ -33,8 +32,7 @@ def test_check_new_version_available(
 def test_check_no_new_version_available(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """
-    Test that no new version is available if request is latest.
+    """Test that no new version is available if request is latest.
 
     Args:
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
@@ -51,10 +49,9 @@ def test_check_no_new_version_available(
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.1")
 def test_check_version_compatibility(
-    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture, test_host: str
 ) -> None:
-    """
-    Test to check whether two minor versions are compatible.
+    """Test to check whether two minor versions are compatible.
 
     Args:
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
@@ -67,10 +64,9 @@ def test_check_version_compatibility(
 @patch("httpx.Client.get")
 @patch("pathogena.__version__", "1.0.0")
 def test_fail_check_version_compatibility(
-    mock_get: MagicMock, caplog: pytest.LogCaptureFixture
+    mock_get: MagicMock, caplog: pytest.LogCaptureFixture, test_host: str
 ) -> None:
-    """
-    Test failure of version compatibility check.
+    """Test failure of version compatibility check.
 
     Args:
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
@@ -78,7 +74,7 @@ def test_fail_check_version_compatibility(
     """
     caplog.set_level(logging.INFO)
     mock_get.return_value = httpx.Response(status_code=200, json={"version": "1.0.1"})
-    with pytest.raises(UnsupportedClientException):
+    with pytest.raises(UnsupportedClientError):
         lib.check_version_compatibility(host=test_host)
         assert "is no longer supported" in caplog.text
 
@@ -88,8 +84,7 @@ def test_fail_check_version_compatibility(
 def test_get_balance(
     mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """
-    Test successfully getting the balance for a given account.
+    """Test successfully getting the balance for a given account.
 
     Args:
         mock_token (MagicMock): Mocked `pathogena.lib.get_access_token` method.
@@ -108,8 +103,7 @@ def test_get_balance(
 def test_get_balance_failure(
     mock_token: MagicMock, mock_client_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """
-    Test failure to get the account balance.
+    """Test failure to get the account balance.
 
     Args:
         mock_token (MagicMock): Mocked `pathogena.lib.get_access_token` method.

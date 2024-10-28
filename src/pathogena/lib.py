@@ -1,30 +1,25 @@
 import csv
 import json
 import logging
-import os
 import multiprocessing
+import os
 import shutil
-from getpass import getpass
 from datetime import datetime, timedelta
-
+from getpass import getpass
 from pathlib import Path
 
+import hostile
 import httpx
-
-from tenacity import retry, wait_random_exponential, stop_after_attempt
-
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
 from hostile.util import BUCKET_URL, CACHE_DIR, choose_default_thread_count
-
 from packaging.version import Version
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-import hostile
-
-from pathogena import util, models
+from pathogena import models, util
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import get_access_token, MissingError, get_token_path
+from pathogena.util import MissingError, get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -46,8 +41,7 @@ HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
 def get_host(cli_host: str | None) -> str:
-    """
-    Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
 
     Args:
         cli_host (str | None): The host provided via CLI argument.
@@ -63,8 +57,7 @@ def get_host(cli_host: str | None) -> str:
 
 
 def get_protocol() -> str:
-    """
-    Get the protocol to use for communication.
+    """Get the protocol to use for communication.
 
     Returns:
         str: The protocol (e.g., 'http', 'https').
@@ -77,8 +70,7 @@ def get_protocol() -> str:
 
 
 def authenticate(host: str = DEFAULT_HOST) -> None:
-    """
-    Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json
+    """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json.
 
     Args:
         host (str): The host server. Defaults to DEFAULT_HOST.
@@ -107,8 +99,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
 
 
 def check_authentication(host: str) -> None:
-    """
-    Check if the user is authenticated.
+    """Check if the user is authenticated.
 
     Args:
         host (str): The host server.
@@ -129,8 +120,7 @@ def check_authentication(host: str) -> None:
 
 
 def get_credit_balance(host: str) -> None:
-    """
-    Get the credit balance for the user.
+    """Get the credit balance for the user.
 
     Args:
         host (str): The host server.
@@ -154,8 +144,9 @@ def get_credit_balance(host: str) -> None:
 
 
 def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
-    """
-    Create batch on server, return batch id, a transaction will be created at this point for the expected
+    """Create batch on server, return batch id.
+
+    A transaction will be created at this point for the expected
     total samples in the BatchModel.
 
     Args:
@@ -198,8 +189,7 @@ def create_sample(
     batch_id: str,
     sample: UploadSample,
 ) -> str:
-    """
-    Create a sample on the server with retries.
+    """Create a sample on the server with retries.
 
     Args:
         host (str): The host server.
@@ -242,8 +232,7 @@ def create_sample(
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def run_sample(sample_id: str, host: str) -> str:
-    """
-    Patch sample status, create run, and patch run status to trigger processing
+    """Patch sample status, create run, and patch run status to trigger processing.
 
     Args:
         sample_id (str): The sample ID.
@@ -283,8 +272,7 @@ def decontaminate_samples_with_hostile(
     threads: int,
     output_dir: Path = Path("."),
 ) -> dict:
-    """
-    Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch.
+    """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch.
 
     Args:
         batch (models.UploadBatch): The batch of samples to decontaminate.
@@ -326,7 +314,11 @@ def decontaminate_samples_with_hostile(
             force=True,
         )
     batch_metadata = dict(
-        zip([s.sample_name for s in batch.samples], decontamination_metadata)
+        zip(
+            [s.sample_name for s in batch.samples],
+            decontamination_metadata,
+            strict=False,
+        )
     )
     batch.ran_through_hostile = True
     logging.info(
@@ -340,8 +332,7 @@ def upload_batch(
     save: bool = False,
     host: str = DEFAULT_HOST,
 ) -> None:
-    """
-    Upload a batch of samples.
+    """Upload a batch of samples.
 
     Args:
         batch (models.UploadBatch): The batch of samples to upload.
@@ -443,8 +434,7 @@ def upload_batch(
 
 
 def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) -> None:
-    """
-    Perform pre-submission validation of a batch of sample model subsets
+    """Perform pre-submission validation of a batch of sample model subsets.
 
     Args:
         batch (UploadBatch): The batch to validate.
@@ -479,8 +469,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
 
 
 def fetch_sample(sample_id: str, host: str) -> dict:
-    """
-    Fetch sample data from the server.
+    """Fetch sample data from the server.
 
     Args:
         sample_id (str): The sample ID.
@@ -506,8 +495,7 @@ def query(
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
 ) -> dict[str, dict]:
-    """
-    Query sample metadata returning a dict of metadata keyed by sample ID
+    """Query sample metadata returning a dict of metadata keyed by sample ID.
 
     Args:
         query_string (str): The query string.
@@ -543,8 +531,7 @@ def status(
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
-    """
-    Get the status of samples from the server.
+    """Get the status of samples from the server.
 
     Args:
         samples (str | None): A comma-separated list of sample IDs.
@@ -576,8 +563,7 @@ def status(
 
 
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
-    """
-    Return models.RemoteFile instances for a sample input files
+    """Return models.RemoteFile instances for a sample input files.
 
     Args:
         sample_id (str): The sample ID.
@@ -611,8 +597,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
 def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
 ) -> dict[str, models.RemoteFile]:
-    """
-    Return models.RemoteFile instances for a sample, optionally including only latest run
+    """Return models.RemoteFile instances for a sample, optionally including only latest run.
 
     Args:
         sample_id (str): The sample ID.
@@ -648,8 +633,7 @@ def fetch_output_files(
 
 
 def parse_csv(path: Path) -> list[dict]:
-    """
-    Parse a CSV file.
+    """Parse a CSV file.
 
     Args:
         path (Path): The path to the CSV file.
@@ -657,14 +641,15 @@ def parse_csv(path: Path) -> list[dict]:
     Returns:
         list[dict]: The parsed CSV data.
     """
-    with open(path, "r") as fh:
+    with open(path) as fh:
         reader = csv.DictReader(fh)
-        return [row for row in reader]
+        return list(reader)
 
 
 def check_version_compatibility(host: str) -> None:
-    """
-    Check the client version expected by the server (Portal) and raise an exception if the client version is not
+    """Check the client version expected by the server (Portal).
+
+    Raise an exception if the client version is not
     compatible.
 
     Args:
@@ -683,7 +668,7 @@ def check_version_compatibility(host: str) -> None:
         f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
     if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientException(pathogena.__version__, lowest_cli_version)
+        raise util.UnsupportedClientError(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
@@ -709,9 +694,7 @@ def check_for_newer_version() -> None:
                     )
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException):
         pass
-    except (
-        Exception
-    ):  # Errors in this check should never prevent further CLI usage, ignore all errors.
+    except Exception:  # Errors in this check should never prevent further CLI usage, ignore all errors.
         pass
 
 
@@ -724,8 +707,7 @@ def download(
     rename: bool = True,
     host: str = DEFAULT_HOST,
 ) -> None:
-    """
-    Download the latest output files for a sample.
+    """Download the latest output files for a sample.
 
     Args:
         samples (str | None): A comma-separated list of sample IDs.
@@ -818,8 +800,7 @@ def download_single(
     headers: dict[str, str],
     out_dir: Path,
 ) -> None:
-    """
-    Download a single file from the server with retries.
+    """Download a single file from the server with retries.
 
     Args:
         client (httpx.Client): The HTTP client to use for the request.
@@ -850,8 +831,7 @@ def download_single(
 
 
 def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
-    """
-    Download and cache the host decontamination index.
+    """Download and cache the host decontamination index.
 
     Args:
         name (str): The name of the index. Defaults to HOSTILE_INDEX_NAME.
@@ -865,9 +845,11 @@ def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
 def prepare_upload_files(
     target_filepath: Path, sample_id: str, read_num: int, decontaminated: bool = False
 ) -> Path:
-    """
-    Rename the files to be compatible with what the server is expecting, which is `*_{1,2}.fastq.gz` and
-    gzip the file if it isn't already, which should only be if the files haven't been run through Hostile.
+    """Rename the files to be compatible with what the server is expecting.
+
+    Which is `*_{1,2}.fastq.gz` and
+    gzip the file if it isn't already,
+    which should only be if the files haven't been run through Hostile.
 
     Args:
         target_filepath (Path): The target file path.
@@ -894,8 +876,7 @@ def prepare_upload_files(
 
 
 def remove_file(file_path: Path) -> None:
-    """
-    Remove a file from the filesystem.
+    """Remove a file from the filesystem.
 
     Args:
         file_path (Path): The path to the file to remove.

@@ -13,7 +13,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `query-raw` command fetches either the raw metadata of one more samples given a mapping CSV 
+The `query-raw` command fetches either the raw metadata of one more samples given a mapping CSV
 generated during upload, or one or more sample GUIDs.
 
 ### Usage

@@ -36,13 +36,58 @@ pathogena = "pathogena.cli:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.2",
-    "pre-commit>=3.6.2",
     "flit>=3.9.0",
-    "ruff>=0.0.282",
-    "black>=23.3.0"
+    "pre-commit>=4.0.1",
+    "pytest>=8.3.3",
+    "ruff>=0.7.1",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ["py310"]
+[tool.ruff.lint]
+select = ["A", "B", "C", "D", "DJ", "E", "I", "N", "SIM", "T20", "TCH", "TD", "UP"]
+
+ignore = ["C901", "D107", "D100", "DJ001", "PD901", "UP007", "UP017", "D206", "E501", "S101", "PT027", "DTZ005", "ARG002", "B026", "D417", "N999", "S603", "S607", "UP017", "SIM103"]
+
+[tool.ruff]
+target-version = "py310"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = ["ARG001", "D", "PT011"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.uv]
+dev-dependencies = [
+    "flit>=3.9.0",
+    "pre-commit>=4.0.1",
+    "pytest>=8.3.3",
+    "ruff>=0.7.1",
+]
+
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+]

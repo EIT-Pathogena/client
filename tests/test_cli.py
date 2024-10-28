@@ -1,16 +1,16 @@
 import os
+from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 from pydantic import ValidationError
-from pathlib import Path
 
 from pathogena import __version__ as version
 from pathogena.cli import main
 
 
 def test_cli_help_override() -> None:
-    """
-    Test the CLI help command.
+    """Test the CLI help command.
 
     This test ensures that the help message for the 'upload' command is displayed correctly.
     """
@@ -20,8 +20,7 @@ def test_cli_help_override() -> None:
 
 
 def test_cli_version() -> None:
-    """
-    Test the CLI version command.
+    """Test the CLI version command.
 
     This test ensures that the version of the CLI is displayed correctly.
     """
@@ -39,9 +38,9 @@ def test_cli_version() -> None:
 #     [os.remove(f) for f in os.listdir(".") if f.endswith("clean.fastq.gz")]
 
 
+@pytest.mark.slow
 def test_cli_decontaminate_illumina(illumina_sample_csv: Path) -> None:
-    """
-    Test the CLI decontaminate command for Illumina samples.
+    """Test the CLI decontaminate command for Illumina samples.
 
     Args:
         illumina_sample_csv (Path): Path to the Illumina sample CSV file.
@@ -52,9 +51,9 @@ def test_cli_decontaminate_illumina(illumina_sample_csv: Path) -> None:
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
+@pytest.mark.slow
 def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv: Path) -> None:
-    """
-    Test the CLI decontaminate command for Illumina samples with an output directory.
+    """Test the CLI decontaminate command for Illumina samples with an output directory.
 
     Args:
         illumina_sample_csv (Path): Path to the Illumina sample CSV file.
@@ -67,9 +66,9 @@ def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv: Path) -
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
+@pytest.mark.slow
 def test_cli_fail_decontaminate_output_dir(illumina_sample_csv: Path) -> None:
-    """
-    Test the CLI decontaminate command failure with a non-existent output directory.
+    """Test the CLI decontaminate command failure with a non-existent output directory.
 
     Args:
         illumina_sample_csv (Path): Path to the Illumina sample CSV file.
@@ -84,8 +83,7 @@ def test_cli_fail_decontaminate_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_cli_fail_upload_output_dir(illumina_sample_csv: Path) -> None:
-    """
-    Test the CLI upload command failure with a non-existent output directory.
+    """Test the CLI upload command failure with a non-existent output directory.
 
     Args:
         illumina_sample_csv (Path): Path to the Illumina sample CSV file.
@@ -99,8 +97,7 @@ def test_cli_fail_upload_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_cli_fail_download_output_dir(illumina_sample_csv: Path) -> None:
-    """
-    Test the CLI download command failure with a non-existent output directory.
+    """Test the CLI download command failure with a non-existent output directory.
 
     Args:
         illumina_sample_csv (Path): Path to the Illumina sample CSV file.
@@ -112,8 +109,7 @@ def test_cli_fail_download_output_dir(illumina_sample_csv: Path) -> None:
 
 
 def test_validation_fail_control(invalid_control_csv: Path) -> None:
-    """
-    Test validation failure for control CSV.
+    """Test validation failure for control CSV.
 
     Args:
         invalid_control_csv (Path): Path to the invalid control CSV file.
@@ -127,7 +123,7 @@ def test_validation_fail_control(invalid_control_csv: Path) -> None:
 
 # Doesn't work because it actually uploads data, need to work out a mock system or break down the function
 # even further, for now, an authenticated used can un-comment and run the tests.
-# TODO: Re-implement with a mock upload somehow.
+# TODO: Re-implement with a mock upload somehow.  # noqa: TD002, TD003
 # def test_validation(illumina_sample_csv):
 #     runner = CliRunner()
 #     result = runner.invoke(main, ["validate", str(illumina_sample_csv)])

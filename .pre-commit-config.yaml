@@ -1,7 +1,30 @@
+---
 repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.6
-  hooks:
-    - id: ruff
-      args: [ --fix ]
-    - id: ruff-format
+  - hooks:
+      - exclude: (.git/)
+        id: forbid-tabs
+      - exclude: (.git/)
+        id: remove-tabs
+    repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.1.9
+  - hooks:
+      - id: trailing-whitespace
+        exclude: ^test_files/
+      - id: end-of-file-fixer
+      - id: check-json
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: check-docstring-first
+    repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]

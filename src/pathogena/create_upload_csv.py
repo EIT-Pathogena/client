@@ -1,15 +1,14 @@
-from pathlib import Path
-import logging
 import csv
+import logging
+from pathlib import Path
 
 from pydantic import Field
+
 from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
-    """
-    Model for upload data with additional fields for read suffixes and batch size.
-    """
+    """Model for upload data with additional fields for read suffixes and batch size."""
 
     ont_read_suffix: str = Field(
         default=".fastq.gz", description="Suffix for ONT reads"
@@ -30,8 +29,7 @@ def build_upload_csv(
     output_csv: Path | str,
     upload_data: UploadData,
 ) -> None:
-    """
-    Create upload csv based on folder of fastq files.
+    """Create upload csv based on folder of fastq files.
 
     Args:
         samples_folder (Path | str): The folder containing the FASTQ files.
@@ -65,12 +63,15 @@ def build_upload_csv(
                 f"Each sample must have two paired files.\nSome lack pairs:{unmatched}"
             )
 
-        files = [(g, str(f1), str(f2)) for g, f1, f2 in zip(guids1, fastqs1, fastqs2)]
+        files = [
+            (g, str(f1), str(f2))
+            for g, f1, f2 in zip(guids1, fastqs1, fastqs2, strict=False)
+        ]
     elif upload_data.instrument_platform == "ont":
         fastqs = list(samples_folder.glob(f"*{upload_data.ont_read_suffix}"))
         fastqs.sort()
         guids = [f.name.replace(upload_data.ont_read_suffix, "") for f in fastqs]
-        files = [(g, str(f), str("")) for g, f in zip(guids, fastqs)]
+        files = [(g, str(f), "") for g, f in zip(guids, fastqs, strict=False)]
     else:
         raise ValueError("Invalid instrument platform")
 
@@ -101,8 +102,7 @@ def build_upload_csv(
 
 
 def chunks(lst: list, n: int) -> list[list]:
-    """
-    Yield successive n-sized chunks from provided list.
+    """Yield successive n-sized chunks from provided list.
 
     Args:
         lst (list): The list to split.
@@ -119,8 +119,7 @@ def _write_csv(
     read_files: list[tuple[str, str, str]],
     upload_data: UploadData,
 ) -> None:
-    """
-    Build a CSV file for upload to EIT Pathogena.
+    """Build a CSV file for upload to EIT Pathogena.
 
     Args:
         data (list[dict]): The data to write.

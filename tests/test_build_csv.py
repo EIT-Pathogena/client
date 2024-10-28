@@ -1,19 +1,18 @@
 import filecmp
-import pytest
 import logging
-
-from pathlib import Path
-from pydantic import ValidationError
 from datetime import datetime
+from pathlib import Path
 
-from pathogena.create_upload_csv import build_upload_csv, UploadData
+import pytest
+from pydantic import ValidationError
+
+from pathogena.create_upload_csv import UploadData, build_upload_csv
 
 
 def test_build_csv_illumina(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
 ) -> None:
-    """
-    Test building CSV for Illumina platform.
+    """Test building CSV for Illumina platform.
 
     This test checks that the output illumina csv is the same as the temp output csv, that the csv creation
     can be seen in the log output, and that some help text can be seen in the log output.
@@ -44,8 +43,7 @@ def test_build_csv_illumina(
 def test_build_csv_ont(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
 ) -> None:
-    """
-    Test building CSV for ONT platform.
+    """Test building CSV for ONT platform.
 
     This test checks that the output ont csv is the same as the temp output csv, and that the csv creation
     can be seen in the log output.
@@ -75,8 +73,7 @@ def test_build_csv_ont(
 def test_build_csv_batches(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
 ) -> None:
-    """
-    Test building CSV in batches.
+    """Test building CSV in batches.
 
     This test checks that the both of the batch csvs are the same as the temp output csvs, and that the csv creation
     can be seen in the log output.
@@ -104,8 +101,7 @@ def test_build_csv_batches(
 
 
 def test_build_csv_suffix_match(tmp_path: Path, upload_data: UploadData) -> None:
-    """
-    Test building CSV with matching read suffixes.
+    """Test building CSV with matching read suffixes.
 
     This test checks that an empty samples folder raises an error, and that the corresponding error message is
     as expected.
@@ -125,8 +121,7 @@ def test_build_csv_suffix_match(tmp_path: Path, upload_data: UploadData) -> None
 
 
 def test_build_csv_unmatched_files(tmp_path: Path, upload_data: UploadData) -> None:
-    """
-    Test building CSV with unmatched files.
+    """Test building CSV with unmatched files.
 
     This test checks that a samples folder with unmatched files raises an error, and that the corresponding
     error message is as expected.
@@ -145,8 +140,7 @@ def test_build_csv_unmatched_files(tmp_path: Path, upload_data: UploadData) -> N
 
 
 def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None:
-    """
-    Test building CSV with an invalid instrument platform.
+    """Test building CSV with an invalid instrument platform.
 
     This test checks that an invalid instrument platform together with a samples folder with unmatched files
     raises an error, and that the corresponding error message is as expected.
@@ -168,8 +162,7 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
 
 
 def test_upload_data_model() -> None:
-    """
-    Test the UploadData model validation.
+    """Test the UploadData model validation.
 
     This test ensures that the UploadData model raises validation errors for invalid data, such as platform, country and
     specimen_organism.
