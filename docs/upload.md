@@ -24,6 +24,8 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples, 
 before uploading sequences to EIT Pathogena for analysis.
 
+To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation. 
+
 ### Credits
 
 Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
