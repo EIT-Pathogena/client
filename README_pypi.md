@@ -55,7 +55,7 @@ conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
 conda activate pathogena
 pip install --upgrade pathogena
 ```
-  
+
 #### MacOS
 
 Please note the additional argument `--platform osx-64` in this command, compared to the above.
@@ -114,14 +114,14 @@ Creating a Personal Account:
 
 Navigate to EIT Pathogena and click on “Sign Up”. Follow the instructions to create a user account.
 
-Shortly after filling out the form you'll receive a verification email. Click the link in the email to verify your 
+Shortly after filling out the form you'll receive a verification email. Click the link in the email to verify your
 account and email address. If you don’t receive the email, please contact pathogena.support@eit.org.
 
 You are now ready to start using EIT Pathogena.
 
 ##### What happens when my token expires?
 
-If you haven't already retrieved a token, you will receive the following error message. 
+If you haven't already retrieved a token, you will receive the following error message.
 
 ```bash No token file
 $ pathogena upload tests/data/illumina-2.csv
@@ -135,7 +135,7 @@ If your token is invalid or expired, you will receive the following message
 
 ```text Invalid token
 14:03:26 INFO: EIT Pathogena client version 2.0.0rc1
-14:03:26 ERROR: AuthorizationError: Authorization checks failed! Please re-authenticate with `pathogena auth` and 
+14:03:26 ERROR: AuthorizationError: Authorization checks failed! Please re-authenticate with `pathogena auth` and
 try again.
 ```
 
@@ -162,7 +162,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the
 header of the Pathogena Portal or by using the `pathogena balance` command when logged in.
 
 ### Usage
@@ -196,13 +196,13 @@ Options:
 > Where samples may contain human reads we strongly recommend using the provided decontamination functionality. This is
 best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
 
-The upload command performs metadata validation and client-side removal of human reads for each of your samples, 
+The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
 
 ### Credits
 
-Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
-header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the 
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the
+header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the
 `pathogena balance` section.
 
 Each sample for Mycobacterium genomic sequencing will require 10 credits. During the upload command process,
@@ -217,9 +217,9 @@ check. You may optionally download the index ahead of time using the command `pa
 
 By default, the upload command will first run `pathogena decontaminate` to attempt to remove human reads prior to
 uploading the input samples to EIT Pathogena, this option can be overridden but only do so if you're aware of the risks
-stated above. 
+stated above.
 
-To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform 
+To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform
 decontamination without uploading anything, use the `pathogena decontaminate` command.
 
 During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly
@@ -376,8 +376,8 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `validate` command will check that a Batch can be created from a given CSV and if your user account has permission 
-to upload the samples, the individual FastQ files are then checked for validity. These checks are already performed 
+The `validate` command will check that a Batch can be created from a given CSV and if your user account has permission
+to upload the samples, the individual FastQ files are then checked for validity. These checks are already performed
 by default with the `upload` command but using this can ensure validity without commiting to the subsequent upload
 if you're looking to check a CSV during writing it.
 ## `pathogena query-raw`
@@ -395,7 +395,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `query-raw` command fetches either the raw metadata of one more samples given a mapping CSV 
+The `query-raw` command fetches either the raw metadata of one more samples given a mapping CSV
 generated during upload, or one or more sample GUIDs.
 
 ### Usage
@@ -419,7 +419,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-The `query-status` command fetches the current processing status of one or more samples in a mapping CSV 
+The `query-status` command fetches the current processing status of one or more samples in a mapping CSV
 generated during upload, or one or more sample GUIDs.
 
 ### Usage
@@ -433,9 +433,9 @@ pathogena query-status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 ```
 ## `pathogena autocomplete`
 
-This command will output the steps required to enable auto-completion in either a Bash or ZSH shell, follow the output 
+This command will output the steps required to enable auto-completion in either a Bash or ZSH shell, follow the output
 to enable autocompletion, this will need to be executed on every new shell session, instructions are provided on how to
-make this permanent depending on your environment. More information and instructions for other shells can be found in 
+make this permanent depending on your environment. More information and instructions for other shells can be found in
 the [Click documentation](https://click.palletsprojects.com/en/8.1.x/shell-completion/).
 
 ### Usage
@@ -448,7 +448,7 @@ Add this to your ~/.bashrc file to enable this permanently:
     command -v pathogena > /dev/null 2>&1 && eval "$(_PATHOGENA_COMPLETE=bash_source pathogena)"
 ```
 
-Tab completion can optionally be enabled by adding the lines output by the command to your shell source files. 
+Tab completion can optionally be enabled by adding the lines output by the command to your shell source files.
 This will enable the ability to press tab after writing `pathogena ` to list possible sub-commands. It can also be used
 for sub-command options, if `--` is entered prior to pressing tab.
 

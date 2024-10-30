@@ -21,15 +21,15 @@ Options:
 > Where samples may contain human reads we strongly recommend using the provided decontamination functionality. This is
 best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
 
-The upload command performs metadata validation and client-side removal of human reads for each of your samples, 
+The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
 
 To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation. 
 
 ### Credits
 
-Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
-header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the 
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the
+header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the
 `pathogena balance` section.
 
 Each sample for Mycobacterium genomic sequencing will require 10 credits. During the upload command process,
@@ -44,9 +44,9 @@ check. You may optionally download the index ahead of time using the command `pa
 
 By default, the upload command will first run `pathogena decontaminate` to attempt to remove human reads prior to
 uploading the input samples to EIT Pathogena, this option can be overridden but only do so if you're aware of the risks
-stated above. 
+stated above.
 
-To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform 
+To retain the decontaminated FASTQ files uploaded to EIT Pathogena, include the optional `--save` flag. To perform
 decontamination without uploading anything, use the `pathogena decontaminate` command.
 
 During upload, a mapping CSV is created (e.g. `a5w2e8.mapping.csv`) linking your local sample names with their randomly

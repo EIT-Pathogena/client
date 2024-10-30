@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -13,11 +13,22 @@ ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 def is_valid_file_extension(
     filename: str, allowed_extensions: tuple[str] = ALLOWED_EXTENSIONS
-):
+) -> bool:
+    """Check if the file has a valid extension.
+
+    Args:
+        filename (str): The name of the file.
+        allowed_extensions (tuple[str]): A tuple of allowed file extensions.
+
+    Returns:
+        bool: True if the file has a valid extension, False otherwise.
+    """
     return filename.endswith(allowed_extensions)
 
 
 class UploadBase(BaseModel):
+    """Base model for any uploaded data."""
+
     batch_name: str = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
@@ -41,6 +52,8 @@ class UploadBase(BaseModel):
 
 
 class UploadSample(UploadBase):
+    """Model for an uploaded sample's data."""
+
     sample_name: str = Field(
         min_length=1, description="Sample name (anonymised prior to upload)"
     )
@@ -96,6 +109,14 @@ class UploadSample(UploadBase):
 
     @model_validator(mode="after")
     def validate_fastq_files(self):
+        """Validate the FASTQ files.
+
+        Returns:
+            Self: The validated UploadSample instance.
+
+        Raises:
+            ValueError: If any validation checks fail.
+        """
         self.reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
         self.reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
         self.check_fastq_paths_are_different()
@@ -121,16 +142,28 @@ class UploadSample(UploadBase):
         return self
 
     def check_fastq_paths_are_different(self):
+        """Check that the FASTQ paths are different.
+
+        Returns:
+            Self: The UploadSample instance.
+
+        Raises:
+            ValueError: If the FASTQ paths are the same.
+        """
         if self.reads_1 == self.reads_2:
             raise ValueError(
                 f"reads_1 and reads_2 paths must be different in sample {self.sample_name}"
             )
         return self
 
-    def validate_reads_from_fastq(self):
+    def validate_reads_from_fastq(self) -> None:
+        """Validate the reads from the FASTQ files.
+
+        Raises:
+            ValueError: If any validation checks fail.
+        """
         reads = self.get_read_paths()
         logging.info("Performing FastQ checks and gathering total reads")
-        line_count = 0
         valid_lines_per_read = 4
         self.reads_in = 0
         for read in reads:
@@ -145,22 +178,38 @@ class UploadSample(UploadBase):
                 )
             self.reads_in += line_count / valid_lines_per_read
         logging.info(f"{self.reads_in} reads in FASTQ file")
-        return
 
-    def get_read_paths(self):
+    def get_read_paths(self) -> list[Path]:
+        """Get the paths of the read files.
+
+        Returns:
+            list[Path]: A list of paths to the read files.
+        """
         reads = [self.reads_1_resolved_path]
         if self.is_illumina():
             reads.append(self.reads_2_resolved_path)
         return reads
 
-    def is_ont(self):
+    def is_ont(self) -> bool:
+        """Check if the instrument platform is ONT.
+
+        Returns:
+            bool: True if the instrument platform is ONT, False otherwise.
+        """
         return self.instrument_platform == "ont"
 
-    def is_illumina(self):
+    def is_illumina(self) -> bool:
+        """Check if the instrument platform is Illumina.
+
+        Returns:
+            bool: True if the instrument platform is Illumina, False otherwise.
+        """
         return self.instrument_platform == "illumina"
 
 
 class UploadBatch(BaseModel):
+    """Model for a batch of upload samples."""
+
     samples: list[UploadSample]
     skip_reading_fastqs: bool = Field(
         description="Skip checking FastQ files", default=False
@@ -173,6 +222,14 @@ class UploadBatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_sample_names(self):
+        """Validate that sample names are unique.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If duplicate sample names are found.
+        """
         names = [sample.sample_name for sample in self.samples]
         if len(names) != len(set(names)):
             duplicates = find_duplicate_entries(names)
@@ -181,6 +238,14 @@ class UploadBatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_file_names(self):
+        """Validate that file names are unique.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If duplicate file names are found.
+        """
         reads = []
         reads.append([str(sample.reads_1.name) for sample in self.samples])
         if self.is_illumina():
@@ -195,6 +260,14 @@ class UploadBatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_single_instrument_platform(self):
+        """Validate that all samples have the same instrument platform.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If multiple instrument platforms are found.
+        """
         instrument_platforms = [sample.instrument_platform for sample in self.samples]
         if len(set(instrument_platforms)) != 1:
             raise ValueError(
@@ -204,8 +277,15 @@ class UploadBatch(BaseModel):
         logging.debug(f"{self.instrument_platform=}")
         return self
 
-    def update_sample_metadata(self, metadata=None) -> None:
-        """Update sample metadata with output from decontamination process, or defaults if decontamination is skipped"""
+    def update_sample_metadata(self, metadata: dict[str, Any] = None) -> None:
+        """Updates the sample metadata.
+
+        Update sample metadata with output from decontamination process, or defaults if
+        decontamination is skipped
+
+        Args:
+            metadata (dict[str, Any], optional): Metadata to update. Defaults to None.
+        """
         if metadata is None:
             metadata = {}
         for sample in self.samples:
@@ -238,7 +318,8 @@ class UploadBatch(BaseModel):
                 else:
                     sample.reads_2_pre_upload_checksum = sample.reads_2_dirty_checksum
 
-    def validate_all_sample_fastqs(self):
+    def validate_all_sample_fastqs(self) -> None:
+        """Validate all sample FASTQ files."""
         for sample in self.samples:
             if not self.skip_reading_fastqs and sample.reads_in == 0:
                 sample.validate_reads_from_fastq()
@@ -247,22 +328,43 @@ class UploadBatch(BaseModel):
                     f"Skipping additional FastQ file checks as requested (skip_checks = {self.skip_reading_fastqs}"
                 )
 
-    def is_ont(self):
+    def is_ont(self) -> bool:
+        """Check if the instrument platform is ONT.
+
+        Returns:
+            bool: True if the instrument platform is ONT, False otherwise.
+        """
         return self.instrument_platform == "ont"
 
-    def is_illumina(self):
+    def is_illumina(self) -> bool:
+        """Check if the instrument platform is Illumina.
+
+        Returns:
+            bool: True if the instrument platform is Illumina, False otherwise.
+        """
         return self.instrument_platform == "illumina"
 
 
 class RemoteFile(BaseModel):
+    """Model for a remote file."""
+
     filename: str
     run_id: int
     sample_id: str
 
 
 def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> UploadBatch:
+    """Create an UploadBatch instance from a CSV file.
+
+    Args:
+        upload_csv (Path): Path to the upload CSV file.
+        skip_checks (bool, optional): Whether to skip FASTQ file checks. Defaults to False.
+
+    Returns:
+        UploadBatch: The created UploadBatch instance.
+    """
     records = util.parse_csv(upload_csv)
     return UploadBatch(  # Include upload_csv to enable relative fastq path validation
-        samples=[UploadSample(**r, **dict(upload_csv=upload_csv)) for r in records],
+        samples=[UploadSample(**r, **{"upload_csv": upload_csv}) for r in records],
         skip_reading_fastqs=skip_checks,
     )

@@ -1,6 +1,6 @@
 # EIT Pathogena client
 
-The command line interface for the EIT Pathogena mycobacterial platform. 
+The command line interface for the EIT Pathogena mycobacterial platform.
 
 The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
 upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM

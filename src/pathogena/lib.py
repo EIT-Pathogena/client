@@ -1,30 +1,25 @@
 import csv
 import json
 import logging
-import os
 import multiprocessing
+import os
 import shutil
-from getpass import getpass
 from datetime import datetime, timedelta
-
+from getpass import getpass
 from pathlib import Path
 
+import hostile
 import httpx
-
-from tenacity import retry, wait_random_exponential, stop_after_attempt
-
 from hostile.lib import ALIGNER, clean_fastqs, clean_paired_fastqs
 from hostile.util import BUCKET_URL, CACHE_DIR, choose_default_thread_count
-
 from packaging.version import Version
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-import hostile
-
-from pathogena import util, models
+from pathogena import models, util
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import get_access_token, MissingError, get_token_path
+from pathogena.util import MissingError, get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -46,7 +41,14 @@ HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
 def get_host(cli_host: str | None) -> str:
-    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value"""
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
+
+    Args:
+        cli_host (str | None): The host provided via CLI argument.
+
+    Returns:
+        str: The resolved hostname.
+    """
     return (
         cli_host
         if cli_host is not None
@@ -55,6 +57,11 @@ def get_host(cli_host: str | None) -> str:
 
 
 def get_protocol() -> str:
+    """Get the protocol to use for communication.
+
+    Returns:
+        str: The protocol (e.g., 'http', 'https').
+    """
     if "PATHOGENA_PROTOCOL" in os.environ:
         protocol = os.environ["PATHOGENA_PROTOCOL"]
         return protocol
@@ -63,7 +70,11 @@ def get_protocol() -> str:
 
 
 def authenticate(host: str = DEFAULT_HOST) -> None:
-    """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json"""
+    """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json.
+
+    Args:
+        host (str): The host server. Defaults to DEFAULT_HOST.
+    """
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password (hidden): ")
@@ -88,6 +99,14 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
 
 
 def check_authentication(host: str) -> None:
+    """Check if the user is authenticated.
+
+    Args:
+        host (str): The host server.
+
+    Raises:
+        RuntimeError: If authentication fails.
+    """
     with httpx.Client(event_hooks=util.httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
@@ -100,7 +119,12 @@ def check_authentication(host: str) -> None:
         )
 
 
-def get_credit_balance(host: str):
+def get_credit_balance(host: str) -> None:
+    """Get the credit balance for the user.
+
+    Args:
+        host (str): The host server.
+    """
     logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -120,8 +144,18 @@ def get_credit_balance(host: str):
 
 
 def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
-    """Create batch on server, return batch id, a transaction will be created at this point for the expected
-    total samples in the BatchModel."""
+    """Create batch on server, return batch id.
+
+    A transaction will be created at this point for the expected
+    total samples in the BatchModel.
+
+    Args:
+        host (str): The host server.
+        number_of_samples (int): The expected number of samples in the batch.
+
+    Returns:
+        tuple[str, str]: The batch ID and name.
+    """
     telemetry_data = {
         "client": {
             "name": "pathogena-client",
@@ -155,7 +189,16 @@ def create_sample(
     batch_id: str,
     sample: UploadSample,
 ) -> str:
-    """Create sample on server, return sample id"""
+    """Create a sample on the server with retries.
+
+    Args:
+        host (str): The host server.
+        batch_id (str): The batch ID.
+        sample (UploadSample): The sample to create.
+
+    Returns:
+        str: The sample ID.
+    """
     data = {
         "batch_id": batch_id,
         "status": "Created",
@@ -189,7 +232,15 @@ def create_sample(
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def run_sample(sample_id: str, host: str) -> str:
-    """Patch sample status, create run, and patch run status to trigger processing"""
+    """Patch sample status, create run, and patch run status to trigger processing.
+
+    Args:
+        sample_id (str): The sample ID.
+        host (str): The host server.
+
+    Returns:
+        str: The result of the sample run.
+    """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -221,7 +272,16 @@ def decontaminate_samples_with_hostile(
     threads: int,
     output_dir: Path = Path("."),
 ) -> dict:
-    """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch"""
+    """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch.
+
+    Args:
+        batch (models.UploadBatch): The batch of samples to decontaminate.
+        threads (int): The number of threads to use.
+        output_dir (Path): The output directory for the cleaned FastQ files.
+
+    Returns:
+        dict: Metadata related to the batch.
+    """
     logging.debug(f"decontaminate_samples_with_hostile() {threads=} {output_dir=}")
     logging.info(
         f"Removing human reads from {batch.instrument_platform.upper()} FastQ files and storing in {output_dir.absolute()}"
@@ -254,7 +314,11 @@ def decontaminate_samples_with_hostile(
             force=True,
         )
     batch_metadata = dict(
-        zip([s.sample_name for s in batch.samples], decontamination_metadata)
+        zip(
+            [s.sample_name for s in batch.samples],
+            decontamination_metadata,
+            strict=False,
+        )
     )
     batch.ran_through_hostile = True
     logging.info(
@@ -267,14 +331,21 @@ def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
     host: str = DEFAULT_HOST,
-):
-    # Generate and submit metadata
+) -> None:
+    """Upload a batch of samples.
+
+    Args:
+        batch (models.UploadBatch): The batch of samples to upload.
+        host (str): The host server.
+        threads (int): The number of threads to use.
+        output_dir (Path): The output directory for the uploaded files.
+    """
     batch_id, batch_name = create_batch_on_server(
         host=host, number_of_samples=len(batch.samples)
     )
     mapping_csv_records = []
     upload_meta = []
-    for sample in batch.samples:
+    for sample in batch.samples:  # generate metadata
         sample_id = create_sample(
             host=host,
             batch_id=batch_id,
@@ -282,18 +353,22 @@ def upload_batch(
         )
         logging.debug(f"{sample_id=}")
         sample.reads_1_upload_file = prepare_upload_files(
-            target_filepath=sample.reads_1_cleaned_path
-            if batch.ran_through_hostile
-            else sample.reads_1_resolved_path,
+            target_filepath=(
+                sample.reads_1_cleaned_path
+                if batch.ran_through_hostile
+                else sample.reads_1_resolved_path
+            ),
             sample_id=sample_id,
             decontaminated=batch.ran_through_hostile,
             read_num=1,
         )
         if sample.is_illumina():
             sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=sample.reads_2_cleaned_path
-                if batch.ran_through_hostile
-                else sample.reads_2_resolved_path,
+                target_filepath=(
+                    sample.reads_2_cleaned_path
+                    if batch.ran_through_hostile
+                    else sample.reads_2_resolved_path
+                ),
                 sample_id=sample_id,
                 decontaminated=batch.ran_through_hostile,
                 read_num=2,
@@ -359,7 +434,13 @@ def upload_batch(
 
 
 def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) -> None:
-    """Perform pre-submission validation of a batch of sample model subsets"""
+    """Perform pre-submission validation of a batch of sample model subsets.
+
+    Args:
+        batch (UploadBatch): The batch to validate.
+        protocol (str): The protocol to use.
+        host (str): The host server.
+    """
     data = []
     for sample in batch.samples:
         data.append(
@@ -388,7 +469,15 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
 
 
 def fetch_sample(sample_id: str, host: str) -> dict:
-    """Fetch sample data from server"""
+    """Fetch sample data from the server.
+
+    Args:
+        sample_id (str): The sample ID.
+        host (str): The host server.
+
+    Returns:
+        dict: The sample data.
+    """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -406,7 +495,16 @@ def query(
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
 ) -> dict[str, dict]:
-    """Query sample metadata returning a dict of metadata keyed by sample ID"""
+    """Query sample metadata returning a dict of metadata keyed by sample ID.
+
+    Args:
+        query_string (str): The query string.
+        host (str): The host server.
+        protocol (str): The protocol to use. Defaults to DEFAULT_PROTOCOL.
+
+    Returns:
+        dict: The query result.
+    """
     check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
@@ -433,7 +531,16 @@ def status(
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
 ) -> dict[str, str]:
-    """Query sample status"""
+    """Get the status of samples from the server.
+
+    Args:
+        samples (str | None): A comma-separated list of sample IDs.
+        mapping_csv (Path | None): The path to a CSV file containing sample mappings.
+        host (str): The host server. Defaults to DEFAULT_HOST.
+
+    Returns:
+        dict[str, str]: A dictionary with sample IDs as keys and their statuses as values.
+    """
     check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
@@ -456,7 +563,15 @@ def status(
 
 
 def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.RemoteFile]:
-    """Return models.RemoteFile instances for a sample input files"""
+    """Return models.RemoteFile instances for a sample input files.
+
+    Args:
+        sample_id (str): The sample ID.
+        host (str): The host server.
+
+    Returns:
+        dict[str, models.RemoteFile]: The latest input files.
+    """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -482,7 +597,16 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
 def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
 ) -> dict[str, models.RemoteFile]:
-    """Return models.RemoteFile instances for a sample, optionally including only latest run"""
+    """Return models.RemoteFile instances for a sample, optionally including only latest run.
+
+    Args:
+        sample_id (str): The sample ID.
+        host (str): The host server.
+        protocol (str): The protocol to use. Defaults to DEFAULT_PROTOCOL.
+
+    Returns:
+        dict[str, models.RemoteFile]: The output files.
+    """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -508,16 +632,28 @@ def fetch_output_files(
     return output_files
 
 
-def parse_csv(path: Path):
-    with open(path, "r") as fh:
+def parse_csv(path: Path) -> list[dict]:
+    """Parse a CSV file.
+
+    Args:
+        path (Path): The path to the CSV file.
+
+    Returns:
+        list[dict]: The parsed CSV data.
+    """
+    with open(path) as fh:
         reader = csv.DictReader(fh)
-        return [row for row in reader]
+        return list(reader)
 
 
 def check_version_compatibility(host: str) -> None:
-    """
-    Check the client version expected by the server (Portal) and raise an exception if the client version is not
-    compatible
+    """Check the client version expected by the server (Portal).
+
+    Raise an exception if the client version is not
+    compatible.
+
+    Args:
+        host (str): The host server.
     """
     with httpx.Client(
         event_hooks=util.httpx_hooks,
@@ -532,7 +668,7 @@ def check_version_compatibility(host: str) -> None:
         f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
     if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientException(pathogena.__version__, lowest_cli_version)
+        raise util.UnsupportedClientError(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
@@ -571,7 +707,17 @@ def download(
     rename: bool = True,
     host: str = DEFAULT_HOST,
 ) -> None:
-    """Download latest output files for a sample"""
+    """Download the latest output files for a sample.
+
+    Args:
+        samples (str | None): A comma-separated list of sample IDs.
+        mapping_csv (Path | None): The path to a CSV file containing sample mappings.
+        filenames (str): A comma-separated list of filenames to download. Defaults to "main_report.json".
+        inputs (bool): Whether to download input files as well. Defaults to False.
+        out_dir (Path): The directory to save the downloaded files. Defaults to the current directory.
+        rename (bool): Whether to rename the downloaded files based on the sample name. Defaults to True.
+        host (str): The host server. Defaults to DEFAULT_HOST.
+    """
     check_version_compatibility(host)
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     if mapping_csv:
@@ -653,13 +799,19 @@ def download_single(
     filename: str,
     headers: dict[str, str],
     out_dir: Path,
-):
+) -> None:
+    """Download a single file from the server with retries.
+
+    Args:
+        client (httpx.Client): The HTTP client to use for the request.
+        url (str): The URL of the file to download.
+        filename (str): The name of the file to save.
+        headers (dict[str, str]): The headers to include in the request.
+        out_dir (Path): The directory to save the downloaded file.
+    """
     logging.info(f"Downloading {filename}")
     with client.stream("GET", url=url, headers=headers) as r:
         file_size = int(r.headers.get("content-length", 0))
-        progress = tqdm(
-            total=file_size, unit="B", unit_scale=True, desc=filename, leave=False
-        )
         chunk_size = 262_144
         with (
             Path(out_dir).joinpath(f"{filename}").open("wb") as fh,
@@ -679,6 +831,11 @@ def download_single(
 
 
 def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
+    """Download and cache the host decontamination index.
+
+    Args:
+        name (str): The name of the index. Defaults to HOSTILE_INDEX_NAME.
+    """
     logging.info(f"Cache directory: {CACHE_DIR}")
     logging.info(f"Manifest URL: {BUCKET_URL}/manifest.json")
     ALIGNER.minimap2.value.check_index(name)
@@ -688,8 +845,20 @@ def download_index(name: str = HOSTILE_INDEX_NAME) -> None:
 def prepare_upload_files(
     target_filepath: Path, sample_id: str, read_num: int, decontaminated: bool = False
 ) -> Path:
-    """Rename the files to be compatible with what the server is expecting, which is `*_{1,2}.fastq.gz` and
-    gzip the file if it isn't already, which should only be if the files haven't been run through Hostile.
+    """Rename the files to be compatible with what the server is expecting.
+
+    Which is `*_{1,2}.fastq.gz` and
+    gzip the file if it isn't already,
+    which should only be if the files haven't been run through Hostile.
+
+    Args:
+        target_filepath (Path): The target file path.
+        sample_id (str): The sample ID.
+        read_num (int): The read number.
+        decontaminated (bool): Whether the files are decontaminated.
+
+    Returns:
+        Path: The prepared file path.
     """
     new_reads_filename = f"{sample_id}_{read_num}.fastq.gz"
     if decontaminated:
@@ -707,6 +876,11 @@ def prepare_upload_files(
 
 
 def remove_file(file_path: Path) -> None:
+    """Remove a file from the filesystem.
+
+    Args:
+        file_path (Path): The path to the file to remove.
+    """
     try:
         file_path.unlink()
     except OSError:

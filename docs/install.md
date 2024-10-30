@@ -51,7 +51,7 @@ conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
 conda activate pathogena
 pip install --upgrade pathogena
 ```
-  
+
 #### MacOS
 
 Please note the additional argument `--platform osx-64` in this command, compared to the above.

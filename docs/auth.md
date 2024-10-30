@@ -41,14 +41,14 @@ Creating a Personal Account:
 
 Navigate to EIT Pathogena and click on “Sign Up”. Follow the instructions to create a user account.
 
-Shortly after filling out the form you'll receive a verification email. Click the link in the email to verify your 
+Shortly after filling out the form you'll receive a verification email. Click the link in the email to verify your
 account and email address. If you don’t receive the email, please contact pathogena.support@eit.org.
 
 You are now ready to start using EIT Pathogena.
 
 ##### What happens when my token expires?
 
-If you haven't already retrieved a token, you will receive the following error message. 
+If you haven't already retrieved a token, you will receive the following error message.
 
 ```bash No token file
 $ pathogena upload tests/data/illumina-2.csv
@@ -62,7 +62,7 @@ If your token is invalid or expired, you will receive the following message
 
 ```text Invalid token
 14:03:26 INFO: EIT Pathogena client version 2.0.0rc1
-14:03:26 ERROR: AuthorizationError: Authorization checks failed! Please re-authenticate with `pathogena auth` and 
+14:03:26 ERROR: AuthorizationError: Authorization checks failed! Please re-authenticate with `pathogena auth` and
 try again.
 ```
 

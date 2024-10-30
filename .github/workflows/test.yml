@@ -28,6 +28,12 @@ jobs:
         run: |
           conda install hostile
           pip install '.[dev]'
+      - name: Format
+        run: |
+          python -m ruff format --check
+      - name: Lint
+        run: |
+          python -m ruff check
       - name: Test
         run: |
           python -m pytest

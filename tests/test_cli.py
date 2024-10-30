@@ -1,5 +1,7 @@
 import os
+from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 from pydantic import ValidationError
 
@@ -7,13 +9,21 @@ from pathogena import __version__ as version
 from pathogena.cli import main
 
 
-def test_cli_help_override():
+def test_cli_help_override() -> None:
+    """Test the CLI help command.
+
+    This test ensures that the help message for the 'upload' command is displayed correctly.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["upload", "-h"])
     assert result.exit_code == 0
 
 
-def test_cli_version():
+def test_cli_version() -> None:
+    """Test the CLI version command.
+
+    This test ensures that the version of the CLI is displayed correctly.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
@@ -28,14 +38,26 @@ def test_cli_version():
 #     [os.remove(f) for f in os.listdir(".") if f.endswith("clean.fastq.gz")]
 
 
-def test_cli_decontaminate_illumina(illumina_sample_csv):
+@pytest.mark.slow
+def test_cli_decontaminate_illumina(illumina_sample_csv: Path) -> None:
+    """Test the CLI decontaminate command for Illumina samples.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["decontaminate", str(illumina_sample_csv)])
     assert result.exit_code == 0
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
-def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv):
+@pytest.mark.slow
+def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv: Path) -> None:
+    """Test the CLI decontaminate command for Illumina samples with an output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main, ["decontaminate", str(illumina_sample_csv), "--output-dir", "."]
@@ -44,7 +66,13 @@ def test_cli_decontaminate_illumina_with_output_dir(illumina_sample_csv):
     [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
 
 
-def test_cli_fail_decontaminate_output_dir(illumina_sample_csv):
+@pytest.mark.slow
+def test_cli_fail_decontaminate_output_dir(illumina_sample_csv: Path) -> None:
+    """Test the CLI decontaminate command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main,
@@ -54,7 +82,12 @@ def test_cli_fail_decontaminate_output_dir(illumina_sample_csv):
     assert "Directory 'totallyfakedir' does not exist" in result.stdout
 
 
-def test_cli_fail_upload_output_dir(illumina_sample_csv):
+def test_cli_fail_upload_output_dir(illumina_sample_csv: Path) -> None:
+    """Test the CLI upload command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(
         main, ["upload", str(illumina_sample_csv), "--output-dir", "totallyfakedir"]
@@ -63,14 +96,24 @@ def test_cli_fail_upload_output_dir(illumina_sample_csv):
     assert "Directory 'totallyfakedir' does not exist" in result.stdout
 
 
-def test_cli_fail_download_output_dir(illumina_sample_csv):
+def test_cli_fail_download_output_dir(illumina_sample_csv: Path) -> None:
+    """Test the CLI download command failure with a non-existent output directory.
+
+    Args:
+        illumina_sample_csv (Path): Path to the Illumina sample CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["download", "--output-dir", "totallyfakedir"])
     assert result.exit_code != 0
     assert "Directory 'totallyfakedir' does not exist" in result.stdout
 
 
-def test_validation_fail_control(invalid_control_csv):
+def test_validation_fail_control(invalid_control_csv: Path) -> None:
+    """Test validation failure for control CSV.
+
+    Args:
+        invalid_control_csv (Path): Path to the invalid control CSV file.
+    """
     runner = CliRunner()
     result = runner.invoke(main, ["validate", str(invalid_control_csv)])
     assert result.exit_code == 1
@@ -80,7 +123,7 @@ def test_validation_fail_control(invalid_control_csv):
 
 # Doesn't work because it actually uploads data, need to work out a mock system or break down the function
 # even further, for now, an authenticated used can un-comment and run the tests.
-# TODO: Re-implement with a mock upload somehow.
+# TODO: Re-implement with a mock upload somehow.  # noqa: TD002, TD003
 # def test_validation(illumina_sample_csv):
 #     runner = CliRunner()
 #     result = runner.invoke(main, ["validate", str(illumina_sample_csv)])

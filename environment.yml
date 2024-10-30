@@ -1,3 +1,4 @@
+---
 name: pathogena
 channels:
   - conda-forge
@@ -8,4 +9,4 @@ dependencies:
   - pip
   - hostile~=1.1.0
   - pip:
-    - pathogena>=2.0.0rc1
+      - pathogena>=2.0.0rc1

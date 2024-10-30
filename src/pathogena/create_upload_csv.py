@@ -1,12 +1,15 @@
-from pathlib import Path
-import logging
 import csv
+import logging
+from pathlib import Path
 
 from pydantic import Field
+
 from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
+    """Model for upload data with additional fields for read suffixes and batch size."""
+
     ont_read_suffix: str = Field(
         default=".fastq.gz", description="Suffix for ONT reads"
     )
@@ -25,11 +28,17 @@ def build_upload_csv(
     samples_folder: Path | str,
     output_csv: Path | str,
     upload_data: UploadData,
-):
-    """Create upload csv based on folder of fastq files."""
+) -> None:
+    """Create upload csv based on folder of fastq files.
+
+    Args:
+        samples_folder (Path | str): The folder containing the FASTQ files.
+        output_csv (Path | str): The path to the output CSV file.
+        upload_data (UploadData): The upload data containing read suffixes and batch size.
+    """
     samples_folder = Path(samples_folder)
     output_csv = Path(output_csv)
-    assert samples_folder.is_dir()  # This should be dealth with by Click
+    assert samples_folder.is_dir()  # This should be dealt with by Click
 
     if upload_data.instrument_platform == "illumina":
         if upload_data.illumina_read1_suffix == upload_data.illumina_read2_suffix:
@@ -54,12 +63,15 @@ def build_upload_csv(
                 f"Each sample must have two paired files.\nSome lack pairs:{unmatched}"
             )
 
-        files = [(g, str(f1), str(f2)) for g, f1, f2 in zip(guids1, fastqs1, fastqs2)]
+        files = [
+            (g, str(f1), str(f2))
+            for g, f1, f2 in zip(guids1, fastqs1, fastqs2, strict=False)
+        ]
     elif upload_data.instrument_platform == "ont":
         fastqs = list(samples_folder.glob(f"*{upload_data.ont_read_suffix}"))
         fastqs.sort()
         guids = [f.name.replace(upload_data.ont_read_suffix, "") for f in fastqs]
-        files = [(g, str(f), str("")) for g, f in zip(guids, fastqs)]
+        files = [(g, str(f), "") for g, f in zip(guids, fastqs, strict=False)]
     else:
         raise ValueError("Invalid instrument platform")
 
@@ -90,8 +102,14 @@ def build_upload_csv(
 
 
 def chunks(lst: list, n: int) -> list[list]:
-    """
-    Yield successive n-sized chunks from provided list.
+    """Yield successive n-sized chunks from provided list.
+
+    Args:
+        lst (list): The list to split.
+        n (int): The size of each chunk.
+
+    Returns:
+        list[list]: A list of chunks.
     """
     return [lst[i : i + n] for i in range(0, len(lst), n)]
 
@@ -100,9 +118,12 @@ def _write_csv(
     filename: Path,
     read_files: list[tuple[str, str, str]],
     upload_data: UploadData,
-):
-    """
-    Build a CSV file for upload to EIT Pathogena.
+) -> None:
+    """Build a CSV file for upload to EIT Pathogena.
+
+    Args:
+        data (list[dict]): The data to write.
+        output_csv (Path): The path to the output CSV file.
     """
     # Note that csv module uses CRLF line endings
     with open(filename, "w", newline="", encoding="utf-8") as outfile:

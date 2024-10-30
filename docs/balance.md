@@ -12,7 +12,7 @@ Options:
   -h, --help   Show this message and exit.
 ```
 
-Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the 
+Credits are required to upload samples and initiate the analysis process. Users can check their credit balance in the
 header of the Pathogena Portal or by using the `pathogena balance` command when logged in.
 
 ### Usage

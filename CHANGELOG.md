@@ -31,7 +31,7 @@
 - PyPi URL now points to new Pathogena project.
 - Default pipeline entry incorrectly set to `mycobacterium` instead of `mycobacteria` during refactor.
 
-### Chore 
+### Chore
 
 - Update `--out-dir` to `--output-dir` in the `download` sub-command to be consistent with other commands.
 - Tracebacks are suppressed when debug isn't set to true so that errors are clearer to users.

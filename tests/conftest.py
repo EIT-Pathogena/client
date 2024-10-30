@@ -1,13 +1,14 @@
+from datetime import datetime
 from pathlib import Path
+
 import pytest
 
 from pathogena.create_upload_csv import UploadData
-from pathogena.models import create_batch_from_csv, UploadBatch, UploadSample
-from datetime import datetime
+from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
 
 
 @pytest.fixture
-def upload_data():
+def upload_data() -> UploadData:
     return UploadData(
         batch_name="batch_name",
         instrument_platform="illumina",
@@ -17,8 +18,8 @@ def upload_data():
     )
 
 
-@pytest.fixture()
-def test_host():
+@pytest.fixture
+def test_host() -> str:
     return "portal.eit-pathogena.com"
 
 
@@ -138,41 +139,37 @@ def invalid_instrument_platform_csv() -> Path:
 
 
 # Batches
-
-
 @pytest.fixture
-def ont_sample_batch(ont_sample_csv) -> UploadBatch:
+def ont_sample_batch(ont_sample_csv: Path) -> UploadBatch:
     return create_batch_from_csv(ont_sample_csv)
 
 
 @pytest.fixture
-def ont_multiple_sample_batch(ont_multiple_sample_csv) -> UploadBatch:
+def ont_multiple_sample_batch(ont_multiple_sample_csv: Path) -> UploadBatch:
     return create_batch_from_csv(ont_multiple_sample_csv)
 
 
 @pytest.fixture
-def illumina_sample_batch(illumina_sample_csv) -> UploadBatch:
+def illumina_sample_batch(illumina_sample_csv: Path) -> UploadBatch:
     return create_batch_from_csv(illumina_sample_csv)
 
 
 @pytest.fixture
-def illumina_multiple_sample_batch(illumina_multiple_sample_csv) -> UploadBatch:
+def illumina_multiple_sample_batch(illumina_multiple_sample_csv: Path) -> UploadBatch:
     return create_batch_from_csv(illumina_multiple_sample_csv)
 
 
 @pytest.fixture
-def invalid_fastq_paths_batch(invalid_fastq_paths_csv) -> Path:
+def invalid_fastq_paths_batch(invalid_fastq_paths_csv: Path) -> Path:
     return create_batch_from_csv(invalid_fastq_paths_csv)
 
 
 @pytest.fixture
-def illumina_2_mismatch_batch(illumina_mismatched_fastqs_csv) -> UploadBatch:
+def illumina_2_mismatch_batch(illumina_mismatched_fastqs_csv: Path) -> UploadBatch:
     return create_batch_from_csv(illumina_mismatched_fastqs_csv)
 
 
 # Samples
-
-
 @pytest.fixture
 def ont_sample(ont_sample_batch) -> UploadSample:
     return ont_sample_batch.samples[0]

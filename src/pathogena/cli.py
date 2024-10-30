@@ -1,14 +1,14 @@
-import logging
-from datetime import datetime, date
 import json as json_
+import logging
+import sys
+from datetime import date, datetime
 from os import environ
 from pathlib import Path
-import sys
 
 import click
 
-from pathogena import lib, util, models
-from pathogena.create_upload_csv import build_upload_csv, UploadData
+from pathogena import lib, models, util
+from pathogena.create_upload_csv import UploadData, build_upload_csv
 
 
 @click.group(name="Pathogena", context_settings={"help_option_names": ["-h", "--help"]})
@@ -16,8 +16,12 @@ from pathogena.create_upload_csv import build_upload_csv, UploadData
 @click.option(
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
-def main(*, debug: bool = False):
-    """EIT Pathogena command line interface."""
+def main(*, debug: bool = False) -> None:
+    """EIT Pathogena command line interface.
+
+    Args:
+        debug (bool): Whether to enable verbose debug messages.
+    """
     lib.check_for_newer_version()
     util.display_cli_version()
     util.configure_debug_logging(debug)
@@ -37,8 +41,11 @@ def main(*, debug: bool = False):
     help="Check for a current token and print the expiry if exists",
 )
 def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
-    """
-    Authenticate with EIT Pathogena.
+    """Authenticate with EIT Pathogena.
+
+    Args:
+        host (str | None): The host server.
+        check_expiry (bool): Whether to check for a current token and print the expiry if it exists.
     """
     host = lib.get_host(host)
     if check_expiry:
@@ -62,8 +69,10 @@ def balance(
     *,
     host: str | None = None,
 ) -> None:
-    """
-    Check your EIT Pathogena account balance.
+    """Check your EIT Pathogena account balance.
+
+    Args:
+        host (str | None): The host server.
     """
     host = lib.get_host(host)
     lib.get_credit_balance(host=host)
@@ -71,11 +80,11 @@ def balance(
 
 @main.command()
 def autocomplete() -> None:
-    """Activate shell completion."""
+    """Enable shell autocompletion."""
     shell = environ.get("SHELL", "/bin/bash").split("/")[-1]
     single_use_command = f'eval "$(_PATHOGENA_COMPLETE={shell}_source pathogena)"'
-    print(f"Run this command to enable autocompletion:\n    {single_use_command}")
-    print(
+    print(f"Run this command to enable autocompletion:\n    {single_use_command}")  # noqa: T201
+    print(  # noqa: T201
         f"Add this to your ~/.{shell}rc file to enable this permanently:\n"
         f"    command -v pathogena > /dev/null 2>&1 && {single_use_command}"
     )
@@ -110,8 +119,15 @@ def decontaminate(
     threads: int = None,
     skip_fastq_check: bool = False,
 ) -> None:
-    """
-    Decontaminate reads from a CSV file.
+    """Decontaminate reads from provided csv samples.
+
+    Args:
+        samples (str): The samples to decontaminate.
+        host (str | None): The host server.
+        save (bool): Whether to retain decontaminated reads after upload completion.
+        skip_fastq_check (bool): Whether to skip checking FASTQ files for validity.
+        skip_decontamination (bool): Whether to skip the decontamination process.
+        output_dir (str): The output directory for the cleaned FastQ files.
     """
     batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
     batch.validate_all_sample_fastqs()
@@ -168,9 +184,18 @@ def upload(
     skip_fastq_check: bool = False,
     output_dir: Path = Path("."),
 ) -> None:
-    """
-    Validate, decontaminate and upload reads to EIT Pathogena. Creates a mapping CSV
-    file which can be used to download output files with original sample names.
+    """Validate, decontaminate and upload reads to EIT Pathogena.
+
+    Creates a mapping CSV file which can be used to download output
+    files with original sample names.
+
+    Args:
+        samples (str): The samples to upload.
+        host (str | None): The host server.
+        save (bool): Whether to retain decontaminated reads after upload completion.
+        skip_fastq_check (bool): Whether to skip checking FASTQ files for validity.
+        skip_decontamination (bool): Whether to skip the decontamination process.
+        output_dir (str): The output directory for the cleaned FastQ files.
     """
     host = lib.get_host(host)
     lib.check_version_compatibility(host=host)
@@ -233,9 +258,17 @@ def download(
     rename: bool = True,
     host: str | None = None,
 ) -> None:
-    """
-    Download input and output files associated with sample IDs or a mapping CSV file
-    created during upload.
+    """Download input and output files associated with sample IDs or a mapping CSV file.
+
+    That are created during upload.
+
+    Args:
+        samples (str): The samples to download.
+        filenames (str): Comma-separated list of output filenames to download.
+        inputs (bool): Whether to also download decontaminated input FASTQ files.
+        output_dir (str): The output directory for the downloaded files.
+        rename (bool): Whether to rename downloaded files using sample names when given a mapping CSV.
+        host (str | None): The host server.
     """
     host = lib.get_host(host)
     if util.is_auth_token_live(host):
@@ -268,9 +301,13 @@ def download(
 @click.argument("samples", type=str)
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def query_raw(samples: str, *, host: str | None = None) -> None:
-    """
-    Fetch metadata for one or more SAMPLES in JSON format.
+    """Fetch metadata for one or more SAMPLES in JSON format.
+
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
+
+    Args:
+        samples (str): Command separated list of GUIDs or path to mapping CSV.
+        host (str | None): The host server.
     """
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
@@ -281,7 +318,7 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
         )
-    print(json_.dumps(result, indent=4))
+    print(json_.dumps(result, indent=4))  # noqa: T201
 
 
 @main.command()
@@ -289,9 +326,14 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
 @click.option("--json", is_flag=True, help="Output status in JSON format")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def query_status(samples: str, *, json: bool = False, host: str | None = None) -> None:
-    """
-    Fetch processing status for one or more SAMPLES.
+    """Fetch processing status for one or more SAMPLES.
+
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
+
+    Args:
+        samples (str): Command separated list of GUIDs or path to mapping CSV.
+        json (bool): Whether to output status in JSON format.
+        host (str | None): The host server.
     """
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
@@ -303,17 +345,15 @@ def query_status(samples: str, *, json: bool = False, host: str | None = None) -
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
         )
     if json:
-        print(json_.dumps(result, indent=4))
+        print(json_.dumps(result, indent=4))  # noqa: T201
     else:
         for name, status in result.items():
-            print(f"{name} \t{status}")
+            print(f"{name} \t{status}")  # noqa: T201
 
 
 @main.command()
 def download_index() -> None:
-    """
-    Download and cache host decontamination index.
-    """
+    """Download and cache host decontamination index."""
     lib.download_index()
 
 
@@ -323,7 +363,12 @@ def download_index() -> None:
 )
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def validate(upload_csv: Path, *, host: str | None = None) -> None:
-    """Validate a given upload CSV."""
+    """Validate a given upload CSV.
+
+    Args:
+        upload_csv (Path): The path to the upload CSV file.
+        host (str | None): The host server.
+    """
     host = lib.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
     lib.validate_upload_permissions(batch=batch, protocol=lib.get_protocol(), host=host)
@@ -416,12 +461,25 @@ def build_csv(
     illumina_read1_suffix: str = lib.DEFAULT_METADATA["illumina_read1_suffix"],
     illumina_read2_suffix: str = lib.DEFAULT_METADATA["illumina_read2_suffix"],
     max_batch_size: int = lib.DEFAULT_METADATA["max_batch_size"],
-):
-    """
-    Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
+) -> None:
+    r"""Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
     Use max_batch_size to split into multiple separate upload csvs.\n
     Adjust the read_suffix parameters to match the file endings for your read files.
-    """
+
+    Args:
+        samples_folder (str): The folder containing the FASTQ files.
+        output_csv (str): The path to the output CSV file.
+        batch_name (str): The name of the batch.
+        collection_date (str): The collection date in YYYY-MM-DD format.
+        country (str): The 3-letter country code.
+        instrument_platform (str): The sequencing technology.
+        subdivision (str): The subdivision.
+        district (str): The district.
+        ont_read_suffix (str): The read file ending for ONT fastq files.
+        illumina_read1_suffix (str): The read file ending for Illumina read 1 files.
+        illumina_read2_suffix (str): The read file ending for Illumina read 2 files.
+        max_batch_size (int): The maximum number of samples per batch.
+    """  # noqa: D205
     if len(country) != 3:
         raise ValueError(f"Country ({country}) should be 3 letter code")
     output_csv = Path(output_csv)
