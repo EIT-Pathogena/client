@@ -312,6 +312,7 @@ def decontaminate_samples_with_hostile(
             threads=threads if threads else choose_default_thread_count(CPU_COUNT),
             out_dir=output_dir,
             force=True,
+            aligner_args=" --local",
         )
     batch_metadata = dict(
         zip(
