@@ -1,5 +1,11 @@
 ## Unreleased
 
+## 2.0.1rc1 (2024-11-07)
+
+### Fix
+
+- Human read removal settings match those used in the Portal pipeline.
+
 ## 2.0.0 (2024-09-09)
 
 ### Feat
