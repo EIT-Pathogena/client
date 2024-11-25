@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import sys
 import uuid
+from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
@@ -15,9 +17,13 @@ from types import TracebackType
 from typing import Literal
 
 import httpx
+from dotenv import load_dotenv
+from httpx import Response
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 import pathogena
+
+load_dotenv()
 
 PLATFORMS = Literal["illumina", "ont"]
 
@@ -271,48 +277,124 @@ def hash_file(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
+chunk_size = int(os.getenv("NEXT_PUBLIC_CHUNK_SIZE", 5000000))  # 5000000 = 5 mb
+max_concurrent_chunks = int(os.getenv("MAX_CONCURRENT_CHUNKS", 5))
+
+
+def chunk_file(file_path: Path, chunk_size: int) -> Generator[bytes, None, None]:
+    """Splits the file into chunks of the specified size.
+
+    Args:
+        file_path (Path): Path to file being uploded
+        chunk_size (int): Size of file chunks, defaults to 5 mb
+
+    Yields:
+        Generator[bytes,None, None]: generator for getting file chunk
+    """
+    with open(file_path, "rb") as file:
+        while chunk := file.read(chunk_size):
+            yield chunk
+
+
+# @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
+def upload_chunk(
+    batch_pk: int,
+    host: str,
+    protocol: str,
+    checksum: str,
+    dirty_checksum: str,
+    chunk: bytes,
+    chunk_index: int,
+) -> Response:
+    """Upload a single file chunk.
+
+    Args:
+        batch_pk (int): ID of sample to upload
+        host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
+        protocol (str): protocol, default https
+        checksum (str): sample metadata if decontaminated
+        dirty_checksum (str): sample metadata pre-decontimation
+        chunk (bytes): File chunk to be uploaded
+        chunk_index (int): Index representing what chunk of the whole sample file this chunk is from 0...total_chunks
+    """
+    with httpx.Client(
+        event_hooks=httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=7200,  # 2 hours
+    ) as client:
+        return client.post(
+            f"{protocol}://{host}/api/v1/batches/{batch_pk}/uploads/upload-chunk/",
+            headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            files={"file": chunk},
+            data={
+                "checksum": checksum,
+                "dirty_checksum": dirty_checksum,
+                "chunk_index": chunk_index,
+            },
+        )
+
+
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def upload_file(
-    sample_id: int,
+def upload_file_as_chunks(
+    batch_pk: int,
     file_path: Path,
     host: str,
     protocol: str,
     checksum: str,
     dirty_checksum: str,
+    chunk_size: int = chunk_size,
+    max_concurrent_chunks: int = max_concurrent_chunks,
 ) -> None:
-    """Upload a file to the server with retries.
+    """Upload a file as a combinatin of all its chunks.
 
     Args:
-        sample_id (int): The ID of the sample.
-        file_path (Path): The path to the file to be uploaded.
-        host (str): The host server.
-        protocol (str): The protocol to use (e.g., 'http', 'https').
-        checksum (str): The checksum of the file.
-        dirty_checksum (str): The dirty checksum of the file.
+        batch_pk (int): ID of sample to upload
+        file_path (Path): File path of sample to be uploaded
+        host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
+        protocol (str): protocol, default https
+        checksum (str): sample metadata if decontaminated
+        dirty_checksum (str): sample metadata pre-decontimation
+        chunk_size (int): Size of file chunks, defaults to 5 mb
+        ax_concurrent_chunksx (int): IMAximum number of chunks to be processed concurrently
     """
-    with (
-        httpx.Client(
-            event_hooks=httpx_hooks,
-            transport=httpx.HTTPTransport(retries=5),
-            timeout=7200,  # 2 hours
-        ) as client,
-        open(file_path, "rb") as fh,
-    ):
-        client.post(
-            f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
-            headers={"Authorization": f"Bearer {get_access_token(host)}"},
-            files={"file": fh},
-            data={"checksum": checksum, "dirty_checksum": dirty_checksum},
-        )
+    with httpx.Client(  # noqa: SIM117
+        event_hooks=httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=7200,  # 2 hours
+    ) as client:
+        with ThreadPoolExecutor(max_workers=max_concurrent_chunks) as executor:
+            futures = []
+            chunk_index = 0
+            for chunk in chunk_file(file_path, chunk_size):
+                future = executor.submit(
+                    upload_chunk,
+                    batch_pk,
+                    host,
+                    protocol,
+                    checksum,
+                    dirty_checksum,
+                    chunk,
+                    chunk_index,
+                )
+
+                futures.append(future)
+                chunk_index = +1
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception:
+                    logging.error("Error uploading file chunk:{e}")
 
 
 def upload_fastq(
-    sample_id: int,
+    batch_pk: int,
     sample_name: str,
     reads: Path,
     host: str,
     protocol: str,
     dirty_checksum: str,
+    chunk_size: int,
+    max_concurrent_chunks: int,
 ) -> None:
     """Upload a FASTQ file to the server.
 
@@ -325,16 +407,18 @@ def upload_fastq(
         dirty_checksum (str): The dirty checksum of the file.
     """
     reads = Path(reads)
-    logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
+    logging.debug(f"upload_fastq(): {batch_pk=}, {sample_name=}, {reads=}")
     logging.info(f"Uploading {sample_name}")
     checksum = hash_file(reads)
-    upload_file(
-        sample_id,
+    upload_file_as_chunks(
+        batch_pk,
         reads,
         host=host,
         protocol=protocol,
         checksum=checksum,
         dirty_checksum=dirty_checksum,
+        chunk_size=chunk_size,
+        max_concurrent_chunks=max_concurrent_chunks,
     )
     logging.info(f"  Uploaded {reads.name}")
 
