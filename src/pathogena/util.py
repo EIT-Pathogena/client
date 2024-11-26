@@ -296,7 +296,7 @@ def chunk_file(file_path: Path, chunk_size: int) -> Generator[bytes, None, None]
             yield chunk
 
 
-# @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
+@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_chunk(
     batch_pk: int,
     host: str,
