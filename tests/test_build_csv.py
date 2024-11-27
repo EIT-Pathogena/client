@@ -164,9 +164,9 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
 def test_build_csv_invalid_specimen_organism(
     tmp_path: Path, upload_data: UploadData
 ) -> None:
-    """Test building CSV with an invalid instrument platform.
+    """Test building CSV with an invalid specimen organism.
 
-    This test checks that an invalid instrument platform together with a samples folder with unmatched files
+    This test checks that an invalid specimen organism 
     raises an error, and that the corresponding error message is as expected.
 
     Note that this should be caught by the model validation.
