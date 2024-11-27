@@ -166,7 +166,7 @@ def test_build_csv_invalid_specimen_organism(
 ) -> None:
     """Test building CSV with an invalid specimen organism.
 
-    This test checks that an invalid specimen organism 
+    This test checks that an invalid specimen organism
     raises an error, and that the corresponding error message is as expected.
 
     Note that this should be caught by the model validation.
