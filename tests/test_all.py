@@ -109,7 +109,9 @@ def test_validate_ont_model(ont_sample_csv: Path) -> None:
     models.create_batch_from_csv(ont_sample_csv)
 
 
-def test_validate_covid_specimen_organism(illumina_covid_gzipped_sample_csv: Path) -> None:
+def test_validate_covid_specimen_organism(
+    illumina_covid_gzipped_sample_csv: Path,
+) -> None:
     """Test validation of COVID specimen organism.
 
     Args:

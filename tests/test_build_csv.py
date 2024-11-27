@@ -161,7 +161,9 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
     assert "Invalid instrument platform" in str(e_info.value)
 
 
-def test_build_csv_invalid_specimen_organism(tmp_path: Path, upload_data: UploadData) -> None:
+def test_build_csv_invalid_specimen_organism(
+    tmp_path: Path, upload_data: UploadData
+) -> None:
     """Test building CSV with an invalid instrument platform.
 
     This test checks that an invalid instrument platform together with a samples folder with unmatched files

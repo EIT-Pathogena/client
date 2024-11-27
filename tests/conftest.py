@@ -102,6 +102,7 @@ def ont_sample_csv() -> Path:
 def ont_gzipped_sample_csv() -> Path:
     return Path("tests/data/ont-gzipped.csv")
 
+
 @pytest.fixture
 def illumina_covid_gzipped_sample_csv() -> Path:
     return Path("tests/data/covid_illumina.csv")
