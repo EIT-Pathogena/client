@@ -57,7 +57,7 @@ def test_build_csv_ont(
     upload_data.instrument_platform = "ont"
     upload_data.district = "dis"
     upload_data.subdivision = "sub"
-    upload_data.specimen_organism = "pipe"
+    upload_data.specimen_organism = "mycobacteria"
     upload_data.host_organism = "unicorn"
     upload_data.ont_read_suffix = "_2.fastq.gz"
     build_upload_csv(
@@ -159,6 +159,28 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
             upload_data,
         )
     assert "Invalid instrument platform" in str(e_info.value)
+
+
+def test_build_csv_invalid_specimen_organism(tmp_path: Path, upload_data: UploadData) -> None:
+    """Test building CSV with an invalid instrument platform.
+
+    This test checks that an invalid instrument platform together with a samples folder with unmatched files
+    raises an error, and that the corresponding error message is as expected.
+
+    Note that this should be caught by the model validation.
+
+    Args:
+        tmp_path (Path): Temporary path for output files.
+        upload_data (UploadData): Data required for building the upload CSV.
+    """
+    upload_data.specimen_organism = "invalid"
+    with pytest.raises(ValueError) as e_info:
+        build_upload_csv(
+            "tests/data/empty_files",
+            f"{tmp_path}/output.csv",
+            upload_data,
+        )
+    assert "Invalid pipeline" in str(e_info.value)
 
 
 def test_upload_data_model() -> None:
