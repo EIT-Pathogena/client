@@ -75,6 +75,9 @@ def build_upload_csv(
     else:
         raise ValueError("Invalid instrument platform")
 
+    if upload_data.specimen_organism not in UploadData.model_fields["specimen_organism"].annotation.__args__:
+        raise ValueError("Invalid pipeline")
+
     if upload_data.max_batch_size >= len(files):
         _write_csv(
             output_csv,
