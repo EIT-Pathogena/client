@@ -425,6 +425,13 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     show_default=True,
 )
 @click.option(
+    "--specimen-organism",
+    type=click.Choice(["mycobacteria", "covid"]),
+    help="Specimen organism",
+    default=lib.DEFAULT_METADATA["pipeline"],
+    show_default=True,
+)
+@click.option(
     "--ont_read_suffix",
     type=str,
     default=lib.DEFAULT_METADATA["ont_read_suffix"],
