@@ -1,11 +1,217 @@
-import os
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+from concurrent.futures import Future
 
 import pytest
 from httpx import Response
 
-from pathogena.util import upload_chunk, upload_file_as_chunks
+from pathogena.util import (
+    APIClient,
+    APIError,
+    SelectedFilesType,
+    UploadFileType,
+    prepare_file,
+    prepare_files,
+    upload_chunk,
+    upload_chunks,
+    upload_files,
+)
+
+
+@pytest.fixture
+def mock_api_client(mocker):
+    return mocker.MagicMock(spec=APIClient)
+
+
+class TestPrepareFile:
+    @pytest.fixture(autouse=True)
+    def setup(self, mocker):
+        self.file = mocker.MagicMock()
+        self.file.name = "file1.txt"
+        self.file.size = 1024  # 1mb
+        self.file.type = "text/plain"
+
+    # set values to call prepare files
+    batch_pk = 1
+    upload_session = 123
+
+    def test_prepare_file_success(self, mock_api_client):
+        # mock successful api response
+        mock_api_client.batches_uploads_start_create.return_value = {
+            "status": 200,
+            "data": {"upload_id": "abc123", "sample_id": 456},
+        }
+
+        # call
+        result = prepare_file(
+            self.file, self.batch_pk, self.upload_session, mock_api_client
+        )
+
+        assert result == {
+            "file": self.file,
+            "upload_id": "abc123",
+            "batch_id": 1,
+            "sample_id": 456,
+            "total_chunks": 1,  # 1024/5000000 = 0.0002, rounds to 1 chunk
+            "upload_session": 123,
+        }
+
+    def test_prepare_file_unsuccessful(self, mock_api_client):
+        # mock api response with 400 code
+        mock_api_client.batches_uploads_start_create.return_value = {
+            "status": 400,
+            "error": "Bad Request",
+        }
+
+        # call
+        result = prepare_file(
+            self.file, self.batch_pk, self.upload_session, mock_api_client
+        )
+
+        assert result == {
+            "status": 400,
+            "error": "Bad Request",
+            "upload_session": 123,  ## assert upload session added to response
+        }
+
+    def test_prepare_file_apierror(self, mock_api_client):
+        # mock api response
+        mock_api_client.batches_uploads_start_create.side_effect = APIError(
+            "API request failed", 500
+        )
+
+        # call
+        result = prepare_file(
+            self.file, self.batch_pk, self.upload_session, mock_api_client
+        )
+
+        assert result == {
+            "error": "API request failed",
+            "status code": 500,
+            "upload_session": 123,
+        }
+
+
+class TestPrepareFiles:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        # Set up multiple files as dictionaries
+        self.file1 = {
+            "name": "file1.txt",
+            "size": 10000000,  # 10 MB
+            "type": "text/plain",
+        }
+
+        self.file2 = {
+            "name": "file2.txt",
+            "size": 20000000,  # 20 MB
+            "type": "text/plain",
+        }
+
+        # Set values for the batch and instrument
+        self.batch_pk = 1
+        self.instrument_code = "INST001"
+        self.upload_session = 123
+
+    def test_prepare_files_success(self, mock_api_client, mocker):
+        # mock a successful credit check response
+        mock_api_client.batches_samples_start_upload_session_create.return_value = {
+            "status": 200,
+            "data": {
+                "upload_session": self.upload_session,
+            },
+        }
+
+        # mock the check_if_file_is_in_sample function to return valid sample names
+        mocker.patch(
+            "pathogena.util.check_if_file_is_in_sample",
+            side_effect=lambda sample_uploads, file: sample_uploads.get(file["name"]),
+        )
+
+        # set upload statuses of files assuming they're already present in the saple uploads
+        # 1 complete and to be skipped in prepare files, 1 in progress
+        sample_uploads = {
+            "file1.txt": {
+                "upload_status": "COMPLETE",
+                "id": 1,
+                "upload_id": "abc123",
+                "total_chunks": 2,
+            },
+            "file2.txt": {
+                "upload_status": "IN_PROGRESS",
+                "id": 2,
+                "upload_id": "def456",
+                "total_chunks": 4,
+            },
+        }
+
+        # mock prepare_file with successful preparation of new files
+        mocker.patch(
+            "pathogena.util.prepare_file",
+            side_effect=[
+                {
+                    "file": {
+                        "name": "file1.txt",
+                        "size": 10000000,
+                        "type": "text/plain",
+                    },
+                    "upload_id": "abc123",
+                    "batch_id": self.batch_pk,
+                    "sample_id": 1,
+                    "total_chunks": 2,
+                    "upload_session": self.upload_session,
+                },
+                {
+                    "file": {
+                        "name": "file2.txt",
+                        "size": 20000000,
+                        "type": "text/plain",
+                    },
+                    "upload_id": "def456",
+                    "batch_id": self.batch_pk,
+                    "sample_id": 2,
+                    "total_chunks": 4,
+                    "upload_session": self.upload_session,
+                },
+            ],
+        )
+
+        # list of files to pass to prepare_files
+        files = [
+            {"file": self.file1, "result": "POSITIVE"},
+            {"file": self.file2, "result": "POSITIVE"},
+        ]
+
+        # call prepare_files
+        result = prepare_files(
+            self.batch_pk, self.instrument_code, files, mock_api_client, sample_uploads
+        )
+
+        assert len(result["files"]) == 1  # file1.txt is complete and so is skipped
+        assert result["files"][0]["upload_id"] == "def456"  # file2 (in progress)
+        assert (
+            result["uploadSession"] == self.upload_session
+        )  #  upload session is resumed
+
+    def test_prepare_files_apierror(self, mock_api_client):
+        # mock api error
+        mock_api_client.batches_samples_start_upload_session_create.side_effect = (
+            APIError("API request failed during credit check", 500)
+        )
+
+        # list of files to pass to prepare_files
+        files = [
+            {"file": self.file1, "result": "POSITIVE"},
+            {"file": self.file2, "result": "POSITIVE"},
+        ]
+
+        # call
+        result = prepare_files(
+            self.batch_pk, self.instrument_code, files, mock_api_client
+        )
+
+        assert result == {
+            "API error occurred when checking credits": "API request failed during credit check",
+            "status code": 500,
+        }
 
 
 @pytest.fixture
@@ -73,142 +279,266 @@ def test_upload_chunk(mock_upload_chunk):
     assert response.status_code == 200
 
 
-def test_upload_file_as_chunks(mocker):
-    # Patch upload_chunk in the same module where upload_file_as_chunks is defined
-    mocked_upload_chunk = mocker.patch("pathogena.util.upload_chunk")
+class TestUploadChunks:
+    @pytest.fixture(autouse=True)
+    def setup(self, mocker):
+        # Set values for the batch, instrument, and upload session
+        self.batch_pk = 123
+        self.instrument_code = "INST001"
+        self.upload_session = 123
 
-    # Mock a sucessful response
-    mocked_upload_chunk.return_value = mocker.Mock(status_code=200)
-
-    # Mockchunk_file to avoid actual file operations
-    mocker.patch("pathogena.util.chunk_file", return_value=[b"chunk1", b"chunk2"])
-
-    # set values for upload_file_as_chunks
-    batch_pk = 123
-    file_path = "test_file.txt"
-    host = "testhost.com"
-    protocol = "https"
-    checksum = "dummy_checksum"
-    dirty_checksum = "dummy_dirty_checksum"
-
-    # Call the function
-    upload_file_as_chunks(
-        batch_pk=batch_pk,
-        file_path=Path(file_path),
-        host=host,
-        protocol=protocol,
-        checksum=checksum,
-        dirty_checksum=dirty_checksum,
-    )
-
-    # Verify that upload_chunk was called correctly
-    assert mocked_upload_chunk.call_count == 2  # Two chunks expected
-    mocked_upload_chunk.assert_any_call(
-        batch_pk,
-        host,
-        protocol,
-        checksum,
-        dirty_checksum,
-        b"chunk1",
-        0,
-    )
-    mocked_upload_chunk.assert_any_call(
-        batch_pk,
-        host,
-        protocol,
-        checksum,
-        dirty_checksum,
-        b"chunk2",
-        1,
-    )
-
-
-def test_upload_file_as_chunks_error(mocker):
-    # Patch upload_chunk to avoid actual uploading
-    mocked_upload_chunk = mocker.patch("pathogena.util.upload_chunk")
-
-    # Mock a sucessful and unsucessful response
-    mocked_upload_chunk.side_effect = [
-        mocker.Mock(Response == 200),
-        Exception("Mocked error for chunk 2"),
-    ]
-
-    # Mock chunk_file to avoid actual file operations
-    mocker.patch("pathogena.util.chunk_file", return_value=[b"chunk1", b"chunk2"])
-
-    # Mock logging
-    mocked_logging = mocker.patch("pathogena.util.logging.error")
-
-    # set values for upload_file_as_chunks
-    batch_pk = 123
-    file_path = "test_file.txt"
-    host = "testhost.com"
-    protocol = "https"
-    checksum = "dummy_checksum"
-    dirty_checksum = "dummy_dirty_checksum"
-
-    # Call the function
-    try:  # noqa: SIM105
-        upload_file_as_chunks(
-            batch_pk=batch_pk,
-            file_path=Path(file_path),
-            host=host,
-            protocol=protocol,
-            checksum=checksum,
-            dirty_checksum=dirty_checksum,
+        # mock as_completed to simulate completed futures
+        self.mock_future = mocker.MagicMock(spec=Future)
+        self.mock_future.result.return_value = mocker.MagicMock(
+            status_code=200, text="OK", data={"metrics": "some_metrics"}
         )
-    except Exception:
-        pass  # Catch the exception and allow the test to continue
+        mocker.patch(
+            "concurrent.futures.as_completed", return_value=[self.mock_future] * 4
+        )  # 4 completed chunks to match mock file
 
-    assert mocked_upload_chunk.call_count == 2
-    mocked_logging.assert_called_with("Error uploading file chunk:{e}")
+        # Mock process_queue to prevent it from blocking the test
+        mocker.patch("pathogena.util.process_queue", return_value=None)
 
+        # mock as_completed to simulate completed futures
+        self.mock_end_upload = mocker.MagicMock()
+        self.mock_end_upload.return_value = {
+            "status": 200,
+            "message": "Upload complete",
+        }
+        mocker.patch("pathogena.util.end_upload", self.mock_end_upload)
 
-def test_upload_file_as_chunks_threading(tmp_path, mocker):
-    # Patch upload_chunk to avoid actual uploading
-    mocked_upload_chunk = mocker.patch("pathogena.util.upload_chunk")
+    # fixture for mock_upload_data
+    @pytest.fixture
+    def mock_upload_data(self, mocker):
+        # mock relevant parts of UploadFileType class
+        mock_upload_data = mocker.MagicMock(spec=UploadFileType)
+        mock_upload_data.max_concurrent_chunks = 2
+        mock_upload_data.batch_pk = self.batch_pk
+        mock_upload_data.env = "api.upload-dev.eit-pathogena.com"
+        mock_upload_data.on_progress = mocker.MagicMock()
+        mock_upload_data.on_complete = mocker.MagicMock()
+        return mock_upload_data
 
-    # Mock a sucessful response
-    mocked_upload_chunk.side_effect = [mocker.Mock(Response == 200)]
+    # fixture for mock_file
+    @pytest.fixture
+    def mock_file(self, mocker):
+        # mock relevant parts of SelectedFilesType class
+        mock_file = mocker.MagicMock(spec=SelectedFilesType)
+        mock_file.total_chunks = 4
+        mock_file.upload_id = "file_123"
+        mock_file.batch_id = self.batch_pk
+        mock_file.file_data = [b"chunk1", b"chunk2", b"chunk3", b"chunk4"]
+        return mock_file
 
-    # Mock chunk_file to avoid actual file operations
-    mocked_chunked_file = mocker.patch(
-        "pathogena.util.chunk_file",
-        return_value=[b"chunk1", b"chunk2", b"chunk3", b"chunk4", b"chunk5", b"chunk6"],
-    )
+    # fixture for mock_file_status
+    @pytest.fixture
+    def mock_file_status(self):
+        return {}
 
-    original_submitter = ThreadPoolExecutor.submit
-    active_thread_count = []
+    def test_upload_chunks_success(
+        self, mock_upload_data, mock_file, mock_file_status, mocker
+    ):
+        # Mock upload_chunk to return a successful result
+        mock_upload = mocker.MagicMock()
+        mock_upload.result.return_value = mocker.MagicMock(
+            status_code=200, text="OK", data={"metrics": "some_metrics"}
+        )
+        mocker.patch("pathogena.util.upload_chunk", return_value=mock_upload)
 
-    # wrap submittion so that it counts the number of active threads
-    def custom_submitter(self, fn, *args, **kwargs):
-        active_thread_count.append(len(self._threads))
-        return original_submitter(self, fn, *args, **kwargs)
+        # call
+        upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
-    # mock the ThreadPoolExecutor.submit
-    mocker.patch.object(ThreadPoolExecutor, "submit", custom_submitter)
+        assert (
+            mock_upload_data.on_progress.call_count == 4
+        )  # called once for each chunk
+        assert mock_upload_data.on_complete.called_once_with(
+            mock_file.upload_id, mock_file.batch_id
+        )  # on_complete called once
+        # 4 chunks uploaded
+        assert mock_file_status[mock_file.upload_id]["chunks_uploaded"] == 4
+        assert (
+            mock_file_status[mock_file.upload_id]["chunks_uploaded"]
+            == mock_file.total_chunks
+        )
+        assert self.mock_end_upload.calledonce  # end_upload called once
 
-    # set values for upload_file_as_chunks
-    batch_pk = 123
-    file_path = "test_file.txt"
-    host = "testhost.com"
-    protocol = "https"
-    checksum = "dummy_checksum"
-    dirty_checksum = "dummy_dirty_checksum"
-
-    with mocker.patch(
-        "pathogena.util.ThreadPoolExecutor",
-        wraps=ThreadPoolExecutor,
-    ) as mock_executer:
-        upload_file_as_chunks(
-            batch_pk, Path(file_path), host, protocol, checksum, dirty_checksum
+    def test_upload_chunks_stop_on_400(
+        self, mock_upload_data, mock_file, mock_file_status, mocker
+    ):
+        # mock the first chunk to succeed and the second to fail with a 400
+        mock_upload_1 = mocker.MagicMock()
+        mock_upload_1.result.return_value = mocker.MagicMock(
+            status_code=200, text="OK", data={"metrics": "metrics_1"}
         )
 
-    max_concurrent_chunks = int(os.getenv("MAX_CONCURRENT_CHUNKS", 5))
+        mock_upload_2 = mocker.MagicMock()
+        mock_upload_2.result.return_value = mocker.MagicMock(
+            status_code=400, text="Bad Request"
+        )
 
-    ## maximum number of active threads cannot exceed max concurrent chunks
-    assert max(active_thread_count) <= max_concurrent_chunks
-    ## assert that upload_chunk was called once for all of the returned file chunks
-    assert mocked_upload_chunk.call_count == len(mocked_chunked_file.return_value)
-    ## assert maximum number of active threads cannot exceed number of generated file chunks
-    assert max(active_thread_count) <= len(mocked_chunked_file.return_value)
+        # mock upload_chunk to return the above mocks
+        mocker.patch(
+            "pathogena.util.upload_chunk", side_effect=[mock_upload_1, mock_upload_2]
+        )
+
+        # call
+        upload_chunks(mock_upload_data, mock_file, mock_file_status)
+
+        assert mock_upload_data.on_progress.call_count == 1  # only chunk 1 was uploaded
+        assert (
+            not self.mock_end_upload.called
+        )  # end_upload should not be called as 2nd upload failed
+
+    def test_upload_chunks_error_handling(
+        self, mock_upload_data, mock_file, mock_file_status, mocker, caplog
+    ):
+        # mock the first chunk to raise an exception
+        mock_upload_1 = mocker.MagicMock()
+        mock_upload_1.result.side_effect = Exception("Some error")
+
+        # mock upload_chunk to return the above mock
+        mocker.patch("pathogena.util.upload_chunk", side_effect=[mock_upload_1])
+
+        # call
+        upload_chunks(mock_upload_data, mock_file, mock_file_status)
+
+        assert (
+            mock_upload_data.on_progress.call_count == 0
+        )  # no chunk was successfully uploaded
+        assert (
+            not self.mock_end_upload.called
+        )  # end_upload should not be called since there was an error
+        assert (
+            "Error uploading chunk 0 of batch 123: Some error" in caplog.text
+        )  # eroor captures in logging
+
+
+class TestUploadFiles:
+    @pytest.fixture
+    def mock_upload_data(self):
+        """Fixture for mocked upload data."""
+        # mocking UploadFileType with required attributes
+        files = [
+            SelectedFilesType(
+                upload_id="upload_1",
+                batch_pk=123,
+                file_data="file1.txt",
+                total_chunks=5,
+                upload_session=123,
+            ),
+            SelectedFilesType(
+                upload_id="upload_2",
+                batch_pk=123,
+                file_data="file2.txt",
+                total_chunks=5,
+                upload_session=123,
+            ),
+        ]
+        return UploadFileType(
+            access_token="access_token",
+            batch_pk=123,
+            files=files,
+            on_complete=None,
+            on_progress=None,
+            max_concurrent_chunks=2,
+            max_concurrent_files=2,
+            upload_session=456,
+            abort_controller=None,
+        )
+
+    @pytest.fixture
+    def mock_sample_uploads(self):
+        """Fixture for mocked sample uploads."""
+        return {"file1.txt": "pending", "file2.txt": "pending"}
+
+    @pytest.fixture
+    def mock_api_client(self, mocker):
+        """Fixture for mocking the APIClient."""
+        return mocker.MagicMock(spec=APIClient)
+
+    def test_upload_files_success(
+        self, mock_upload_data, mock_sample_uploads, mock_api_client, mocker
+    ):
+        # mock successful prepare files
+        mock_prepare_files = mocker.patch(
+            "pathogena.util.prepare_files",
+            return_value={"files": [{"file": "file1.txt"}, {"file": "file2.txt"}]},
+        )
+
+        # mock successful upload_chunks
+        mock_upload_chunks = mocker.patch(
+            "pathogena.util.upload_chunks", return_value=None
+        )
+
+        # mock successful API client response
+        mocker.patch.object(
+            APIClient,
+            "batches_samples_end_upload_session_create",
+            return_value={"status": 200},
+        )
+
+        # call
+        upload_files(
+            mock_upload_data, "instrument_code", mock_api_client, mock_sample_uploads
+        )
+
+        # files were prepared
+        mock_prepare_files.assert_called_once_with(
+            batch_pk=mock_upload_data.batch_pk,
+            instrument_code="instrument_code",
+            files=mock_upload_data.files,
+            api_client=mock_api_client,
+            sample_uploads=mock_sample_uploads,
+        )
+        assert mock_upload_chunks.call_count == 2  # upload chunks called for each file
+        APIClient.batches_samples_end_upload_session_create.assert_called_once_with(
+            mock_upload_data.batch_pk, mock_upload_data
+        )  # end session once
+
+    def test_upload_files_prepare_api_error(
+        self, mock_upload_data, mock_sample_uploads, mock_api_client, mocker
+    ):
+        # mock prepare_files with api error
+        mock_prepare_files = mocker.patch(
+            "pathogena.util.prepare_files",
+            return_value={"API error occurred": "Some error"},
+        )
+
+        # call
+        result = upload_files(
+            mock_upload_data, "instrument_code", mock_api_client, mock_sample_uploads
+        )
+
+        mock_prepare_files.assert_called_once()  # prepare_files was called
+        # result contains correct error message
+        assert "API error occurred" in result
+        assert result["API error occurred"] == "Some error"
+
+    def test_upload_files_chunk_upload_error(
+        self, mock_upload_data, mock_sample_uploads, mock_api_client, mocker, caplog
+    ):
+        ## mock successful prepare files
+        mocker.patch(
+            "pathogena.util.prepare_files",
+            return_value={"files": [{"file": "file1.txt"}, {"file": "file2.txt"}]},
+        )
+
+        # mock upload_chunks with exception
+        mock_upload_chunks = mocker.patch(
+            "pathogena.util.upload_chunks", side_effect=Exception("Chunk upload error")
+        )
+
+        # mock successful API client response
+        mocker.patch.object(
+            APIClient,
+            "batches_samples_end_upload_session_create",
+            return_value={"status": 200},
+        )
+
+        # call
+        result = upload_files(
+            mock_upload_data, "instrument_code", mock_api_client, mock_sample_uploads
+        )
+
+        assert mock_upload_chunks.call_count == 2  # upload chunks called twice
+        assert "Error uploading file" in caplog.text  # error is logged
