@@ -25,6 +25,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 CPU_COUNT = multiprocessing.cpu_count()
 DEFAULT_HOST = "portal.eit-pathogena.com"
+# UPLOAD_API_HOST = "api.upload.eit-pathogena.com"
 DEFAULT_PROTOCOL = "https"
 DEFAULT_METADATA = {
     "country": None,
