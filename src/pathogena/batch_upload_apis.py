@@ -1,6 +1,6 @@
 from typing import Any
 
-import requests
+import httpx
 
 from pathogena.upload_utils import get_upload_host
 from pathogena.util import get_access_token
@@ -20,17 +20,17 @@ class APIClient:
     def __init__(
         self,
         base_url: str = "api.upload.eit-pathogena.com",
-        client: requests.Session | None = None,
+        client: httpx.Client | None = None,
         upload_session: int | None = None,
     ):
         """Initialize the APIClient with a base URL and an optional HTTP client.
 
         Args:
             base_url (str): The base URL for the API, e.g api.upload-dev.eit-pathogena.com
-            client (requests.Session | None): A custom HTTP client (session) for making requests.
+            client (httpx.Client | None): A custom HTTP client (Client) for making requests.
         """
         self.base_url = base_url
-        self.client = client or requests.Session()
+        self.client = client or httpx.Client()
         self.token = get_access_token(get_upload_host())
         self.upload_session = upload_session
 
@@ -51,15 +51,16 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"https://{self.base_url}/api/v1/batches/"
+        response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
             )
             response.raise_for_status()
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to create: {e.response.text}", e.response.status_code
+                f"Failed to create: {response.text}", response.status_code
             ) from e
 
     ## start upload session for a batches samples
@@ -83,6 +84,7 @@ class APIClient:
         """
         url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
 
+        response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
@@ -91,10 +93,10 @@ class APIClient:
 
             response.raise_for_status()  # Raise an HTTPError for bad responses
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to start upload session: {e.response.text}, status code: {e.response.status_code}",
-                e.response.status_code,
+                f"Failed to start upload session: {response.text}",
+                response.status_code,
             ) from e
 
     # start batch upload
@@ -116,16 +118,17 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
+        response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
             )
             response.raise_for_status()
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to start batch upload: {e.response.text}",
-                e.response.status_code,
+                f"Failed to start batch upload: {response.text}",
+                response.status_code,
             ) from e
 
     # start a chunking session
@@ -147,16 +150,17 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
+        response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
             )
             response.raise_for_status()
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to start batch chunk upload: {e.response.text}",
-                e.response.status_code,
+                f"Failed to start batch chunk upload: {response.text}",
+                response.status_code,
             ) from e
 
     # end batch upload
@@ -178,16 +182,16 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
-
+        response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
             )
             response.raise_for_status()
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to end batch upload: {e.response.text}", e.response.status_code
+                f"Failed to end batch upload: {response.text}", response.status_code
             ) from e
 
     ## end upload session for a batches samples
@@ -216,14 +220,15 @@ class APIClient:
 
         url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
 
+        response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url, json=data, headers={"Authorization": f"Bearer {self.token}"}
             )
             response.raise_for_status()  # Raise an HTTPError for bad responses
             return response.json()
-        except requests.HTTPError as e:
+        except httpx.HTTPError as e:
             raise APIError(
-                f"Failed to end upload session: {e.response.text}",
-                e.response.status_code,
+                f"Failed to end upload session: {response.text}",
+                response.status_code,
             ) from e

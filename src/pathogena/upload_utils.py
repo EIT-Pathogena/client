@@ -5,7 +5,8 @@ import os
 from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from datetime import datetime
+from typing import Any, Literal, TypedDict
 
 import httpx
 from httpx import Response, codes
@@ -16,6 +17,67 @@ from pathogena.constants import DEFAULT_CHUNK_SIZE, DEFAULT_UPLOAD_HOST
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadSample
 from pathogena.util import get_access_token
+
+
+class UploadMetrics(TypedDict):
+    """A TypedDict representing metrics for file upload progress and status.
+
+    Args:
+        chunks_received: Number of chunks successfully received by the server
+        chunks_total: Total number of chunks expected for the complete file
+        upload_status: Current status of the upload (e.g. "in_progress", "complete")
+        percentage_complete: Upload progress as a percentage from 0 to 100
+        upload_speed: Current upload speed in bytes per second
+        time_remaining: Estimated time remaining for upload completion in seconds
+        estimated_completion_time: Predicted datetime when upload will complete
+    """
+    chunks_received: int
+    chunks_total: int
+    upload_status: str
+    percentage_complete: float
+    upload_speed: float
+    time_remaining: float
+    estimated_completion_time: datetime
+
+class SampleUploadStatus(TypedDict):
+    """A TypedDict representing the status and metadata of a sample upload.
+
+    Args:
+        id: Unique identifier for the sample upload
+        batch: ID of the batch this sample belongs to
+        file_path: Path to the uploaded file on the server
+        uploaded_file_name: Original name of the uploaded file
+        generated_name: System-generated name for the file
+        created_at: Timestamp when the upload was created
+        upload_status: Current status of the upload (IN_PROGRESS/COMPLETE/FAILED)
+        total_chunks: Total number of chunks for this file
+        upload_id: Unique identifier for this upload session
+        legacy_sample_id: Original sample ID from legacy system
+        hyphenated_legacy_sample_id: Hyphenated version of legacy sample ID
+        metrics: Upload metrics including progress and performance data
+    """
+    id: int
+    batch: int
+    file_path: str
+    uploaded_file_name: str
+    generated_name: str
+    created_at: datetime
+    upload_status: Literal["IN_PROGRESS", "COMPLETE", "FAILED"]
+    total_chunks: int
+    upload_id: str
+    legacy_sample_id: str
+    hyphenated_legacy_sample_id: str
+    metrics: UploadMetrics
+
+class BatchUploadStatus(TypedDict):
+    """A TypedDict representing the status of a batch upload and its samples.
+
+    Args:
+        upload_status: Current status of the batch upload (e.g. "in_progress", "complete")
+        samples: Dictionary mapping sample IDs to their individual upload statuses
+    """
+    upload_status: str
+    samples: dict[str, SampleUploadStatus]
 
 
 class SelectedFile(TypedDict):
