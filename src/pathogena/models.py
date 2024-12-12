@@ -259,7 +259,7 @@ class UploadBatch(BaseModel):
         description="Skip checking FastQ files", default=False
     )
     ran_through_hostile: bool = False
-    instrument_platform: str | None = None
+    instrument_platform: str
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
