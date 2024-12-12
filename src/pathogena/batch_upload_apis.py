@@ -59,7 +59,7 @@ class APIClient:
             return response.json()
         except requests.HTTPError as e:
             raise APIError(
-                f"Failed to create: {e.response.text}", response.status_code
+                f"Failed to create: {e.response.text}", e.response.status_code
             ) from e
 
     ## start upload session for a batches samples
@@ -93,8 +93,8 @@ class APIClient:
             return response.json()
         except requests.HTTPError as e:
             raise APIError(
-                f"Failed to start upload session: {e.response.text}, status code: {response.status_code}",
-                response.status_code,
+                f"Failed to start upload session: {e.response.text}, status code: {e.response.status_code}",
+                e.response.status_code,
             ) from e
 
     # start batch upload
@@ -124,7 +124,8 @@ class APIClient:
             return response.json()
         except requests.HTTPError as e:
             raise APIError(
-                f"Failed to start batch upload: {e.response.text}", response.status_code
+                f"Failed to start batch upload: {e.response.text}",
+                e.response.status_code,
             ) from e
 
     # start a chunking session
@@ -186,7 +187,7 @@ class APIClient:
             return response.json()
         except requests.HTTPError as e:
             raise APIError(
-                f"Failed to end batch upload: {e.response.text}", response.status_code
+                f"Failed to end batch upload: {e.response.text}", e.response.status_code
             ) from e
 
     ## end upload session for a batches samples
@@ -223,5 +224,6 @@ class APIClient:
             return response.json()
         except requests.HTTPError as e:
             raise APIError(
-                f"Failed to end upload session: {e.response.text}", response.status_code
+                f"Failed to end upload session: {e.response.text}",
+                e.response.status_code,
             ) from e
