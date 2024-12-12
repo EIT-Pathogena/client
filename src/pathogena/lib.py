@@ -17,7 +17,7 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-from pathogena import models, util
+from pathogena import batch_upload_apis, models, util
 from pathogena.models import UploadBatch, UploadSample
 from pathogena.util import MissingError, get_access_token, get_token_path
 
@@ -25,7 +25,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 CPU_COUNT = multiprocessing.cpu_count()
 DEFAULT_HOST = "portal.eit-pathogena.com"
-# UPLOAD_API_HOST = "api.upload.eit-pathogena.com"
+DEFAULT_UPLOAD_HOST = "api.upload.eit-pathogena.com"
 DEFAULT_PROTOCOL = "https"
 DEFAULT_METADATA = {
     "country": None,
@@ -41,7 +41,7 @@ DEFAULT_METADATA = {
 HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
-def get_host(cli_host: str | None) -> str:
+def get_host(cli_host: str | None = None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
 
     Args:
@@ -401,37 +401,25 @@ def upload_batch(
         f"{get_protocol()}://{host}/batches/{batch_id}"
     )
 
-    # Upload reads
-    for (
-        name,
-        sample_id,
-        reads1_to_upload,
-        reads2_to_upload,
-        reads_1_dirty_checksum,
-        reads_2_dirty_checksum,
-    ) in upload_meta:
-        util.upload_fastq(
-            sample_id=sample_id,
-            sample_name=name,
-            reads=reads1_to_upload,
-            host=host,
-            protocol=get_protocol(),
-            dirty_checksum=reads_1_dirty_checksum,
-        )
-        if batch.is_illumina():
-            util.upload_fastq(
-                sample_id=sample_id,
-                sample_name=name,
-                reads=reads2_to_upload,
-                host=host,
-                protocol=get_protocol(),
-                dirty_checksum=reads_2_dirty_checksum,
-            )
-        run_sample(sample_id=sample_id, host=host)
-        if not save:
-            remove_file(file_path=reads1_to_upload)
-            if batch.is_illumina():
-                remove_file(file_path=reads2_to_upload)
+    upload_file_type = models.UploadFileType(
+        access_token=util.get_access_token(get_host(None)),
+        batch_pk=batch_id,
+        env=get_upload_host(),
+        samples=batch.samples,
+    )
+    models.upload_fastq(
+        upload_data=upload_file_type,
+        instrument_code=sample.instrument_platform,
+        api_client=batch_upload_apis.APIClient(upload_file_type.env),
+    )
+
+    # check what this funct does
+
+    # run_sample(sample_id=sample_id, host=host)
+    # if not save:
+    #     remove_file(file_path=reads1_to_upload)
+    #     if batch.is_illumina():
+    #         remove_file(file_path=reads2_to_upload)
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
