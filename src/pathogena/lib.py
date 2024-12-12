@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import multiprocessing
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -18,27 +17,17 @@ from tqdm import tqdm
 
 import pathogena
 from pathogena import batch_upload_apis, models, util
+from pathogena.constants import (
+    CPU_COUNT,
+    DEFAULT_HOST,
+    DEFAULT_PROTOCOL,
+    HOSTILE_INDEX_NAME,
+)
+from pathogena.errors import MissingError
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import MissingError, get_access_token, get_token_path
+from pathogena.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
-CPU_COUNT = multiprocessing.cpu_count()
-DEFAULT_HOST = "portal.eit-pathogena.com"
-DEFAULT_UPLOAD_HOST = "api.upload.eit-pathogena.com"
-DEFAULT_PROTOCOL = "https"
-DEFAULT_METADATA = {
-    "country": None,
-    "district": "",
-    "subdivision": "",
-    "instrument_platform": "illumina",
-    "pipeline": "mycobacteria",
-    "ont_read_suffix": ".fastq.gz",
-    "illumina_read1_suffix": "_1.fastq.gz",
-    "illumina_read2_suffix": "_2.fastq.gz",
-    "max_batch_size": 50,
-}
-HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
 def get_host(cli_host: str | None = None) -> str:

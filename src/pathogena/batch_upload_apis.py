@@ -154,14 +154,14 @@ class APIClient:
         except requests.HTTPError as e:
             raise APIError(
                 f"Failed to start batch chunk upload: {e.response.text}",
-                response.status_code,
+                e.response.status_code,
             ) from e
 
     # end batch upload
     def batches_uploads_end_create(
         self,
         batch_pk: int,
-        data: dict[str, str] | None = None,
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """End a batch upload by making a POST request.
 

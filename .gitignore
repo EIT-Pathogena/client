@@ -134,3 +134,4 @@ dmypy.json
 
 #local env
 .env.local
+.mise.toml

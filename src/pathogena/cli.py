@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from pathogena import lib, models, util
+from pathogena import constants, lib, models, util
 from pathogena.create_upload_csv import UploadData, build_upload_csv
 
 
@@ -402,7 +402,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     type=str,
     help="3-letter Country Code",
     required=True,
-    default=lib.DEFAULT_METADATA["country"],
+    default=constants.DEFAULT_METADATA["country"],
     show_default=True,
 )
 @click.option(

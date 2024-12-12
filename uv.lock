@@ -288,10 +288,11 @@ dev = [
     { name = "flit" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-mock" },
     { name = "ruff" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "flit" },
     { name = "pre-commit" },
@@ -315,7 +316,7 @@ requires-dist = [
     { name = "tqdm", specifier = "==4.66.3" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "flit", specifier = ">=3.9.0" },
     { name = "pre-commit", specifier = ">=4.0.1" },
