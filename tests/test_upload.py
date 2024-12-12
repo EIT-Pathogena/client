@@ -1,18 +1,28 @@
 from concurrent.futures import Future
+from datetime import date
+from pathlib import Path
 
 import pytest
 from httpx import Response
 
+from pathogena.models import (
+    SelectedFile,
+    UploadFileType,
+    UploadSample,
+    prepare_files,
+    upload_chunks,
+    upload_files,
+)
 from pathogena.util import (
     APIClient,
     APIError,
-    SelectedFilesType,
-    UploadFileType,
+    # SelectedFile,
+    # UploadFileType,
     prepare_file,
-    prepare_files,
+    # prepare_files,
     upload_chunk,
-    upload_chunks,
-    upload_files,
+    # upload_chunks,
+    # upload_files,
 )
 
 
@@ -94,17 +104,70 @@ class TestPrepareFiles:
     @pytest.fixture(autouse=True)
     def setup(self):
         # Set up multiple files as dictionaries
-        self.file1 = {
-            "name": "file1.txt",
-            "size": 10000000,  # 10 MB
-            "type": "text/plain",
-        }
+        # self.file1 = {
+        #     "name": "file1.txt",
+        #     "size": 10000000,  # 10 MB
+        #     "type": "text/plain",
+        # }
 
-        self.file2 = {
-            "name": "file2.txt",
-            "size": 20000000,  # 20 MB
-            "type": "text/plain",
-        }
+        # self.file2 = {
+        #     "name": "file2.txt",
+        #     "size": 20000000,  # 20 MB
+        #     "type": "text/plain",
+        # }
+
+        self.file1 = UploadSample(
+            sample_name="name",
+            upload_csv="test.csv",
+            reads_1=Path("../samples"),
+            reads_2=Path("../samples"),
+            control="positive",
+            instrument_platform="illumina",
+            collection_date=date(2024, 12, 1),
+            country="GBR",
+            # reads_1_resolved_path="resolved_path",
+            # reads_2_resolved_path="resolved_path2",
+            # reads_1_dirty_checksum="dirty_checksum",
+            # reads_2_dirty_checksum="dirty_checksum2",
+            # reads_1_cleaned_path="cleaned_path",
+            # reads_2_cleaned_path="cleaned_path2",
+            # reads_1_pre_upload_checksum="pre_upload_checksum",
+            # reads_2_pre_upload_checksum="pre_upload_checksum2",
+            # reads_1_upload_file="reads_1",
+            # reads_2_upload_file="reads_1",
+            # reads_in=3,
+            # reads_out=2,
+            # reads_removed=1,
+            file1_size=2,
+            file2_size=4,
+        )
+        self.file2 = (
+            UploadSample(
+                sample_name="name2",
+                upload_csv="test2.csv",
+                reads_1=Path("../samples"),
+                reads_2=Path("../samples"),
+                control="positive",
+                instrument_platform="illumina",
+                collection_date=date(2024, 12, 1),
+                country="GBR",
+                # reads_1_resolved_path="resolved_path",
+                # reads_2_resolved_path="resolved_path2",
+                # reads_1_dirty_checksum="dirty_checksum",
+                # reads_2_dirty_checksum="dirty_checksum2",
+                # reads_1_cleaned_path="cleaned_path",
+                # reads_2_cleaned_path="cleaned_path2",
+                # reads_1_pre_upload_checksum="pre_upload_checksum",
+                # reads_2_pre_upload_checksum="pre_upload_checksum2",
+                # reads_1_upload_file="reads_1",
+                # reads_2_upload_file="reads_1",
+                # reads_in=3,
+                # reads_out=2,
+                # reads_removed=1,
+                file1_size=3,
+                file2_size=6,
+            ),
+        )
 
         # Set values for the batch and instrument
         self.batch_pk = 1
@@ -322,8 +385,8 @@ class TestUploadChunks:
     # fixture for mock_file
     @pytest.fixture
     def mock_file(self, mocker):
-        # mock relevant parts of SelectedFilesType class
-        mock_file = mocker.MagicMock(spec=SelectedFilesType)
+        # mock relevant parts of SelectedFile class
+        mock_file = mocker.MagicMock(spec=SelectedFile)
         mock_file.total_chunks = 4
         mock_file.upload_id = "file_123"
         mock_file.batch_id = self.batch_pk
@@ -418,26 +481,63 @@ class TestUploadFiles:
     def mock_upload_data(self):
         """Fixture for mocked upload data."""
         # mocking UploadFileType with required attributes
-        files = [
-            SelectedFilesType(
-                upload_id="upload_1",
-                batch_pk=123,
-                file_data="file1.txt",
-                total_chunks=5,
-                upload_session=123,
+        samples = [
+            UploadSample(
+                sample_name="name",
+                upload_csv="test.csv",
+                reads_1="path",
+                reads_2="path2",
+                control="positive",
+                reads_1_resolved_path="resolved_path",
+                reads_2_resolved_path="resolved_path2",
+                reads_1_dirty_checksum="dirty_checksum",
+                reads_2_dirty_checksum="dirty_checksum2",
+                file1_size=2,
+                file2_size=4,
             ),
-            SelectedFilesType(
-                upload_id="upload_2",
+            UploadSample(
+                sample_name="name2",
+                upload_csv="test2.csv",
+                reads_1="path",
+                reads_2="path2",
+                control="positive",
+                reads_1_resolved_path="resolved_path",
+                reads_2_resolved_path="resolved_path2",
+                reads_1_dirty_checksum="dirty_checksum",
+                reads_2_dirty_checksum="dirty_checksum2",
+                file1_size=3,
+                file2_size=6,
+            ),
+        ]
+        files = [
+            SelectedFile(
+                file={"file1": "name"},
+                upload_id=456,
                 batch_pk=123,
-                file_data="file2.txt",
+                sample_id=678,
                 total_chunks=5,
-                upload_session=123,
+                estimated_completion_time=5,
+                time_remaining=3,
+                uploadSession=123,
+                file_data="file data",
+            ),
+            SelectedFile(
+                file={"file2": "name"},
+                upload_id=789,
+                batch_pk=456,
+                sample_id=890,
+                total_chunks=5,
+                estimated_completion_time=5,
+                time_remaining=3,
+                uploadSession=123,
+                file_data="file2 data",
             ),
         ]
         return UploadFileType(
             access_token="access_token",
             batch_pk=123,
-            files=files,
+            env="env.com",
+            samples=samples,
             on_complete=None,
             on_progress=None,
             max_concurrent_chunks=2,
