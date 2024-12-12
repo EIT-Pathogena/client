@@ -2,7 +2,8 @@ from typing import Any
 
 import requests
 
-from pathogena.util import get_access_token, get_upload_host
+from pathogena.upload_utils import get_upload_host
+from pathogena.util import get_access_token
 
 
 class APIError(Exception):
