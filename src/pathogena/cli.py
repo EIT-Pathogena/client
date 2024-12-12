@@ -9,6 +9,8 @@ import click
 
 from pathogena import constants, lib, models, util
 from pathogena.create_upload_csv import UploadData, build_upload_csv
+from pathogena.errors import AuthorizationError
+from pathogena.log_utils import configure_debug_logging
 
 
 @click.group(name="Pathogena", context_settings={"help_option_names": ["-h", "--help"]})
@@ -24,7 +26,7 @@ def main(*, debug: bool = False) -> None:
     """
     lib.check_for_newer_version()
     util.display_cli_version()
-    util.configure_debug_logging(debug)
+    configure_debug_logging(debug)
 
 
 @main.command()
@@ -116,7 +118,7 @@ def decontaminate(
     input_csv: Path,
     *,
     output_dir: Path = Path("."),
-    threads: int = None,
+    threads: int = 1,
     skip_fastq_check: bool = False,
 ) -> None:
     """Decontaminate reads from provided csv samples.
@@ -221,7 +223,7 @@ def upload(
         lib.upload_batch(batch=batch, host=host, save=save)
         lib.get_credit_balance(host=host)
     else:
-        raise util.AuthorizationError()
+        raise AuthorizationError()
 
 
 @main.command()
@@ -282,7 +284,7 @@ def download(
             )
         elif Path(samples).is_file():
             lib.download(
-                mapping_csv=samples,
+                mapping_csv=Path(samples),
                 filenames=filenames,
                 inputs=inputs,
                 out_dir=output_dir,

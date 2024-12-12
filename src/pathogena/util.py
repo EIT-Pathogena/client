@@ -101,7 +101,7 @@ def hash_file(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
-def parse_comma_separated_string(string) -> set[str]:
+def parse_comma_separated_string(string: str) -> set[str]:
     """Parse a comma-separated string into a set of strings.
 
     Args:
@@ -113,7 +113,7 @@ def parse_comma_separated_string(string) -> set[str]:
     return set(string.strip(",").split(","))
 
 
-def validate_guids(guids: list[str]) -> bool:
+def validate_guids(guids: set[str]) -> bool:
     """Validate a list of GUIDs.
 
     Args:

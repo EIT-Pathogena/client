@@ -23,8 +23,10 @@ from pathogena.constants import (
     DEFAULT_PROTOCOL,
     HOSTILE_INDEX_NAME,
 )
-from pathogena.errors import MissingError
+from pathogena.errors import MissingError, UnsupportedClientError
+from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
+from pathogena.upload_utils import get_upload_host
 from pathogena.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -68,7 +70,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password (hidden): ")
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(event_hooks=httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
@@ -97,7 +99,7 @@ def check_authentication(host: str) -> None:
     Raises:
         RuntimeError: If authentication fails.
     """
-    with httpx.Client(event_hooks=util.httpx_hooks):
+    with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
@@ -135,7 +137,7 @@ def get_credit_balance(host: str) -> None:
     """
     logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=15,
     ) as client:
@@ -191,7 +193,7 @@ def create_batch_on_server(
         url += "/validate_creation"
 
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -241,7 +243,7 @@ def create_sample(
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -266,7 +268,7 @@ def run_sample(sample_id: str, host: str) -> str:
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=30,
     ) as client:
@@ -438,7 +440,7 @@ def upload_batch(
     )
     models.upload_fastq(
         upload_data=upload_file_type,
-        instrument_code=sample.instrument_platform,
+        instrument_code=batch.instrument_platform,
         api_client=batch_upload_apis.APIClient(upload_file_type.env),
     )
 
@@ -475,7 +477,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
     logging.debug(f"Validating {data=}")
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -499,7 +501,7 @@ def fetch_sample(sample_id: str, host: str) -> dict:
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -593,7 +595,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -628,7 +630,7 @@ def fetch_output_files(
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -675,7 +677,7 @@ def check_version_compatibility(host: str) -> None:
         host (str): The host server.
     """
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=2),
         timeout=10,
     ) as client:
@@ -687,7 +689,7 @@ def check_version_compatibility(host: str) -> None:
         f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
     if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientError(pathogena.__version__, lowest_cli_version)
+        raise UnsupportedClientError(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
@@ -750,18 +752,18 @@ def download(
         logging.info(f"Using guids {guids}")
     else:
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
-    filenames = util.parse_comma_separated_string(filenames)
+    unique_filenames: set[str] = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = []  # There are no output files. The run may have failed.
+            output_files = {}  # There are no output files. The run may have failed.
         with httpx.Client(
-            event_hooks=util.httpx_hooks,
+            event_hooks=httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
             timeout=7200,  # 2 hours
         ) as client:
-            for filename in filenames:
+            for filename in unique_filenames:
                 prefixed_filename = f"{guid}_{filename}"
                 if prefixed_filename in output_files:
                     output_file = output_files[prefixed_filename]
