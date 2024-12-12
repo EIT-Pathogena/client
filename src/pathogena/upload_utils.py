@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, TypedDict
 
 import httpx
-from httpx import Response, _status_codes, codes
+from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from pathogena.batch_upload_apis import APIClient, APIError
@@ -33,6 +33,7 @@ class SelectedFile(TypedDict):
         file_data: The actual file data to be uploaded
         total_chunks: Total number of chunks for this file
     """
+
     file: dict[str, str]
     upload_id: int
     batch_pk: int
@@ -45,7 +46,6 @@ class SelectedFile(TypedDict):
     total_chunks: int
 
 
-
 class PreparedFiles(TypedDict):
     """A TypedDict representing the prepared files and upload session data.
 
@@ -54,6 +54,7 @@ class PreparedFiles(TypedDict):
         uploadSession: Unique identifier for the current upload session
         uploadSessionData: Dictionary containing additional metadata about the upload session
     """
+
     files: list[SelectedFile]
     uploadSession: int
     uploadSessionData: dict[str, Any]
@@ -62,6 +63,7 @@ class PreparedFiles(TypedDict):
 @dataclass
 class Metrics:
     """A placeholder class for the metrics associated with file uploads."""
+
     ...
 
 
@@ -138,7 +140,6 @@ class UploadFileType:
         self.abort_controller = abort_controller
 
 
-
 def get_upload_host(cli_host: str | None = None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
 
@@ -180,7 +181,6 @@ def check_if_file_is_in_sample(
             return sample_data
 
     return False
-
 
 
 def prepare_files(
@@ -242,14 +242,18 @@ def prepare_files(
         )
     except APIError as e:
         raise APIError(
-             f"Error checking credits: {str(e)}",
+            f"Error checking credits: {str(e)}",
             e.status_code,
         ) from e
 
     if not check_credits.get("data", {}).get("upload_session"):
         # Log if the upload session could not be resumed
-        logging.exception("Upload session cannot be resumed. Please create a new batch.")
-        raise APIError("No upload session returned by the API.", codes.INTERNAL_SERVER_ERROR)
+        logging.exception(
+            "Upload session cannot be resumed. Please create a new batch."
+        )
+        raise APIError(
+            "No upload session returned by the API.", codes.INTERNAL_SERVER_ERROR
+        )
 
     # Upload session
     upload_session = check_credits["data"]["upload_session"]
@@ -296,9 +300,13 @@ def prepare_files(
         "uploadSessionData": check_credits["data"],
     }
 
+
 # upload_all chunks of a file
 def upload_chunks(
-        upload_data: UploadFileType, file: SelectedFile, file_status: dict, chunk_size: int = DEFAULT_CHUNK_SIZE
+    upload_data: UploadFileType,
+    file: SelectedFile,
+    file_status: dict,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> None:
     """Uploads chunks of a single file.
 
@@ -375,9 +383,7 @@ def upload_chunks(
 
                 if chunks_uploaded == file["total_chunks"]:
                     if upload_data.on_complete:
-                        complete_event = OnComplete(
-                            file["upload_id"], file["batch_pk"]
-                        )
+                        complete_event = OnComplete(file["upload_id"], file["batch_pk"])
                         upload_data.on_complete(complete_event)
 
                     end_status = end_upload(file["batch_pk"], file["upload_id"])
@@ -472,7 +478,6 @@ def upload_files(
         logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
     else:
         logging.info(f"All uploads complete.")
-
 
 
 def prepare_file(
@@ -637,6 +642,7 @@ def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
         batch_pk, upload_session
     )
 
+
 def upload_fastq(
     # batch_pk: int,
     # sample_name: str,
@@ -661,6 +667,7 @@ def upload_fastq(
     # checksum = hash_file(reads)
     upload_files(upload_data, instrument_code, api_client, sample_uploads)
     # logging.info(f"  Uploaded {reads.name}")
+
 
 # from pathogena import prepare_files
 # from pathogena.models import UploadSample
