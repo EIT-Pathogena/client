@@ -94,6 +94,7 @@ def check_if_file_is_in_sample(
 
     return False
 
+
 def prepare_file(
     file: Any,
     batch_pk: int,
@@ -153,6 +154,7 @@ def prepare_file(
             "status code": e.status_code,
             "upload_session": upload_session,
         }
+
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_chunk(
@@ -222,6 +224,7 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
         for future in as_completed(chunk_queue):
             yield future.result()
 
+
 def end_upload(batch_pk: int, file_id: int) -> dict[str, Any]:
     """End the upload of a sample.
 
@@ -250,7 +253,10 @@ def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
     """
     api_client = APIClient()
 
-    return api_client.batches_samples_end_upload_session_create(batch_pk, upload_session)
+    return api_client.batches_samples_end_upload_session_create(
+        batch_pk, upload_session
+    )
+
 
 # from pathogena import prepare_files
 # from pathogena.models import UploadSample
@@ -274,7 +280,6 @@ def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
 #     files: list[SelectedFile]
 #     uploadSession: int
 #     uploadSessionData: dict[str, Any]
-
 
 
 # class SelectedFilesType:
@@ -619,7 +624,6 @@ def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
 #         logging.info(f"All uploads complete.")
 
 
-
 # def upload_fastq(
 #     # batch_pk: int,
 #     # sample_name: str,
@@ -644,5 +648,3 @@ def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
 #     # checksum = hash_file(reads)
 #     upload_files(upload_data, instrument_code, api_client, sample_uploads)
 #     # logging.info(f"  Uploaded {reads.name}")
-
-
