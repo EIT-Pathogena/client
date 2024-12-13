@@ -450,7 +450,7 @@ def upload_batch(
         samples=batch.samples,
     )
 
-    batch_status = get_batch_upload_status(int(batch_id))
+    batch_status = get_batch_upload_status(batch_id)
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
         instrument_code=batch.instrument_platform,
