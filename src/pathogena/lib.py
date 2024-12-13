@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import multiprocessing
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -17,28 +16,24 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-from pathogena import batch_upload_apis, models, util
+from pathogena import batch_upload_apis, models, upload_utils, util
+from pathogena.constants import (
+    CPU_COUNT,
+    DEFAULT_HOST,
+    DEFAULT_PROTOCOL,
+    HOSTILE_INDEX_NAME,
+)
+from pathogena.errors import MissingError, UnsupportedClientError
+from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import MissingError, get_access_token, get_token_path
+from pathogena.upload_utils import (
+    UploadFileType,
+    get_batch_upload_status,
+    get_upload_host,
+)
+from pathogena.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
-CPU_COUNT = multiprocessing.cpu_count()
-DEFAULT_HOST = "portal.eit-pathogena.com"
-DEFAULT_UPLOAD_HOST = "api.upload.eit-pathogena.com"
-DEFAULT_PROTOCOL = "https"
-DEFAULT_METADATA = {
-    "country": None,
-    "district": "",
-    "subdivision": "",
-    "instrument_platform": "illumina",
-    "pipeline": "mycobacteria",
-    "ont_read_suffix": ".fastq.gz",
-    "illumina_read1_suffix": "_1.fastq.gz",
-    "illumina_read2_suffix": "_2.fastq.gz",
-    "max_batch_size": 50,
-}
-HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
 
 def get_host(cli_host: str | None = None) -> str:
@@ -79,7 +74,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password (hidden): ")
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(event_hooks=httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
@@ -108,7 +103,7 @@ def check_authentication(host: str) -> None:
     Raises:
         RuntimeError: If authentication fails.
     """
-    with httpx.Client(event_hooks=util.httpx_hooks):
+    with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
@@ -128,7 +123,7 @@ def get_credit_balance(host: str) -> None:
     """
     logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=15,
     ) as client:
@@ -172,7 +167,7 @@ def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]
         "expected_sample_count": number_of_samples,
     }
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -219,7 +214,7 @@ def create_sample(
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -244,7 +239,7 @@ def run_sample(sample_id: str, host: str) -> str:
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=30,
     ) as client:
@@ -285,7 +280,7 @@ def decontaminate_samples_with_hostile(
     """
     logging.debug(f"decontaminate_samples_with_hostile() {threads=} {output_dir=}")
     logging.info(
-        f"Removing human reads from {batch.instrument_platform.upper()} FastQ files and storing in {output_dir.absolute()}"
+        f"Removing human reads from {str(batch.instrument_platform).upper()} FastQ files and storing in {output_dir.absolute()}"
     )
     fastq_paths = []
     decontamination_metadata = {}
@@ -354,27 +349,34 @@ def upload_batch(
             sample=sample,
         )
         logging.debug(f"{sample_id=}")
-        sample.reads_1_upload_file = prepare_upload_files(
-            target_filepath=(
-                sample.reads_1_cleaned_path
-                if batch.ran_through_hostile
-                else sample.reads_1_resolved_path
-            ),
-            sample_id=sample_id,
-            decontaminated=batch.ran_through_hostile,
-            read_num=1,
-        )
-        if sample.is_illumina():
+        if sample.reads_1_cleaned_path and batch.ran_through_hostile:
+            sample.reads_1_upload_file = prepare_upload_files(
+                target_filepath=sample.reads_1_cleaned_path,
+                sample_id=sample_id,
+                decontaminated=batch.ran_through_hostile,
+                read_num=1,
+            )
+        else:
+            sample.reads_1_upload_file = sample.reads_1_resolved_path
+        if (
+            sample.is_illumina()
+            and batch.ran_through_hostile
+            and sample.reads_2_cleaned_path
+        ):
             sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=(
-                    sample.reads_2_cleaned_path
-                    if batch.ran_through_hostile
-                    else sample.reads_2_resolved_path
-                ),
+                target_filepath=sample.reads_2_cleaned_path,
                 sample_id=sample_id,
                 decontaminated=batch.ran_through_hostile,
                 read_num=2,
             )
+        elif sample.is_illumina() and sample.reads_2_resolved_path:
+            sample.reads_2_upload_file = prepare_upload_files(
+                target_filepath=sample.reads_2_resolved_path,
+                sample_id=sample_id,
+                decontaminated=batch.ran_through_hostile,
+                read_num=2,
+            )
+
         upload_meta.append(
             (
                 sample.sample_name,
@@ -401,19 +403,22 @@ def upload_batch(
         f"{get_protocol()}://{host}/batches/{batch_id}"
     )
 
-    upload_file_type = models.UploadFileType(
+    upload_file_type = UploadFileType(
         access_token=util.get_access_token(get_host(None)),
         batch_pk=batch_id,
         env=get_upload_host(),
         samples=batch.samples,
     )
-    models.upload_fastq(
+
+    batch_status = get_batch_upload_status(int(batch_id))
+    upload_utils.upload_fastq(
         upload_data=upload_file_type,
-        instrument_code=sample.instrument_platform,
+        instrument_code=batch.instrument_platform,
         api_client=batch_upload_apis.APIClient(upload_file_type.env),
+        sample_uploads=batch_status.get("samples"),
     )
 
-    # check what this funct does
+    # check what this func does
 
     # run_sample(sample_id=sample_id, host=host)
     # if not save:
@@ -446,7 +451,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
     logging.debug(f"Validating {data=}")
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -470,7 +475,7 @@ def fetch_sample(sample_id: str, host: str) -> dict:
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -564,7 +569,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -599,7 +604,7 @@ def fetch_output_files(
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
@@ -646,7 +651,7 @@ def check_version_compatibility(host: str) -> None:
         host (str): The host server.
     """
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=2),
         timeout=10,
     ) as client:
@@ -658,7 +663,7 @@ def check_version_compatibility(host: str) -> None:
         f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
     if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientError(pathogena.__version__, lowest_cli_version)
+        raise UnsupportedClientError(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
@@ -721,18 +726,18 @@ def download(
         logging.info(f"Using guids {guids}")
     else:
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
-    filenames = util.parse_comma_separated_string(filenames)
+    unique_filenames: set[str] = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = []  # There are no output files. The run may have failed.
+            output_files = {}  # There are no output files. The run may have failed.
         with httpx.Client(
-            event_hooks=util.httpx_hooks,
+            event_hooks=httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
             timeout=7200,  # 2 hours
         ) as client:
-            for filename in filenames:
+            for filename in unique_filenames:
                 prefixed_filename = f"{guid}_{filename}"
                 if prefixed_filename in output_files:
                     output_file = output_files[prefixed_filename]
