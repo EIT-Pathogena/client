@@ -26,7 +26,11 @@ from pathogena.constants import (
 from pathogena.errors import MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.upload_utils import UploadFileType, get_upload_host
+from pathogena.upload_utils import (
+    UploadFileType,
+    get_batch_upload_status,
+    get_upload_host,
+)
 from pathogena.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -405,10 +409,13 @@ def upload_batch(
         env=get_upload_host(),
         samples=batch.samples,
     )
+
+    batch_status = get_batch_upload_status(int(batch_id))
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
         instrument_code=batch.instrument_platform,
         api_client=batch_upload_apis.APIClient(upload_file_type.env),
+        sample_uploads=batch_status.get("samples"),
     )
 
     # check what this func does
