@@ -1,9 +1,26 @@
+import os
 from typing import Any
 
 import httpx
 
-from pathogena.upload_utils import get_upload_host
+from pathogena.constants import DEFAULT_HOST
 from pathogena.util import get_access_token
+
+
+def get_host(cli_host: str | None = None) -> str:
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
+
+    Args:
+        cli_host (str | None): The host provided via CLI argument.
+
+    Returns:
+        str: The resolved hostname.
+    """
+    return (
+        cli_host
+        if cli_host is not None
+        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
+    )
 
 
 class APIError(Exception):
@@ -31,7 +48,7 @@ class APIClient:
         """
         self.base_url = base_url
         self.client = client or httpx.Client()
-        self.token = get_access_token(get_upload_host())
+        self.token = get_access_token(get_host())
         self.upload_session = upload_session
 
     # create batch

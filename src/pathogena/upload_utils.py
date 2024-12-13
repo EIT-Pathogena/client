@@ -20,18 +20,20 @@ from pathogena.util import get_access_token
 
 
 class SampleMetadata(TypedDict):
-     """A TypedDict representing sample metadata for upload.
+    """A TypedDict representing sample metadata for upload.
 
-     Args:
-         name: The name of the sample
-         size: The size of the sample file in bytes
-         control: Whether this is a control sample
-         content_type: The content type
-     """
-     name: str
-     size: int
-     control: str
-     content_type: str
+    Args:
+        name: The name of the sample
+        size: The size of the sample file in bytes
+        control: Whether this is a control sample
+        content_type: The content type
+    """
+
+    name: str
+    size: int
+    control: str
+    content_type: str
+
 
 class UploadMetrics(TypedDict):
     """A TypedDict representing metrics for file upload progress and status.
@@ -45,6 +47,7 @@ class UploadMetrics(TypedDict):
         time_remaining: Estimated time remaining for upload completion in seconds
         estimated_completion_time: Predicted datetime when upload will complete
     """
+
     chunks_received: int
     chunks_total: int
     upload_status: str
@@ -52,6 +55,7 @@ class UploadMetrics(TypedDict):
     upload_speed: float
     time_remaining: float
     estimated_completion_time: datetime
+
 
 class SampleUploadStatus(TypedDict):
     """A TypedDict representing the status and metadata of a sample upload.
@@ -70,6 +74,7 @@ class SampleUploadStatus(TypedDict):
         hyphenated_legacy_sample_id: Hyphenated version of legacy sample ID
         metrics: Upload metrics including progress and performance data
     """
+
     id: int
     batch: int
     file_path: str
@@ -83,6 +88,7 @@ class SampleUploadStatus(TypedDict):
     hyphenated_legacy_sample_id: str
     metrics: UploadMetrics
 
+
 class BatchUploadStatus(TypedDict):
     """A TypedDict representing the status of a batch upload and its samples.
 
@@ -90,6 +96,7 @@ class BatchUploadStatus(TypedDict):
         upload_status: Current status of the batch upload (e.g. "in_progress", "complete")
         samples: Dictionary mapping sample IDs to their individual upload statuses
     """
+
     upload_status: str
     samples: dict[str, SampleUploadStatus]
 
@@ -234,8 +241,8 @@ def get_upload_host(cli_host: str | None = None) -> str:
 
 def check_if_file_is_in_sample(
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
-    file: SampleMetadata| None = None,
-    ) -> tuple[bool, SampleUploadStatus | dict]:
+    file: SampleMetadata | None = None,
+) -> tuple[bool, SampleUploadStatus | dict]:
     """Checks if a given file is already present in the sample uploads.
 
     Args:
@@ -258,35 +265,35 @@ def check_if_file_is_in_sample(
 
     return (False, {})
 
+
 def get_batch_upload_status(
-        batch_pk: int,
-    ) -> BatchUploadStatus:
-        """Starts a upload by making a POST request.
+    batch_pk: str,
+) -> BatchUploadStatus:
+    """Starts a upload by making a POST request.
 
-        Args:
-            batch_pk (int): The primary key of the batch.
-            data (dict[str, Any] | None): Data to include in the POST request body.
+    Args:
+        batch_pk (int): The primary key of the batch.
+        data (dict[str, Any] | None): Data to include in the POST request body.
 
-        Returns:
-            dict[str, Any]: The response JSON from the API.
+    Returns:
+        dict[str, Any]: The response JSON from the API.
 
-        Raises:
-            APIError: If the API returns a non-2xx status code.
-        """
-        api = APIClient()
-        url = f"https://{api.base_url}/api/v1/batches/{batch_pk}/samples/state/"
-        response = httpx.Response(httpx.codes.OK)
-        try:
-            response = api.client.get(
-                url,  headers={"Authorization": f"Bearer {api.token}"}
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            raise APIError(
-                f"Failed to fetch batch status: {response.text}",
-                response.status_code,
-            ) from e
+    Raises:
+        APIError: If the API returns a non-2xx status code.
+    """
+    api = APIClient()
+    url = f"https://{api.base_url}/api/v1/batches/{batch_pk}/samples/state"
+    response = httpx.Response(httpx.codes.OK)
+    try:
+        response = api.client.get(url, headers={"Authorization": f"Bearer {api.token}"})
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPError as e:
+        raise APIError(
+            f"Failed to fetch batch status: {response.text}",
+            response.status_code,
+        ) from e
+
 
 def prepare_files(
     batch_pk: int,
@@ -318,7 +325,10 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file1_size,
                     "control": sample.control,
-                    "content_type": "application/gzip" if sample.reads_1_resolved_path is not None and sample.reads_1_resolved_path.suffix in ("gzip", "gz") else "text/plain"
+                    "content_type": "application/gzip"
+                    if sample.reads_1_resolved_path is not None
+                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
+                    else "text/plain",
                 }
             )
             samples.append(
@@ -326,7 +336,10 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file2_size,
                     "control": sample.control,
-                    "content_type": "application/gzip" if sample.reads_2_resolved_path is not None and sample.reads_2_resolved_path.suffix in ("gzip", "gz") else "text/plain"
+                    "content_type": "application/gzip"
+                    if sample.reads_2_resolved_path is not None
+                    and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
+                    else "text/plain",
                 }
             )
         else:
@@ -335,7 +348,10 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file1_size,
                     "control": sample.control,
-                    "content_type": "application/gzip" if sample.reads_1_resolved_path is not None and sample.reads_1_resolved_path.suffix in ("gzip", "gz") else "text/plain"
+                    "content_type": "application/gzip"
+                    if sample.reads_1_resolved_path is not None
+                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
+                    else "text/plain",
                 }
             )
 
@@ -366,11 +382,12 @@ def prepare_files(
     # Upload session
     upload_session = check_credits["data"]["upload_session"]
 
-
     if sample_uploads is None:
         sample_uploads = {}
     for sample in samples:
-        was_found, sample_upload_status = check_if_file_is_in_sample(sample_uploads, sample)
+        was_found, sample_upload_status = check_if_file_is_in_sample(
+            sample_uploads, sample
+        )
         if (
             was_found
             and sample_upload_status
@@ -381,27 +398,33 @@ def prepare_files(
             selected_files.append(
                 {
                     "file": sample_upload_status.get("file"),
-                    "upload_id":sample_upload_status.get("upload_id"),
+                    "upload_id": sample_upload_status.get("upload_id"),
                     "batch_id": batch_pk,
                     "sample_id": sample_upload_status.get("id"),
                     "total_chunks": sample_upload_status.get("metrics", {}).get(
                         "chunks_total", sample_upload_status.get("total_chunks", 0)
                     ),
-                    "estimated_completion_time": sample_upload_status.get("metrics", {}).get(
-                        "estimated_completion_time"
+                    "estimated_completion_time": sample_upload_status.get(
+                        "metrics", {}
+                    ).get("estimated_completion_time"),
+                    "time_remaining": sample_upload_status.get("metrics", {}).get(
+                        "time_remaining"
                     ),
-                    "time_remaining": sample_upload_status.get("metrics", {}).get("time_remaining"),
                     "uploadSession": upload_session,
                 }
             )
-        elif was_found and sample and sample_upload_status.get("upload_status") == "COMPLETE":
+        elif (
+            was_found
+            and sample
+            and sample_upload_status.get("upload_status") == "COMPLETE"
+        ):
             # Log that the file has already been uploaded, don't add to selected files
-            logging.info(f"File '{sample_upload_status['uploaded_file_name']}': {sample['name']} has already been uploaded.")
+            logging.info(
+                f"File '{sample_upload_status['uploaded_file_name']}': {sample['name']} has already been uploaded."
+            )
         else:
             # Prepare new file and add to selected files
-            file_ready = prepare_file(
-                sample, batch_pk, upload_session, api_client
-            )
+            file_ready = prepare_file(sample, batch_pk, upload_session, api_client)
             if file_ready:
                 selected_files.append(file_ready)
 
