@@ -19,6 +19,20 @@ from pathogena.models import UploadSample
 from pathogena.util import get_access_token
 
 
+class SampleMetadata(TypedDict):
+     """A TypedDict representing sample metadata for upload.
+
+     Args:
+         name: The name of the sample
+         size: The size of the sample file in bytes
+         control: Whether this is a control sample
+         content_type: The content type
+     """
+     name: str
+     size: int
+     control: str
+     content_type: str
+
 class UploadMetrics(TypedDict):
     """A TypedDict representing metrics for file upload progress and status.
 
@@ -219,38 +233,67 @@ def get_upload_host(cli_host: str | None = None) -> str:
 
 
 def check_if_file_is_in_sample(
-    sample_uploads: dict[str, dict[str, Any]] | None = None,
-    file: dict[str, Any] | None = None,
-) -> dict[str, Any] | bool:
+    sample_uploads: dict[str, SampleUploadStatus] | None = None,
+    file: SampleMetadata| None = None,
+    ) -> tuple[bool, SampleUploadStatus | dict]:
     """Checks if a given file is already present in the sample uploads.
 
     Args:
-        sample_uploads (dict[str, Dict[str, Any]]): The state of sample uploads.
+        sample_uploads (dict[str, SampleUploadStatus]): The state of sample uploads.
         That is, a dictionary where keys are sample IDs and values are dictionaries containing sample data.
-        file (dict[str, Any]): A dictionary representing the file, expected to have a 'name' key.
+        file (UploadSample | None): A dictionary representing the file, expected to have a 'name' key.
 
     Returns:
-        dict[str, Any] | bool: The sample data if the file is found, else False.
+        tuple[bool, SampleUploadStatus | dict]: A bool if it was found and the result if
+            true.
     """
     # Extract samples from sample_uploads, defaulting to an empty dictionary if None
-    samples = sample_uploads.get("samples") if sample_uploads else None
-    if not samples or not file:
-        return False
+    if not sample_uploads or not file:
+        return (False, {})
 
     # Iterate through sample IDs and check if the uploaded file name matches the file's name
-    for sample_data in samples.values():
-        if sample_data.get("uploaded_file_name") == file.get("name"):
-            return sample_data
+    for sample_data in sample_uploads.values():
+        if sample_data.get("uploaded_file_name") == file["name"]:
+            return (True, sample_data)
 
-    return False
+    return (False, {})
 
+def get_batch_upload_status(
+        batch_pk: int,
+    ) -> BatchUploadStatus:
+        """Starts a upload by making a POST request.
+
+        Args:
+            batch_pk (int): The primary key of the batch.
+            data (dict[str, Any] | None): Data to include in the POST request body.
+
+        Returns:
+            dict[str, Any]: The response JSON from the API.
+
+        Raises:
+            APIError: If the API returns a non-2xx status code.
+        """
+        api = APIClient()
+        url = f"https://{api.base_url}/api/v1/batches/{batch_pk}/samples/state/"
+        response = httpx.Response(httpx.codes.OK)
+        try:
+            response = api.client.get(
+                url,  headers={"Authorization": f"Bearer {api.token}"}
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            raise APIError(
+                f"Failed to fetch batch status: {response.text}",
+                response.status_code,
+            ) from e
 
 def prepare_files(
     batch_pk: int,
     instrument_code: str,
     files: list[UploadSample],
     api_client: APIClient,
-    sample_uploads: dict[str, Any] | None = None,
+    sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> PreparedFiles:
     """Prepares multiple files for upload by checking credits, resuming sessions, and validating file states.
 
@@ -267,7 +310,7 @@ def prepare_files(
     selected_files = []
 
     ## check if we have enough credits to upload the files
-    samples = []
+    samples: list[SampleMetadata] = []
     for sample in files:
         if sample.is_illumina():
             samples.append(
@@ -275,6 +318,7 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file1_size,
                     "control": sample.control,
+                    "content_type": "application/gzip" if sample.reads_1_resolved_path is not None and sample.reads_1_resolved_path.suffix in ("gzip", "gz") else "text/plain"
                 }
             )
             samples.append(
@@ -282,6 +326,7 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file2_size,
                     "control": sample.control,
+                    "content_type": "application/gzip" if sample.reads_2_resolved_path is not None and sample.reads_2_resolved_path.suffix in ("gzip", "gz") else "text/plain"
                 }
             )
         else:
@@ -290,6 +335,7 @@ def prepare_files(
                     "name": sample.sample_name,
                     "size": sample.file1_size,
                     "control": sample.control,
+                    "content_type": "application/gzip" if sample.reads_1_resolved_path is not None and sample.reads_1_resolved_path.suffix in ("gzip", "gz") else "text/plain"
                 }
             )
 
@@ -320,38 +366,41 @@ def prepare_files(
     # Upload session
     upload_session = check_credits["data"]["upload_session"]
 
-    item: UploadSample
-    for item in files:
-        sample = check_if_file_is_in_sample(sample_uploads, item.file)
+
+    if sample_uploads is None:
+        sample_uploads = {}
+    for sample in samples:
+        was_found, sample_upload_status = check_if_file_is_in_sample(sample_uploads, sample)
         if (
-            sample
-            and sample.get("upload_status") != "COMPLETE"
-            and sample.get("total_chunks", 0) > 0
+            was_found
+            and sample_upload_status
+            and sample_upload_status.get("upload_status") != "COMPLETE"
+            and sample_upload_status.get("total_chunks", 0) > 0
         ):
             # File not already uploaded, add to selected files
             selected_files.append(
                 {
-                    "file": item["file"],
-                    "upload_id": sample.get("upload_id"),
+                    "file": sample_upload_status.get("file"),
+                    "upload_id":sample_upload_status.get("upload_id"),
                     "batch_id": batch_pk,
-                    "sample_id": sample.get("id"),
-                    "total_chunks": sample.get("metrics", {}).get(
-                        "chunks_total", sample.get("total_chunks", 0)
+                    "sample_id": sample_upload_status.get("id"),
+                    "total_chunks": sample_upload_status.get("metrics", {}).get(
+                        "chunks_total", sample_upload_status.get("total_chunks", 0)
                     ),
-                    "estimated_completion_time": sample.get("metrics", {}).get(
+                    "estimated_completion_time": sample_upload_status.get("metrics", {}).get(
                         "estimated_completion_time"
                     ),
-                    "time_remaining": sample.get("metrics", {}).get("time_remaining"),
+                    "time_remaining": sample_upload_status.get("metrics", {}).get("time_remaining"),
                     "uploadSession": upload_session,
                 }
             )
-        elif sample and sample.get("upload_status") == "COMPLETE":
+        elif was_found and sample and sample_upload_status.get("upload_status") == "COMPLETE":
             # Log that the file has already been uploaded, don't add to selected files
-            logging.info(f"File '{item['file']['name']}' has already been uploaded.")
+            logging.info(f"File '{sample_upload_status['uploaded_file_name']}': {sample['name']} has already been uploaded.")
         else:
             # Prepare new file and add to selected files
-            file_ready = util.prepare_file(
-                item["file"], batch_pk, upload_session, api_client
+            file_ready = prepare_file(
+                sample, batch_pk, upload_session, api_client
             )
             if file_ready:
                 selected_files.append(file_ready)
@@ -468,7 +517,7 @@ def upload_files(
     upload_data: UploadFileType,
     instrument_code: str,
     api_client: APIClient,
-    sample_uploads: dict[str, Any] | None = None,
+    sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
     """Uploads files in chunks and manages the upload process.
 
@@ -543,7 +592,7 @@ def upload_files(
 
 
 def prepare_file(
-    file: Any,
+    file: SampleMetadata,
     batch_pk: int,
     upload_session: int,
     api_client: APIClient,
@@ -561,9 +610,9 @@ def prepare_file(
     Returns:
         dict[str, Any]: File metadata ready for upload or error details.
     """
-    original_file_name = file.name
-    total_chunks = math.ceil(file.size / chunk_size)
-    content_type = file.type
+    original_file_name = file["name"]
+    total_chunks = math.ceil(file["size"] / chunk_size)
+    content_type = file["content_type"]
 
     form_data = {
         "original_file_name": original_file_name,
@@ -712,7 +761,7 @@ def upload_fastq(
     upload_data: UploadFileType,
     instrument_code: str,
     api_client: APIClient,
-    sample_uploads: dict[str, Any] | None = None,
+    sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
     """Upload a FASTQ file to the server.
 
