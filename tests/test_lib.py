@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from pathogena import lib
-from pathogena.util import UnsupportedClientError
+from pathogena.errors import UnsupportedClientError
 
 
 @patch("httpx.Client.get")

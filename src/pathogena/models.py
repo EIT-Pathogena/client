@@ -235,6 +235,8 @@ class UploadSample(UploadBase):
                 return [x]
             case x, y if self.is_illumina():
                 return [x, y]
+            case x, y if self.is_ont():  # ont only one file
+                return [x]
             case _:
                 return []
 

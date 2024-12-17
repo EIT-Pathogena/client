@@ -67,7 +67,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/"
+        url = f"https://{self.base_url}/api/v1/batches"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -99,7 +99,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session"
 
         response = httpx.Response(httpx.codes.OK)
         try:
@@ -134,7 +134,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -166,7 +166,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -198,7 +198,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end"
         response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -235,7 +235,7 @@ class APIClient:
         else:
             data = {"upload_id": self.upload_session}
 
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session"
 
         response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
