@@ -124,7 +124,7 @@ def test_validation_fail_control(invalid_control_csv: Path) -> None:
 
 def test_build_csv_specimen_organism(reads: Path) -> None:
     """Test building a CSV with a specimen organism via the CLI.
-    
+
     This test is present because the build_csv() function uses a different
     variable name (`pipeline`) for specimen organism.
 
