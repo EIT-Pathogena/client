@@ -13,17 +13,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-13]
+        os: [ubuntu-22.04, macos-14]
         python-version: ['3.10']
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        id: setup-miniconda
+        continue-on-error: true
         with:
-          update-conda: true
-          python-version: ${{ matrix.python-version }}
-          conda-channels: conda-forge, bioconda
+          miniconda-version: latest
+          channels: conda-forge, bioconda
+      - name: Check arm64
+        shell: bash -el {0}
+        run: |
+          conda install -y python
+          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
       - name: Install
         run: |
           conda install hostile==1.1.0
