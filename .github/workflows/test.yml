@@ -33,7 +33,6 @@ jobs:
               conda create --platform osx-64 -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }}
           fi
           conda activate pathogena-test
-          conda info
           pip install '.[dev]'
       - name: Format
         shell: bash -el {0}
