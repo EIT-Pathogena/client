@@ -26,7 +26,7 @@ jobs:
           conda-channels: conda-forge, bioconda
       - name: Install
         run: |
-          conda install hostile
+          conda install hostile==1.1.0
           pip install '.[dev]'
       - name: Format
         run: |
