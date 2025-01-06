@@ -25,12 +25,20 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniconda-version: latest
           channels: conda-forge, bioconda
-          activate-environment: pathogena-test
+          auto-activate-base: true
+          activate-environment: ""
       - name: Install
         shell: bash -el {0}
         run: |
-          conda env list
-          conda install hostile==1.1.0
+          if [ "$RUNNER_OS" == "Linux" ]; then
+              conda create -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0
+          elif [ "$RUNNER_OS" == "MacOS" ]; then
+              conda create --platform osx-64 -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0
+          else
+              echo "$RUNNER_OS not supported"
+              exit 1
+          fi
+          conda activate pathogena-test
           pip install '.[dev]'
       - name: Format
         shell: bash -el {0}
