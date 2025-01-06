@@ -28,6 +28,7 @@ jobs:
           activate-environment: pathogena-test
       - name: Install
         run: |
+          conda env list
           conda install hostile==1.1.0
           pip install '.[dev]'
       - name: Format
