@@ -22,13 +22,9 @@ jobs:
         id: setup-miniconda
         continue-on-error: true
         with:
+          python-version: ${{ matrix.python-version }}
           miniconda-version: latest
           channels: conda-forge, bioconda
-      - name: Check arm64
-        shell: bash -el {0}
-        run: |
-          conda install -y python
-          python -c "import platform; assert platform.machine() == 'arm64', platform.machine()"
       - name: Install
         run: |
           conda install hostile==1.1.0
