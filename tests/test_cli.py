@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -119,6 +120,37 @@ def test_validation_fail_control(invalid_control_csv: Path) -> None:
     assert result.exit_code == 1
     assert result.exc_info[0] == ValidationError
     assert "Input should be 'positive', 'negative' or ''" in str(result.exc_info)
+
+
+def test_build_csv_specimen_organism(reads: Path) -> None:
+    """Test building a CSV with a specimen organism via the CLI.
+    
+    This test is present because the build_csv() function uses a different
+    variable name (`pipeline`) for specimen organism.
+
+    Args:
+        reads (Path): Path to a reads folder containing `fastq` and `fastq.gz` files.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file_path = Path(temp_dir) / "test_ont.csv"
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "build-csv",
+                "--output-csv",
+                str(temp_file_path),
+                "--batch-name",
+                "test_ont",
+                "--country",
+                "GBR",
+                "--instrument-platform",
+                "ont",
+                str(reads),
+            ],
+        )
+        assert result.exit_code == 0
 
 
 # Doesn't work because it actually uploads data, need to work out a mock system or break down the function

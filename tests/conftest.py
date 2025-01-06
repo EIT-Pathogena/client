@@ -24,6 +24,11 @@ def test_host() -> str:
 
 
 @pytest.fixture
+def reads() -> Path:
+    return Path("tests/data/reads")
+
+
+@pytest.fixture
 def human_1_1_fastq_gz() -> Path:
     return Path("tests/data/reads/human_1_1.fastq.gz")
 
