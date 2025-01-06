@@ -25,11 +25,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
           miniconda-version: latest
           channels: conda-forge, bioconda
-          auto-activate-base: true
-          activate-environment: ""
+          activate-environment: "pathogena-test"
       - name: Install
         shell: bash -el {0}
         run: |
+          conda 
           if [ "${{ matrix.os }}" == "ubuntu-22.04" ]; then
               conda create -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0
           elif [ "${{ matrix.os }}" == "macos-14" ]; then
