@@ -126,44 +126,52 @@ def _write_csv(
     upload_data: UploadData,
 ) -> None:
     """Build a CSV file for upload to EIT Pathogena.
-
     Args:
         data (list[dict]): The data to write.
         output_csv (Path): The path to the output CSV file.
     """
+    
+    use_amplicon_scheme = (
+        upload_data.amplicon_scheme is not None
+        and upload_data.specimen_organism == "covid"
+    )
+
     # Note that csv module uses CRLF line endings
     with open(filename, "w", newline="", encoding="utf-8") as outfile:
-        csv_writer = csv.writer(outfile)
-        csv_writer.writerow(
-            [
-                "batch_name",
-                "sample_name",
-                "reads_1",
-                "reads_2",
-                "control",
-                "collection_date",
-                "country",
-                "subdivision",
-                "district",
-                "specimen_organism",
-                "host_organism",
-                "instrument_platform",
-            ]
-        )
+        fieldnames = [
+            "batch_name",
+            "sample_name",
+            "reads_1",
+            "reads_2",
+            "control",
+            "collection_date",
+            "country",
+            "subdivision",
+            "district",
+            "specimen_organism",
+            "host_organism",
+            "instrument_platform",
+        ]
+        if use_amplicon_scheme:
+            fieldnames.append("amplicon_scheme")
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+
         for sample, f1, f2 in read_files:
-            csv_writer.writerow(
-                [
-                    upload_data.batch_name,
-                    sample,
-                    f1,
-                    f2,
-                    "",
-                    upload_data.collection_date,
-                    upload_data.country,
-                    upload_data.subdivision,
-                    upload_data.district,
-                    upload_data.specimen_organism,
-                    upload_data.host_organism,
-                    upload_data.instrument_platform,
-                ]
-            )
+            row = {
+                "batch_name": upload_data.batch_name,
+                "sample_name": sample,
+                "reads_1": f1,
+                "reads_2": f2,
+                "control": "",
+                "collection_date": upload_data.collection_date,
+                "country": upload_data.country,
+                "subdivision": upload_data.subdivision,
+                "district": upload_data.district,
+                "specimen_organism": upload_data.specimen_organism,
+                "host_organism": upload_data.host_organism,
+                "instrument_platform": upload_data.instrument_platform,
+            }
+            if use_amplicon_scheme:
+                row["amplicon_scheme"] = upload_data.amplicon_scheme
+            writer.writerow(row)

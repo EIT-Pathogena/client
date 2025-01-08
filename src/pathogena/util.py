@@ -20,6 +20,17 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 import pathogena
 
 PLATFORMS = Literal["illumina", "ont"]
+AMPLICON_SCHEMES_LIST = [
+    "",
+    "Automatic Detection",
+    "COVID-AMPLISEQ-V1",
+    "COVID-ARTIC-V3",
+    "COVID-ARTIC-V4.1",
+    "COVID-ARTIC-V5.0-5.2.0_1200",
+    "COVID-ARTIC-V5.0-5.3.2_400",
+    "COVID-MIDNIGHT-1200",
+    "COVID-VARSKIP-V1a-2b",
+]
 AMPLICON_SCHEMES = Literal[
     "",
     "Automatic Detection",
