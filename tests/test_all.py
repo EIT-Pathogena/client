@@ -159,6 +159,20 @@ def test_validate_covid_specimen_organism_mix_amp_scheme(
         models.create_batch_from_csv(illumina_covid_mix_amp_gzipped_sample_csv)
 
 
+def test_validate_myco_amp_scheme(
+    myco_illumina_amp: Path,
+) -> None:
+    """Test validation of myco specimen organism.
+
+    Args:
+        covid_sample_csv (Path): Path to a CSV file with myco sample data
+        with amp scheme specified.
+    """
+
+    with pytest.raises(ValidationError):
+        models.create_batch_from_csv(myco_illumina_amp)
+
+
 def test_validate_fail_invalid_control(invalid_control_csv: Path) -> None:
     """Test validation failure for invalid control values.
 

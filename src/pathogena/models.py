@@ -301,6 +301,28 @@ class UploadBatch(BaseModel):
         logging.debug(f"{self.amplicon_scheme=}")
         return self
 
+    @model_validator(mode="after")
+    def validate_no_amplicon_scheme_myco(self):
+        """Validate that if the mycobacteria is the specimen organism, amplicon scheme is not specified.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If amplicon schemes are found when specimen organism is mycobacteria.
+        """
+        amplicon_schemes = [sample.amplicon_scheme for sample in self.samples]
+        specimen_organisms = [sample.specimen_organism for sample in self.samples]
+
+        if (
+            not all(scheme is None for scheme in amplicon_schemes)
+            and "mycobacteria" in specimen_organisms
+        ):
+            raise ValueError(
+                "amplicon_scheme must not and cannot be specified for mycobacteria"
+            )
+        return self
+
     def update_sample_metadata(self, metadata: dict[str, Any] = None) -> None:
         """Updates the sample metadata.
 
