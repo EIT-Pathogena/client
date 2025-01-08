@@ -109,15 +109,15 @@ def test_validate_ont_model(ont_sample_csv: Path) -> None:
     models.create_batch_from_csv(ont_sample_csv)
 
 
-def test_validate_covid_specimen_organism(
-    illumina_covid_gzipped_sample_csv: Path,
+def test_validate_sars_cov_2_specimen_organism(
+    illumina_sars_cov_2_gzipped_sample_csv: Path,
 ) -> None:
-    """Test validation of COVID specimen organism.
+    """Test validation of SARS-CoV-2 specimen organism.
 
     Args:
-        covid_sample_csv (Path): Path to the CSV file with COVID sample data.
+        sars-cov-2_sample_csv (Path): Path to the CSV file with SARS-CoV-2 sample data.
     """
-    models.create_batch_from_csv(illumina_covid_gzipped_sample_csv)
+    models.create_batch_from_csv(illumina_sars_cov_2_gzipped_sample_csv)
 
 
 def test_validate_fail_invalid_control(invalid_control_csv: Path) -> None:

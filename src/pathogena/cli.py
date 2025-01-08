@@ -427,7 +427,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 @click.option(
     "--specimen-organism",
     "pipeline",
-    type=click.Choice(["mycobacteria", "covid"]),
+    type=click.Choice(["mycobacteria", "sars-cov-2"]),
     help="Specimen organism",
     default=lib.DEFAULT_METADATA["pipeline"],
     show_default=True,
