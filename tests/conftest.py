@@ -19,6 +19,19 @@ def upload_data() -> UploadData:
 
 
 @pytest.fixture
+def upload_data_covid_amp() -> UploadData:
+    return UploadData(
+        batch_name="batch_name",
+        instrument_platform="illumina",
+        collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        country="GBR",
+        host_organism="homo sapiens",
+        specimen_organism="covid",
+        amplicon_scheme="COVID-AMPLISEQ-V1",
+    )
+
+
+@pytest.fixture
 def test_host() -> str:
     return "portal.eit-pathogena.com"
 
@@ -131,6 +144,7 @@ def illumina_covid_mix_amp_gzipped_sample_csv() -> Path:
 @pytest.fixture
 def myco_illumina_amp() -> Path:
     return Path("tests/data/myco_illumina_amp.csv")
+
 
 @pytest.fixture
 def ont_multiple_sample_csv() -> Path:
