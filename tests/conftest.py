@@ -114,6 +114,21 @@ def illumina_sars_cov_2_gzipped_sample_csv() -> Path:
 
 
 @pytest.fixture
+def illumina_covid_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/covid_illumina_amp_scheme.csv")
+
+
+@pytest.fixture
+def illumina_covid_bad_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/covid_illumina_bad_amp_scheme.csv")
+
+
+@pytest.fixture
+def illumina_covid_mix_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/covid_illumina_mix_amp_scheme.csv")
+
+
+@pytest.fixture
 def ont_multiple_sample_csv() -> Path:
     return Path("tests/data/ont-2.csv")
 
