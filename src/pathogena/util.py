@@ -32,6 +32,7 @@ AMPLICON_SCHEMES_LIST = [
     "COVID-VARSKIP-V1a-2b",
 ]
 
+
 class InvalidPathError(Exception):
     """Custom exception for giving nice user errors around missing paths."""
 
