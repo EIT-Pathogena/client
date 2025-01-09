@@ -210,6 +210,9 @@ def create_batch_on_server(
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
+        if validate_only:
+            # Don't attempt to return data if just validating (as there's none there)
+            return
     return response.json()["id"], response.json()["name"]
 
 
