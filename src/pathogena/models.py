@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -48,6 +48,10 @@ class UploadBase(BaseModel):
     )
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
+    )
+    amplicon_scheme: util.AMPLICON_SCHEMES | None = Field(
+        default=None,
+        description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
 
 
@@ -216,6 +220,7 @@ class UploadBatch(BaseModel):
     )
     ran_through_hostile: bool = False
     instrument_platform: str = None
+    amplicon_scheme: Optional[util.AMPLICON_SCHEMES] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -275,6 +280,47 @@ class UploadBatch(BaseModel):
             )
         self.instrument_platform = instrument_platforms[0]
         logging.debug(f"{self.instrument_platform=}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_single_amplicon_scheme(self):
+        """Validate that all samples have the same amplicon scheme, or no amplicon scheme.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If multiple amplicon schemes are found.
+        """
+        amplicon_schemes = [sample.amplicon_scheme for sample in self.samples]
+        if len(set(amplicon_schemes)) != 1:
+            raise ValueError(
+                "Samples within a batch must have the same amplicon_scheme"
+            )
+        self.amplicon_scheme = amplicon_schemes[0]
+        logging.debug(f"{self.amplicon_scheme=}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_no_amplicon_scheme_myco(self):
+        """Validate that if the mycobacteria is the specimen organism, amplicon scheme is not specified.
+
+        Returns:
+            Self: The validated UploadBatch instance.
+
+        Raises:
+            ValueError: If amplicon schemes are found when specimen organism is mycobacteria.
+        """
+        amplicon_schemes = [sample.amplicon_scheme for sample in self.samples]
+        specimen_organisms = [sample.specimen_organism for sample in self.samples]
+
+        if (
+            not all(scheme is None for scheme in amplicon_schemes)
+            and "mycobacteria" in specimen_organisms
+        ):
+            raise ValueError(
+                "amplicon_scheme must not and cannot be specified for mycobacteria"
+            )
         return self
 
     def update_sample_metadata(self, metadata: dict[str, Any] = None) -> None:

@@ -433,6 +433,13 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     show_default=True,
 )
 @click.option(
+    "--amplicon-scheme",
+    type=click.Choice(util.AMPLICON_SCHEMES_LIST),
+    help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
+    default=None,
+    show_default=True,
+)
+@click.option(
     "--ont_read_suffix",
     type=str,
     default=lib.DEFAULT_METADATA["ont_read_suffix"],
@@ -464,6 +471,7 @@ def build_csv(
     subdivision: str = lib.DEFAULT_METADATA["subdivision"],
     district: str = lib.DEFAULT_METADATA["district"],
     pipeline: str = lib.DEFAULT_METADATA["pipeline"],
+    amplicon_scheme: str | None = None,
     host_organism: str = "homo sapiens",
     ont_read_suffix: str = lib.DEFAULT_METADATA["ont_read_suffix"],
     illumina_read1_suffix: str = lib.DEFAULT_METADATA["illumina_read1_suffix"],
@@ -483,6 +491,8 @@ def build_csv(
         instrument_platform (str): The sequencing technology.
         subdivision (str): The subdivision.
         district (str): The district.
+        pipeline (str): The specimen organism.
+        amplicon_scheme (str): The amplicon scheme, used only when SARS-CoV-2 is the specimen organism.
         ont_read_suffix (str): The read file ending for ONT fastq files.
         illumina_read1_suffix (str): The read file ending for Illumina read 1 files.
         illumina_read2_suffix (str): The read file ending for Illumina read 2 files.
@@ -501,6 +511,7 @@ def build_csv(
         subdivision=subdivision,
         district=district,
         specimen_organism=pipeline,  # type: ignore
+        amplicon_scheme=amplicon_scheme,
         host_organism=host_organism,
         ont_read_suffix=ont_read_suffix,
         illumina_read1_suffix=illumina_read1_suffix,
