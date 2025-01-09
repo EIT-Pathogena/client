@@ -118,6 +118,24 @@ def check_authentication(host: str) -> None:
             "Authentication failed. You may need to re-authenticate with `pathogena auth`"
         )
 
+def get_amplicon_schemes() -> list[str | None]:
+    """Fetch valid amplicon schemes from the server.
+
+    Returns:
+        list[str | None]: List of valid amplicon schemes.
+    """
+    with httpx.Client(event_hooks=util.httpx_hooks):
+        response = httpx.get(
+            f"{get_protocol()}://{host}/api/v1/amplicon_schemes",
+            headers={"Authorization": f"Bearer {util.get_access_token(DEFAULT_HOST)}"},
+        )
+    if response.is_error:
+        logging.error(f"Authentication failed for host {DEFAULT_HOST}")
+        raise RuntimeError(
+            "Authentication failed. You may need to re-authenticate with `pathogena auth`"
+        )
+    return response.json()["amplicon_schemes"]
+
 
 def get_credit_balance(host: str) -> None:
     """Get the credit balance for the user.

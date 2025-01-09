@@ -435,7 +435,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 )
 @click.option(
     "--amplicon-scheme",
-    type=click.Choice(util.AMPLICON_SCHEMES_LIST),
+    type=click.Choice(lib.get_amplicon_schemes()),
     help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
     default=None,
     show_default=True,
