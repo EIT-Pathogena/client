@@ -119,6 +119,24 @@ def check_authentication(host: str) -> None:
         )
 
 
+def get_amplicon_schemes(host: str | None = None) -> list[str]:
+    """Fetch valid amplicon schemes from the server.
+
+    Returns:
+        list[str]: List of valid amplicon schemes.
+    """
+    with httpx.Client(event_hooks=util.httpx_hooks):
+        response = httpx.get(
+            f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
+        )
+    if response.is_error:
+        logging.error(f"Amplicon schemes could not be fetched from {get_host(host)}")
+        raise RuntimeError(
+            f"Amplicon schemes could not be fetched from the {get_host(host)}. Please try again later."
+        )
+    return [val for val in response.json()["amplicon_schemes"] if val is not None]
+
+
 def get_credit_balance(host: str) -> None:
     """Get the credit balance for the user.
 
@@ -143,7 +161,12 @@ def get_credit_balance(host: str) -> None:
             )
 
 
-def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]:
+def create_batch_on_server(
+    host: str,
+    number_of_samples: int,
+    amplicon_scheme: str | None,
+    validate_only: bool = False,
+) -> tuple[str, str]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -152,6 +175,8 @@ def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]
     Args:
         host (str): The host server.
         number_of_samples (int): The expected number of samples in the batch.
+        amplicon_scheme (str | None): The amplicon scheme to use.
+        validate_only (bool): Whether to validate only. Defaults to False.
 
     Returns:
         tuple[str, str]: The batch ID and name.
@@ -169,17 +194,25 @@ def create_batch_on_server(host: str, number_of_samples: int) -> tuple[str, str]
     data = {
         "telemetry_data": telemetry_data,
         "expected_sample_count": number_of_samples,
+        "amplicon_scheme": amplicon_scheme,
     }
+    url = f"{get_protocol()}://{host}/api/v1/batches"
+    if validate_only:
+        url += "/validate_creation"
+
     with httpx.Client(
         event_hooks=util.httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
         response = client.post(
-            f"{get_protocol()}://{host}/api/v1/batches",
+            url,
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
             json=data,
         )
+        if validate_only:
+            # Don't attempt to return data if just validating (as there's none there)
+            return
     return response.json()["id"], response.json()["name"]
 
 
@@ -332,6 +365,7 @@ def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
     host: str = DEFAULT_HOST,
+    validate_only: bool = False,
 ) -> None:
     """Upload a batch of samples.
 
@@ -342,8 +376,14 @@ def upload_batch(
         output_dir (Path): The output directory for the uploaded files.
     """
     batch_id, batch_name = create_batch_on_server(
-        host=host, number_of_samples=len(batch.samples)
+        host=host,
+        number_of_samples=len(batch.samples),
+        amplicon_scheme=batch.samples[0].amplicon_scheme,
+        validate_only=validate_only,
     )
+    if validate_only:
+        logging.info(f"Batch creation for {batch_name} validated successfully")
+        return
     mapping_csv_records = []
     upload_meta = []
     for sample in batch.samples:  # generate metadata

@@ -1,10 +1,26 @@
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from pathogena.create_upload_csv import UploadData
 from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_amplicon_scheme():
+    with patch("pathogena.lib.get_amplicon_schemes") as get_amplicon_schemes_mock:
+        get_amplicon_schemes_mock.return_value = []
+        yield
+
+
+@pytest.fixture
+def cli_main():
+    # Required to be a fixture to ensure it is patched before use
+    from pathogena.cli import main
+
+    return main
 
 
 @pytest.fixture
@@ -19,8 +35,26 @@ def upload_data() -> UploadData:
 
 
 @pytest.fixture
+def upload_data_sars_cov_2_amp() -> UploadData:
+    return UploadData(
+        batch_name="batch_name",
+        instrument_platform="illumina",
+        collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        country="GBR",
+        host_organism="homo sapiens",
+        specimen_organism="sars-cov-2",
+        amplicon_scheme="COVID-AMPLISEQ-V1",
+    )
+
+
+@pytest.fixture
 def test_host() -> str:
     return "portal.eit-pathogena.com"
+
+
+@pytest.fixture
+def reads() -> Path:
+    return Path("tests/data/reads")
 
 
 @pytest.fixture
@@ -39,13 +73,13 @@ def bad_1_1_fastq_gz() -> Path:
 
 
 @pytest.fixture
-def sars_cov_2_1_1_fastq() -> Path:
-    return Path("tests/data/reads/sars-cov-2_1_1.fastq")
+def sars_cov_2_1_1_fastq_gz() -> Path:
+    return Path("tests/data/reads/sars-cov-2_1_1.fastq.gz")
 
 
 @pytest.fixture
-def sars_cov_2_1_2_fastq() -> Path:
-    return Path("tests/data/reads/sars-cov-2_1_2.fastq")
+def sars_cov_2_1_2_fastq_gz() -> Path:
+    return Path("tests/data/reads/sars-cov-2_1_2.fastq.gz")
 
 
 @pytest.fixture
@@ -101,6 +135,31 @@ def ont_sample_csv() -> Path:
 @pytest.fixture
 def ont_gzipped_sample_csv() -> Path:
     return Path("tests/data/ont-gzipped.csv")
+
+
+@pytest.fixture
+def illumina_sars_cov_2_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars-cov-2_illumina.csv")
+
+
+@pytest.fixture
+def illumina_sars_cov_2_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_amp_scheme.csv")
+
+
+@pytest.fixture
+def illumina_sars_cov_2_bad_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_bad_amp_scheme.csv")
+
+
+@pytest.fixture
+def illumina_sars_cov_2_mix_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_mix_amp_scheme.csv")
+
+
+@pytest.fixture
+def myco_illumina_amp() -> Path:
+    return Path("tests/data/myco_illumina_amp.csv")
 
 
 @pytest.fixture
