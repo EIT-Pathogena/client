@@ -214,7 +214,6 @@ def create_sample(
         "instrument_platform": sample.instrument_platform,
         "specimen_organism": sample.specimen_organism,
         "host_organism": sample.host_organism,
-        "amplicon_scheme": sample.amplicon_scheme,
     }
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     logging.debug(f"Sample {data=}")
