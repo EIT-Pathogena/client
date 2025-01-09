@@ -371,6 +371,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """
     host = lib.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
+    lib.upload_batch(batch=batch, host=host, save=False, validate_only=True)
     lib.validate_upload_permissions(batch=batch, protocol=lib.get_protocol(), host=host)
     batch.validate_all_sample_fastqs()
     logging.info(f"Successfully validated {upload_csv}")
@@ -434,7 +435,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 )
 @click.option(
     "--amplicon-scheme",
-    type=click.Choice(util.AMPLICON_SCHEMES_LIST),
+    type=click.Choice(lib.get_amplicon_schemes()),
     help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
     default=None,
     show_default=True,
@@ -524,6 +525,20 @@ def build_csv(
         output_csv,
         upload_data,
     )
+
+
+@main.command()
+@click.option("--host", type=str, default=None, help="API hostname (for development)")
+def get_amplicon_schemes(*, host: str | None = None) -> None:
+    """Get valid amplicon schemes from the server.
+
+    Args:
+        host (str | None): The host server (for development).
+    """
+    schemes = lib.get_amplicon_schemes(host=host)
+    logging.info("Valid amplicon schemes:")
+    for scheme in schemes:
+        logging.info(scheme)
 
 
 if __name__ == "__main__":
