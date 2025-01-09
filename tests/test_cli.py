@@ -52,7 +52,9 @@ def test_cli_decontaminate_illumina(cli_main, illumina_sample_csv: Path) -> None
 
 
 @pytest.mark.slow
-def test_cli_decontaminate_illumina_with_output_dir(cli_main, illumina_sample_csv: Path) -> None:
+def test_cli_decontaminate_illumina_with_output_dir(
+    cli_main, illumina_sample_csv: Path
+) -> None:
     """Test the CLI decontaminate command for Illumina samples with an output directory.
 
     Args:

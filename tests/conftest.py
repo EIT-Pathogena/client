@@ -14,11 +14,14 @@ def mock_amplicon_scheme():
         get_amplicon_schemes_mock.return_value = []
         yield
 
+
 @pytest.fixture
 def cli_main():
     # Required to be a fixture to ensure it is patched before use
     from pathogena.cli import main
+
     return main
+
 
 @pytest.fixture
 def upload_data() -> UploadData:
