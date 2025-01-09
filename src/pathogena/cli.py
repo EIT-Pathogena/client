@@ -527,5 +527,19 @@ def build_csv(
     )
 
 
+@main.command()
+@click.option("--host", type=str, default=None, help="API hostname (for development)")
+def get_amplicon_schemes(*, host: str | None = None) -> None:
+    """Get valid amplicon schemes from the server.
+
+    Args:
+        host (str | None): The host server (for development).
+    """
+    schemes = lib.get_amplicon_schemes(host=host)
+    logging.info("Valid amplicon schemes:")
+    for scheme in schemes:
+        logging.info(scheme)
+
+
 if __name__ == "__main__":
     main(sys.argv[1:])

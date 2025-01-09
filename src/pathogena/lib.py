@@ -118,7 +118,8 @@ def check_authentication(host: str) -> None:
             "Authentication failed. You may need to re-authenticate with `pathogena auth`"
         )
 
-def get_amplicon_schemes() -> list[str]:
+
+def get_amplicon_schemes(host: str | None = None) -> list[str]:
     """Fetch valid amplicon schemes from the server.
 
     Returns:
@@ -126,12 +127,12 @@ def get_amplicon_schemes() -> list[str]:
     """
     with httpx.Client(event_hooks=util.httpx_hooks):
         response = httpx.get(
-            f"{get_protocol()}://{get_host(None)}/api/v1/amplicon_schemes",
+            f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
         )
     if response.is_error:
-        logging.error(f"Amplicon schemes could not be fetched from {get_host(None)}")
+        logging.error(f"Amplicon schemes could not be fetched from {get_host(host)}")
         raise RuntimeError(
-            f"Amplicon schemes could not be fetched from the {get_host(None)}. Please try again later."
+            f"Amplicon schemes could not be fetched from the {get_host(host)}. Please try again later."
         )
     return [val for val in response.json()["amplicon_schemes"] if val is not None]
 
@@ -160,7 +161,12 @@ def get_credit_balance(host: str) -> None:
             )
 
 
-def create_batch_on_server(host: str, number_of_samples: int, amplicon_scheme: str | None, validate_only: bool = False) -> tuple[str, str]:
+def create_batch_on_server(
+    host: str,
+    number_of_samples: int,
+    amplicon_scheme: str | None,
+    validate_only: bool = False,
+) -> tuple[str, str]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -367,7 +373,10 @@ def upload_batch(
         output_dir (Path): The output directory for the uploaded files.
     """
     batch_id, batch_name = create_batch_on_server(
-        host=host, number_of_samples=len(batch.samples), amplicon_scheme=batch.samples[0].amplicon_scheme, validate_only=validate_only
+        host=host,
+        number_of_samples=len(batch.samples),
+        amplicon_scheme=batch.samples[0].amplicon_scheme,
+        validate_only=validate_only,
     )
     if validate_only:
         logging.info(f"Batch creation for {batch_name} validated successfully")
