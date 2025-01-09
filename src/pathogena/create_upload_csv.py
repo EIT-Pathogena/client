@@ -126,11 +126,11 @@ def _write_csv(
     upload_data: UploadData,
 ) -> None:
     """Build a CSV file for upload to EIT Pathogena.
+
     Args:
         data (list[dict]): The data to write.
         output_csv (Path): The path to the output CSV file.
     """
-
     use_amplicon_scheme = (
         upload_data.amplicon_scheme is not None
         and upload_data.specimen_organism == "sars-cov-2"
