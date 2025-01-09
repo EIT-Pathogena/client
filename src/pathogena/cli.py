@@ -435,7 +435,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 @click.option(
     "--amplicon-scheme",
     type=click.Choice(util.AMPLICON_SCHEMES_LIST),
-    help="Amplicon scheme, use only when covid is the specimen organism",
+    help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
     default=None,
     show_default=True,
 )
@@ -492,7 +492,7 @@ def build_csv(
         subdivision (str): The subdivision.
         district (str): The district.
         pipeline (str): The specimen organism.
-        amplicon_scheme (str): The amplicon scheme, used only when covid is the specimen organism.
+        amplicon_scheme (str): The amplicon scheme, used only when SARS-CoV-2 is the specimen organism.
         ont_read_suffix (str): The read file ending for ONT fastq files.
         illumina_read1_suffix (str): The read file ending for Illumina read 1 files.
         illumina_read2_suffix (str): The read file ending for Illumina read 2 files.

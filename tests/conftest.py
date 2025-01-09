@@ -19,14 +19,14 @@ def upload_data() -> UploadData:
 
 
 @pytest.fixture
-def upload_data_covid_amp() -> UploadData:
+def upload_data_sars_cov_2_amp() -> UploadData:
     return UploadData(
         batch_name="batch_name",
         instrument_platform="illumina",
         collection_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
         country="GBR",
         host_organism="homo sapiens",
-        specimen_organism="covid",
+        specimen_organism="sars-cov-2",
         amplicon_scheme="COVID-AMPLISEQ-V1",
     )
 
@@ -127,18 +127,18 @@ def illumina_sars_cov_2_gzipped_sample_csv() -> Path:
 
 
 @pytest.fixture
-def illumina_covid_amp_gzipped_sample_csv() -> Path:
-    return Path("tests/data/covid_illumina_amp_scheme.csv")
+def illumina_sars_cov_2_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_amp_scheme.csv")
 
 
 @pytest.fixture
-def illumina_covid_bad_amp_gzipped_sample_csv() -> Path:
-    return Path("tests/data/covid_illumina_bad_amp_scheme.csv")
+def illumina_sars_cov_2_bad_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_bad_amp_scheme.csv")
 
 
 @pytest.fixture
-def illumina_covid_mix_amp_gzipped_sample_csv() -> Path:
-    return Path("tests/data/covid_illumina_mix_amp_scheme.csv")
+def illumina_sars_cov_2_mix_amp_gzipped_sample_csv() -> Path:
+    return Path("tests/data/sars_cov_2_illumina_mix_amp_scheme.csv")
 
 
 @pytest.fixture

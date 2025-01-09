@@ -51,7 +51,7 @@ class UploadBase(BaseModel):
     )
     amplicon_scheme: util.AMPLICON_SCHEMES | None = Field(
         default=None,
-        description="If a batch of covid samples, provides the amplicon scheme",
+        description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
 
 

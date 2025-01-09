@@ -120,43 +120,43 @@ def test_validate_sars_cov_2_specimen_organism(
     models.create_batch_from_csv(illumina_sars_cov_2_gzipped_sample_csv)
 
 
-def test_validate_covid_specimen_organism_amp_scheme(
-    illumina_covid_amp_gzipped_sample_csv: Path,
+def test_validate_sars_cov_2_specimen_organism_amp_scheme(
+    illumina_sars_cov_2_amp_gzipped_sample_csv: Path,
 ) -> None:
-    """Test validation of COVID specimen organism.
+    """Test validation of SARS-CoV-2 specimen organism.
 
     Args:
-        covid_sample_csv (Path): Path to the CSV file with COVID sample data.
+        sars_cov_2_sample_csv (Path): Path to the CSV file with SARS-CoV-2 sample data.
     """
-    models.create_batch_from_csv(illumina_covid_amp_gzipped_sample_csv)
+    models.create_batch_from_csv(illumina_sars_cov_2_amp_gzipped_sample_csv)
 
 
-def test_validate_covid_specimen_organism_bad_amp_scheme(
-    illumina_covid_bad_amp_gzipped_sample_csv: Path,
+def test_validate_sars_cov_2_specimen_organism_bad_amp_scheme(
+    illumina_sars_cov_2_bad_amp_gzipped_sample_csv: Path,
 ) -> None:
-    """Test validation of COVID specimen organism.
+    """Test validation of SARS-CoV-2 specimen organism.
 
     Args:
-        covid_sample_csv (Path): Path to a CSV file with COVID sample data
+        sars_cov_2_sample_csv (Path): Path to a CSV file with SARS-CoV-2 sample data
         and an invalid value for amp scheme.
     """
 
     with pytest.raises(ValidationError):
-        models.create_batch_from_csv(illumina_covid_bad_amp_gzipped_sample_csv)
+        models.create_batch_from_csv(illumina_sars_cov_2_bad_amp_gzipped_sample_csv)
 
 
-def test_validate_covid_specimen_organism_mix_amp_scheme(
-    illumina_covid_mix_amp_gzipped_sample_csv: Path,
+def test_validate_sars_cov_2_specimen_organism_mix_amp_scheme(
+    illumina_sars_cov_2_mix_amp_gzipped_sample_csv: Path,
 ) -> None:
-    """Test validation of COVID specimen organism.
+    """Test validation of SARS-CoV-2 specimen organism.
 
     Args:
-        covid_sample_csv (Path): Path to a CSV file with COVID sample data
+        sars_cov_2_sample_csv (Path): Path to a CSV file with SARS-CoV-2 sample data
         and more than one value for amp scheme in the batch.
     """
 
     with pytest.raises(ValidationError):
-        models.create_batch_from_csv(illumina_covid_mix_amp_gzipped_sample_csv)
+        models.create_batch_from_csv(illumina_sars_cov_2_mix_amp_gzipped_sample_csv)
 
 
 def test_validate_myco_amp_scheme(
@@ -165,7 +165,7 @@ def test_validate_myco_amp_scheme(
     """Test validation of myco specimen organism.
 
     Args:
-        covid_sample_csv (Path): Path to a CSV file with myco sample data
+        myco_illumina_amp (Path): Path to a CSV file with myco sample data
         with amp scheme specified.
     """
 

@@ -39,8 +39,11 @@ def test_build_csv_illumina(
         in caplog.text
     )
 
-def test_build_csv_illumina_covid_amp(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data_covid_amp: UploadData
+
+def test_build_csv_illumina_sars_cov_2_amp(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    upload_data_sars_cov_2_amp: UploadData,
 ) -> None:
     """Test building CSV for Illumina platform.
 
@@ -50,17 +53,18 @@ def test_build_csv_illumina_covid_amp(
     Args:
         tmp_path (Path): Temporary path for output files.
         caplog (pytest.LogCaptureFixture): Fixture to capture log output.
-        upload_data_covid_amp (UploadData): Data required for building the upload CSV.
+        upload_data_sars_cov_2_amp (UploadData): Data required for building the upload CSV.
     """
     caplog.set_level(logging.INFO)
     build_upload_csv(
         "tests/data/empty_files",
         f"{tmp_path}/output.csv",
-        upload_data_covid_amp,
+        upload_data_sars_cov_2_amp,
     )
 
     assert filecmp.cmp(
-        "tests/data/auto_upload_csvs/covid_illumina_amp_scheme.csv", f"{tmp_path}/output.csv"
+        "tests/data/auto_upload_csvs/sars_cov_2_illumina_amp_scheme.csv",
+        f"{tmp_path}/output.csv",
     )
 
     assert "Created 1 CSV files: output.csv" in caplog.text
@@ -68,6 +72,7 @@ def test_build_csv_illumina_covid_amp(
         "You can use `pathogena validate` to check the CSV files before uploading."
         in caplog.text
     )
+
 
 def test_build_csv_ont(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData

@@ -130,10 +130,10 @@ def _write_csv(
         data (list[dict]): The data to write.
         output_csv (Path): The path to the output CSV file.
     """
-    
+
     use_amplicon_scheme = (
         upload_data.amplicon_scheme is not None
-        and upload_data.specimen_organism == "covid"
+        and upload_data.specimen_organism == "sars-cov-2"
     )
 
     # Note that csv module uses CRLF line endings
