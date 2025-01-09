@@ -371,6 +371,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """
     host = lib.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
+    lib.upload_batch(batch=batch, host=host, save=False, validate_only=True)
     lib.validate_upload_permissions(batch=batch, protocol=lib.get_protocol(), host=host)
     batch.validate_all_sample_fastqs()
     logging.info(f"Successfully validated {upload_csv}")
