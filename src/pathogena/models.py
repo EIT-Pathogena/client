@@ -49,7 +49,7 @@ class UploadBase(BaseModel):
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    amplicon_scheme: util.AMPLICON_SCHEMES | None = Field(
+    amplicon_scheme: str | None = Field(
         default=None,
         description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
@@ -220,7 +220,7 @@ class UploadBatch(BaseModel):
     )
     ran_through_hostile: bool = False
     instrument_platform: str = None
-    amplicon_scheme: Optional[util.AMPLICON_SCHEMES] = None
+    amplicon_scheme: Optional[str] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

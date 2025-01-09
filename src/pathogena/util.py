@@ -31,18 +31,6 @@ AMPLICON_SCHEMES_LIST = [
     "COVID-MIDNIGHT-1200",
     "COVID-VARSKIP-V1a-2b",
 ]
-AMPLICON_SCHEMES = Literal[
-    "",
-    "Automatic Detection",
-    "COVID-AMPLISEQ-V1",
-    "COVID-ARTIC-V3",
-    "COVID-ARTIC-V4.1",
-    "COVID-ARTIC-V5.0-5.2.0_1200",
-    "COVID-ARTIC-V5.0-5.3.2_400",
-    "COVID-MIDNIGHT-1200",
-    "COVID-VARSKIP-V1a-2b",
-]
-
 
 class InvalidPathError(Exception):
     """Custom exception for giving nice user errors around missing paths."""
