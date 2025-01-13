@@ -375,7 +375,6 @@ def upload_batch(
         threads (int): The number of threads to use.
         output_dir (Path): The output directory for the uploaded files.
     """
-    logging.warning(f"Uploading {batch=} to {host}")
     batch_id, batch_name = create_batch_on_server(
         host=host,
         number_of_samples=len(batch.samples),
