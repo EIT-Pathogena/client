@@ -212,7 +212,7 @@ def create_batch_on_server(
         )
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
-            return
+            return None, None
     return response.json()["id"], response.json()["name"]
 
 
