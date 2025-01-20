@@ -375,23 +375,23 @@ def prepare_files(
                 }
             )
 
-    form_details = {
-        "files_to_upload": [
-            {
-                k
-                if k != "name" and k != "size"
-                else "original_file_name"
-                if k == "name"
-                else "file_size_in_kb": v
-                for k, v in sample.items()
-                if k != "content_type"  # remove content type for api call
-            }
-            for sample in samples
-        ]
-    }
+    files_to_upload = []
+    for sample in samples:
+        sample_payload = {}
+
+        sample_payload["original_file_name"] = sample.get("name")
+        sample_payload["file_size_in_kb"] = sample.get("size")
+
+        if len(sample.get("control", "")) > 0:
+            sample_payload["control"] = sample.get("control")
+        if sample.get("specimen_organism"):
+            sample_payload["specimen_organism"] = sample.get("specimen_organism")
+
+        files_to_upload.append(sample_payload)
+
+    form_details = {"files_to_upload": files_to_upload}
     try:
         # start upload session
-        # NEED A VALUE FOR CONTROL FOR API TO NOT ERROR, BUT VALIDATION OF UPLOAD DATA ALLOWS VALUES OF positive, negative ""
         start_session = api_client.batches_samples_start_upload_session_create(
             batch_pk=batch_pk, data=form_details
         )

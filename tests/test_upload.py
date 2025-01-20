@@ -53,9 +53,7 @@ class TestPrepareFile:
         self.upload_data = UploadSample(
             sample_name="sample1",
             upload_csv=Path("tests/data/illumina.csv"),
-            reads_1=Path(
-                "/Users/sarahmapplebeck/Documents/eit/client/tests/data/reads/tuberculosis_1_1.fastq"
-            ),
+            reads_1=Path("reads/tuberculosis_1_1.fastq"),
             control="positive",
             instrument_platform="illumina",
             collection_date=date(2024, 12, 10),
