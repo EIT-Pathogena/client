@@ -21,15 +21,17 @@ from pathogena.constants import (
     CPU_COUNT,
     DEFAULT_HOST,
     DEFAULT_PROTOCOL,
+    DEFAULT_UPLOAD_HOST,
     HOSTILE_INDEX_NAME,
 )
 from pathogena.errors import MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch, UploadSample
+from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
 from pathogena.upload_utils import (
     UploadFileType,
     get_batch_upload_status,
     get_upload_host,
+    prepare_files,
 )
 from pathogena.util import get_access_token, get_token_path
 
@@ -78,6 +80,7 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
+            follow_redirects=True,
         )
     data = response.json()
 
@@ -107,6 +110,7 @@ def check_authentication(host: str) -> None:
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            follow_redirects=True,
         )
     if response.is_error:
         logging.error(f"Authentication failed for host {host}")
@@ -121,7 +125,7 @@ def get_amplicon_schemes(host: str | None = None) -> list[str]:
     Returns:
         list[str]: List of valid amplicon schemes.
     """
-    with httpx.Client(event_hooks=util.httpx_hooks):
+    with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
         )
@@ -148,6 +152,7 @@ def get_credit_balance(host: str) -> None:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/credits/balance",
             headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            follow_redirects=True,
         )
         if response.status_code == 200:
             logging.info(f"Your remaining account balance is {response.text} credits")
@@ -158,6 +163,7 @@ def get_credit_balance(host: str) -> None:
 
 
 def create_batch_on_server(
+    batch: UploadBatch,
     host: str,
     number_of_samples: int,
     amplicon_scheme: str | None,
@@ -177,19 +183,20 @@ def create_batch_on_server(
     Returns:
         tuple[str, str]: The batch ID and name.
     """
-    telemetry_data = {
-        "client": {
-            "name": "pathogena-client",
-            "version": pathogena.__version__,
-        },
-        "decontamination": {
-            "name": "hostile",
-            "version": hostile.__version__,
-        },
-    }
+    # Assume every sample in batch has same collection date and country etc
+    instrument_platform = batch.samples[0].instrument_platform
+    collection_date = batch.samples[0].collection_date
+    country = batch.samples[0].country
+    batch_name = (
+        batch.samples[0].batch_name
+        if batch.samples[0].batch_name not in ["", " ", None]
+        else f"batch_{collection_date}"
+    )
     data = {
-        "telemetry_data": telemetry_data,
-        "expected_sample_count": number_of_samples,
+        "collection_date": str(collection_date),
+        "instrument": instrument_platform,
+        "country": country,
+        "name": batch_name,
         "amplicon_scheme": amplicon_scheme,
     }
     url = f"{get_protocol()}://{host}/api/v1/batches"
@@ -197,14 +204,19 @@ def create_batch_on_server(
         url += "/validate_creation"
 
     with httpx.Client(
-        event_hooks=httpx_hooks,
+        # event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
+        follow_redirects=True,
     ) as client:
-        response = client.post(
-            url,
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+        response = httpx.post(
+            f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
+            headers={
+                "Authorization": f"Bearer {util.get_access_token(host)}",
+                "accept": "application/json",
+            },
             json=data,
+            follow_redirects=True,
         )
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
@@ -255,6 +267,7 @@ def create_sample(
             f"{get_protocol()}://{host}/api/v1/samples",
             headers=headers,
             json=data,
+            follow_redirects=True,
         )
     return response.json()["id"]
 
@@ -285,6 +298,7 @@ def run_sample(sample_id: str, host: str) -> str:
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs",
             headers=headers,
             json={"sample_id": sample_id},
+            follow_redirects=True,
         )
         run_id = post_run_response.json()["id"]
         client.patch(
@@ -372,6 +386,7 @@ def upload_batch(
         output_dir (Path): The output directory for the uploaded files.
     """
     batch_id, batch_name = create_batch_on_server(
+        batch=batch,
         host=host,
         number_of_samples=len(batch.samples),
         amplicon_scheme=batch.samples[0].amplicon_scheme,
@@ -381,57 +396,77 @@ def upload_batch(
         logging.info(f"Batch creation for {batch_name} validated successfully")
         return
     mapping_csv_records = []
-    upload_meta = []
-    for sample in batch.samples:  # generate metadata
-        sample_id = create_sample(
-            host=host,
-            batch_id=batch_id,
-            sample=sample,
-        )
-        logging.debug(f"{sample_id=}")
-        if sample.reads_1_cleaned_path and batch.ran_through_hostile:
-            sample.reads_1_upload_file = prepare_upload_files(
-                target_filepath=sample.reads_1_cleaned_path,
-                sample_id=sample_id,
-                decontaminated=batch.ran_through_hostile,
-                read_num=1,
-            )
-        else:
-            sample.reads_1_upload_file = sample.reads_1_resolved_path
-        if (
-            sample.is_illumina()
-            and batch.ran_through_hostile
-            and sample.reads_2_cleaned_path
-        ):
-            sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=sample.reads_2_cleaned_path,
-                sample_id=sample_id,
-                decontaminated=batch.ran_through_hostile,
-                read_num=2,
-            )
-        elif sample.is_illumina() and sample.reads_2_resolved_path:
-            sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=sample.reads_2_resolved_path,
-                sample_id=sample_id,
-                decontaminated=batch.ran_through_hostile,
-                read_num=2,
-            )
+    # upload_meta = []
 
-        upload_meta.append(
-            (
-                sample.sample_name,
-                sample_id,
-                sample.reads_1_upload_file,
-                sample.reads_2_upload_file if sample.is_illumina() else None,
-                sample.reads_1_dirty_checksum,
-                sample.reads_2_dirty_checksum if sample.is_illumina() else None,
-            )
-        )
+    prepared_files = prepare_files(
+        batch_pk=int(batch_id),
+        files=batch.samples,
+        api_client=batch_upload_apis.APIClient(),
+    )
+
+    # initialise class
+    upload_file_type = UploadFileType(
+        access_token=util.get_access_token(get_host(None)),
+        batch_pk=int(batch_id),
+        env=get_upload_host(),
+        samples=batch.samples,
+        upload_session=prepared_files["uploadSession"],
+    )
+
+    upload_session_name = prepared_files["uploadSessionData"]["name"]
+
+    for file in prepared_files["files"]:
+        # generate metadata
+        #     sample_id = create_sample(
+        #         host=host,
+        #         batch_id=batch_id,
+        #         sample=sample,
+        #     )
+        #     logging.debug(f"{sample_id=}")
+        #     if sample.reads_1_cleaned_path and batch.ran_through_hostile:
+        #         sample.reads_1_upload_file = prepare_upload_files(
+        #             target_filepath=sample.reads_1_cleaned_path,
+        #             sample_id=sample_id,
+        #             decontaminated=batch.ran_through_hostile,
+        #             read_num=1,
+        #         )
+        #     else:
+        #         sample.reads_1_upload_file = sample.reads_1_resolved_path
+        #     if (
+        #         sample.is_illumina()
+        #         and batch.ran_through_hostile
+        #         and sample.reads_2_cleaned_path
+        #     ):
+        #         sample.reads_2_upload_file = prepare_upload_files(
+        #             target_filepath=sample.reads_2_cleaned_path,
+        #             sample_id=sample_id,
+        #             decontaminated=batch.ran_through_hostile,
+        #             read_num=2,
+        #         )
+        #     elif sample.is_illumina() and sample.reads_2_resolved_path:
+        #         sample.reads_2_upload_file = prepare_upload_files(
+        #             target_filepath=sample.reads_2_resolved_path,
+        #             sample_id=sample_id,
+        #             decontaminated=batch.ran_through_hostile,
+        #             read_num=2,
+        #         )
+
+        #     upload_meta.append(
+        #         (
+        #             sample.sample_name,
+        #             sample_id,
+        #             sample.reads_1_upload_file,
+        #             sample.reads_2_upload_file if sample.is_illumina() else None,
+        #             sample.reads_1_dirty_checksum,
+        #             sample.reads_2_dirty_checksum if sample.is_illumina() else None,
+        #         )
+        #     )
+
         mapping_csv_records.append(
             {
-                "batch_name": sample.batch_name,
-                "sample_name": sample.sample_name,
-                "remote_sample_name": sample_id,
+                "batch_name": upload_session_name,
+                "sample_name": file["file"]["name"],
+                "remote_sample_name": file["sample_id"],
                 "remote_batch_name": batch_name,
                 "remote_batch_id": batch_id,
             }
@@ -442,19 +477,15 @@ def upload_batch(
         "You can monitor the progress of your batch in EIT Pathogena here: "
         f"{get_protocol()}://{host}/batches/{batch_id}"
     )
-
-    upload_file_type = UploadFileType(
-        access_token=util.get_access_token(get_host(None)),
-        batch_pk=batch_id,
-        env=get_upload_host(),
-        samples=batch.samples,
-    )
+    # REMEBER T?HAT HAVE ISSUE WITHC CONTROL TYPE - allows none but api endpoint does not - do any samples have this?
+    # need discussion around sample metadata, logging
 
     batch_status = get_batch_upload_status(batch_id)
+
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
-        instrument_code=batch.instrument_platform,
-        api_client=batch_upload_apis.APIClient(upload_file_type.env),
+        prepared_files=prepared_files,
+        api_client=batch_upload_apis.APIClient(),
         sample_uploads=batch_status.get("samples"),
     )
 
@@ -499,6 +530,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
             f"{protocol}://{host}/api/v1/batches/validate",
             headers=headers,
             json=data,
+            follow_redirects=True,
         )
     logging.debug(f"{response.json()=}")
 
@@ -521,6 +553,7 @@ def fetch_sample(sample_id: str, host: str) -> dict:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
+            follow_redirects=True,
         )
     return response.json()
 
@@ -615,6 +648,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
+            follow_redirects=True,
         )
     data = response.json().get("files", [])
     output_files = {
@@ -650,6 +684,7 @@ def fetch_output_files(
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
+            follow_redirects=True,
         )
     data = response.json().get("files", [])
     output_files = {
@@ -696,7 +731,7 @@ def check_version_compatibility(host: str) -> None:
         timeout=10,
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/cli-version",
+            f"{get_protocol()}://{host}/cli-version", follow_redirects=True
         )
     lowest_cli_version = response.json()["version"]
     logging.debug(
@@ -715,6 +750,7 @@ def check_for_newer_version() -> None:
             response = client.get(
                 pathogena_pypi_url,
                 headers={"Accept": "application/json"},
+                follow_redirects=True,
             )
             if response.status_code == 200:
                 latest_version = Version(

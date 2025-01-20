@@ -214,12 +214,12 @@ def upload(
         lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
         if skip_decontamination:
             batch.validate_all_sample_fastqs()
-            batch.update_sample_metadata()
+            x = batch.update_sample_metadata()
         else:
             cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
                 batch, threads, output_dir=output_dir
             )
-            batch.update_sample_metadata(metadata=cleaned_batch_metadata)
+            x = batch.update_sample_metadata(metadata=cleaned_batch_metadata)
         lib.upload_batch(batch=batch, host=host, save=save)
         lib.get_credit_balance(host=host)
     else:
@@ -424,7 +424,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     "--district",
     type=str,
     help="District",
-    default=lib.DEFAULT_METADATA["district"],
+    default=constants.DEFAULT_METADATA["district"],
     show_default=True,
 )
 @click.option(
@@ -432,7 +432,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     "pipeline",
     type=click.Choice(["mycobacteria", "sars-cov-2"]),
     help="Specimen organism",
-    default=lib.DEFAULT_METADATA["pipeline"],
+    default=constants.DEFAULT_METADATA["pipeline"],
     show_default=True,
 )
 @click.option(
@@ -471,9 +471,9 @@ def build_csv(
     batch_name: str,
     collection_date: datetime,
     country: str,
-    subdivision: str = lib.DEFAULT_METADATA["subdivision"],
-    district: str = lib.DEFAULT_METADATA["district"],
-    pipeline: str = lib.DEFAULT_METADATA["pipeline"],
+    subdivision: str = constants.DEFAULT_METADATA["subdivision"],
+    district: str = constants.DEFAULT_METADATA["district"],
+    pipeline: str = constants.DEFAULT_METADATA["pipeline"],
     amplicon_scheme: str | None = None,
     host_organism: str = "homo sapiens",
     ont_read_suffix: str = constants.DEFAULT_METADATA["ont_read_suffix"],

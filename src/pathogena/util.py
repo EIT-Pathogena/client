@@ -20,6 +20,7 @@ load_dotenv()
 
 PLATFORMS = Literal["illumina", "ont"]
 
+
 def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
     """Wrapper for running shell command subprocesses.
 
@@ -126,7 +127,6 @@ def validate_guids(guids: set[str]) -> bool:
         return all(uuid.UUID(str(guid)) for guid in guids)
     except ValueError:
         return False
-
 
 
 def map_control_value(v: str) -> bool | None:

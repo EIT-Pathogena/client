@@ -1,7 +1,10 @@
+import base64
+import io
 import json
 import logging
 import math
 import os
+import sys
 from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -13,10 +16,26 @@ from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from pathogena.batch_upload_apis import APIClient, APIError
-from pathogena.constants import DEFAULT_CHUNK_SIZE, DEFAULT_UPLOAD_HOST
+from pathogena.constants import DEFAULT_CHUNK_SIZE, DEFAULT_HOST, DEFAULT_UPLOAD_HOST
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadSample
 from pathogena.util import get_access_token
+
+
+def get_host(cli_host: str | None = None) -> str:
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
+
+    Args:
+        cli_host (str | None): The host provided via CLI argument.
+
+    Returns:
+        str: The resolved hostname.
+    """
+    return (
+        cli_host
+        if cli_host is not None
+        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
+    )
 
 
 class SampleMetadata(TypedDict):
@@ -285,7 +304,9 @@ def get_batch_upload_status(
     url = f"https://{api.base_url}/api/v1/batches/{batch_pk}/samples/state"
     response = httpx.Response(httpx.codes.OK)
     try:
-        response = api.client.get(url, headers={"Authorization": f"Bearer {api.token}"})
+        response = api.client.get(
+            url, headers={"Authorization": f"Bearer {api.token}"}, follow_redirects=True
+        )
         response.raise_for_status()
         return response.json()
     except httpx.HTTPError as e:
@@ -297,7 +318,6 @@ def get_batch_upload_status(
 
 def prepare_files(
     batch_pk: int,
-    instrument_code: str,
     files: list[UploadSample],
     api_client: APIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
@@ -322,9 +342,9 @@ def prepare_files(
         if sample.is_illumina():
             samples.append(
                 {
-                    "name": sample.sample_name,
+                    "name": sample.reads_1_resolved_path.name,
                     "size": sample.file1_size,
-                    "control": sample.control,
+                    "control": sample.control.upper(),
                     "content_type": "application/gzip"
                     if sample.reads_1_resolved_path is not None
                     and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
@@ -333,9 +353,9 @@ def prepare_files(
             )
             samples.append(
                 {
-                    "name": sample.sample_name,
+                    "name": sample.reads_2_resolved_path.name,
                     "size": sample.file2_size,
-                    "control": sample.control,
+                    "control": sample.control.upper(),
                     "content_type": "application/gzip"
                     if sample.reads_2_resolved_path is not None
                     and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
@@ -345,9 +365,9 @@ def prepare_files(
         else:
             samples.append(
                 {
-                    "name": sample.sample_name,
+                    "name": sample.reads_1_resolved_path.name,
                     "size": sample.file1_size,
-                    "control": sample.control,
+                    "control": sample.control.upper(),
                     "content_type": "application/gzip"
                     if sample.reads_1_resolved_path is not None
                     and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
@@ -355,22 +375,33 @@ def prepare_files(
                 }
             )
 
-    batch_credit_form = {
-        "samples": json.dumps(samples),
-        "instrument": instrument_code,
+    form_details = {
+        "files_to_upload": [
+            {
+                k
+                if k != "name" and k != "size"
+                else "original_file_name"
+                if k == "name"
+                else "file_size_in_kb": v
+                for k, v in sample.items()
+                if k != "content_type"  # remove content type for api call
+            }
+            for sample in samples
+        ]
     }
     try:
-        # check credits and start upload session
-        check_credits = api_client.batches_samples_start_upload_session_create(
-            batch_pk=batch_pk, data=batch_credit_form
+        # start upload session
+        # NEED A VALUE FOR CONTROL FOR API TO NOT ERROR, BUT VALIDATION OF UPLOAD DATA ALLOWS VALUES OF positive, negative ""
+        start_session = api_client.batches_samples_start_upload_session_create(
+            batch_pk=batch_pk, data=form_details
         )
     except APIError as e:
         raise APIError(
-            f"Error checking credits: {str(e)}",
+            f"Error starting session: {str(e)}",
             e.status_code,
         ) from e
 
-    if not check_credits.get("data", {}).get("upload_session"):
+    if not start_session["upload_session"]:
         # Log if the upload session could not be resumed
         logging.exception(
             "Upload session cannot be resumed. Please create a new batch."
@@ -378,9 +409,8 @@ def prepare_files(
         raise APIError(
             "No upload session returned by the API.", codes.INTERNAL_SERVER_ERROR
         )
-
     # Upload session
-    upload_session = check_credits["data"]["upload_session"]
+    upload_session = start_session["upload_session"]
 
     if sample_uploads is None:
         sample_uploads = {}
@@ -388,6 +418,7 @@ def prepare_files(
         was_found, sample_upload_status = check_if_file_is_in_sample(
             sample_uploads, sample
         )
+
         if (
             was_found
             and sample_upload_status
@@ -424,14 +455,21 @@ def prepare_files(
             )
         else:
             # Prepare new file and add to selected files
-            file_ready = prepare_file(sample, batch_pk, upload_session, api_client)
+            for file in files:
+                if (
+                    file.reads_1.name == sample["name"]
+                    or file.reads_2.name == sample["name"]
+                ):
+                    file_ready = prepare_file(
+                        file, sample, batch_pk, upload_session, api_client
+                    )
             if file_ready:
                 selected_files.append(file_ready)
 
     return {
         "files": selected_files,
         "uploadSession": upload_session,
-        "uploadSessionData": check_credits["data"],
+        "uploadSessionData": start_session,
     }
 
 
@@ -456,7 +494,6 @@ def upload_chunks(
     chunks_uploaded = 0
     chunk_queue = []
     stop_uploading = False
-
     for i in range(file["total_chunks"]):  # total chunks = file.size/chunk_size
         # stop uploading chunks if one returns a 400 error
         if stop_uploading:
@@ -472,12 +509,11 @@ def upload_chunks(
         # upload chunk
         chunk_upload = upload_chunk(
             batch_pk=upload_data.batch_pk,
-            host=upload_data.env,
+            host=get_host(),
             protocol="https",
-            checksum="checksum",
-            dirty_checksum="dirty_checksum",
             chunk=file_chunk,
             chunk_index=i,
+            upload_id=file["upload_id"],
         )
         chunk_queue.append(chunk_upload)
         try:
@@ -518,7 +554,7 @@ def upload_chunks(
                         complete_event = OnComplete(file["upload_id"], file["batch_pk"])
                         upload_data.on_complete(complete_event)
 
-                    end_status = end_upload(file["batch_pk"], file["upload_id"])
+                    end_status = end_upload(file["batch_pk"], file["uploadSession"])
                     if end_status["status"] == 400:
                         logging.error(
                             f"Failed to end upload for file: {file['upload_id']} (Batch ID: {file['batch_pk']})"
@@ -536,7 +572,7 @@ def upload_chunks(
 
 def upload_files(
     upload_data: UploadFileType,
-    instrument_code: str,
+    prepared_files: PreparedFiles,
     api_client: APIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
@@ -559,14 +595,8 @@ def upload_files(
     """
     file_status = {}
 
-    # prepare files before uploading
-    file_preparation = prepare_files(
-        batch_pk=upload_data.batch_pk,
-        instrument_code=instrument_code,
-        files=upload_data.samples,
-        api_client=api_client,
-        sample_uploads=sample_uploads,
-    )
+    # load in prepared files
+    file_preparation = prepared_files
 
     # If prepare_files returned None, log and return
     if file_preparation is None:
@@ -585,7 +615,6 @@ def upload_files(
         return
 
     # files have been sucessfully prepared, extract the prepared file list
-    logging.info(f"upload_files, {file_preparation['files']}")
     selected_files = file_preparation["files"]
 
     # upload the file chunks
@@ -602,17 +631,19 @@ def upload_files(
                 logging.error(f"Error uploading file: {e}")
 
     # end the upload session
-    end_session = APIClient.batches_samples_end_upload_session_create(
-        upload_data.batch_pk, upload_data.batch_pk
+    api_client = APIClient()
+    end_session = api_client.batches_samples_end_upload_session_create(
+        upload_data.batch_pk, upload_data.upload_session
     )
 
-    if end_session["status"] != 200:
+    if end_session.status_code != 200:
         logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
     else:
         logging.info(f"All uploads complete.")
 
 
 def prepare_file(
+    upload_data: UploadSample,
     file: SampleMetadata,
     batch_pk: int,
     upload_session: int,
@@ -631,8 +662,14 @@ def prepare_file(
     Returns:
         dict[str, Any]: File metadata ready for upload or error details.
     """
+    if upload_data.read_file1_data() is not None:
+        file_data = upload_data.read_file1_data()
+
+    elif upload_data.read_file2_data() is not None:
+        file_data = upload_data.read_file2_data()
+
     original_file_name = file["name"]
-    total_chunks = math.ceil(file["size"] / chunk_size)
+    total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
     content_type = file["content_type"]
 
     form_data = {
@@ -645,10 +682,10 @@ def prepare_file(
         start = api_client.batches_uploads_start_create(
             batch_pk=batch_pk, data=form_data
         )
-
-        if start["status"] == 200:
-            upload_id = start["data"]["upload_id"]
-            sample_id = start["data"]["sample_id"]
+        start_data = start.json()
+        if start.status_code == 200:
+            upload_id = start_data["upload_id"]
+            sample_id = start_data["sample_id"]
 
             file_ready = {
                 "file": file,
@@ -657,12 +694,13 @@ def prepare_file(
                 "sample_id": sample_id,
                 "total_chunks": total_chunks,
                 "upload_session": upload_session,
+                "file_data": file_data,
             }
             return file_ready
         else:
             # Include the upload session in the error response
-            start["upload_session"] = upload_session
-            return start
+            start_data["upload_session"] = upload_session
+            return start_data
 
     except APIError as e:
         # Handle any exceptions raised by the APIClient
@@ -678,10 +716,9 @@ def upload_chunk(
     batch_pk: int,
     host: str,
     protocol: str,
-    checksum: str,
-    dirty_checksum: str,
     chunk: bytes,
     chunk_index: int,
+    upload_id: int,
 ) -> Response:
     """Upload a single file chunk.
 
@@ -689,11 +726,10 @@ def upload_chunk(
         batch_pk (int): ID of sample to upload
         host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
         protocol (str): protocol, default https
-        checksum (str): sample metadata if decontaminated
-        dirty_checksum (str): sample metadata pre-decontimation
         chunk (bytes): File chunk to be uploaded
         chunk_index (int): Index representing what chunk of the whole
         sample file this chunk is from 0...total_chunks
+        upload_id: the id of the upload session
 
     Returns:
         Response: The response object from the HTTP POST request conatining
@@ -706,15 +742,16 @@ def upload_chunk(
             timeout=7200,  # 2 hours
         ) as client:
             response = client.post(
-                f"{protocol}://{host}/api/v1/batches/{batch_pk}/uploads/upload-chunk",
+                f"{protocol}://{get_upload_host()}/api/v1/batches/{batch_pk}/uploads/upload-chunk/",
                 headers={"Authorization": f"Bearer {get_access_token(host)}"},
-                files={"file": chunk},
+                files={"chunk": chunk},  # Send the binary chunk
                 data={
-                    "checksum": checksum,
-                    "dirty_checksum": dirty_checksum,
                     "chunk_index": chunk_index,
+                    "upload_id": upload_id,
                 },
+                follow_redirects=True,
             )
+
             if response.status_code >= 400:
                 logging.error(
                     f"Error uploading chunk {chunk_index} of batch {batch_pk}: {response.text}"
@@ -724,7 +761,7 @@ def upload_chunk(
                 return response
     except Exception as e:
         logging.error(
-            f"Exception while uploading chunk {chunk_index} of batch {batch_pk}: {str(e)}"
+            f"Exception while uploading chunk {chunk_index} of batch {batch_pk}: {str(e), chunk[:10]} RESPONSE {response.status_code, response.headers, response.content}"
         )
         raise
 
@@ -746,7 +783,7 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
             chunk_queue.remove(future)
 
 
-def end_upload(batch_pk: int, file_id: int) -> dict[str, Any]:
+def end_upload(batch_pk: int, upload_session: int) -> dict[str, Any]:
     """End the upload of a sample.
 
     Args:
@@ -756,35 +793,15 @@ def end_upload(batch_pk: int, file_id: int) -> dict[str, Any]:
     Returns:
         dict[str, Any]: The response JSON from the API.
     """
-    data = {"upload_id": file_id}
+    data = {"upload_session": upload_session}
     api_client = APIClient()
 
     return api_client.batches_uploads_end_create(batch_pk, data)
 
 
-def end_upload_session(batch_pk: int, upload_session: int) -> dict[str, Any]:
-    """End the upload session.
-
-    Args:
-        batch_pk (int):ID of the uploaded sample.
-        upload_session (int): ID of the upload session.
-
-    Returns:
-        dict[str, Any]: The response JSON from the API.
-    """
-    api_client = APIClient()
-
-    return api_client.batches_samples_end_upload_session_create(
-        batch_pk, upload_session
-    )
-
-
 def upload_fastq(
-    # batch_pk: int,
-    # sample_name: str,
-    # reads: Path,
     upload_data: UploadFileType,
-    instrument_code: str,
+    prepared_files: PreparedFiles,
     api_client: APIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
@@ -797,4 +814,4 @@ def upload_fastq(
         upload_data (UploadFileType): The upload data including batch_id, session info, etc.
         instrument_code (str): The instument code used to take sample.
     """
-    upload_files(upload_data, instrument_code, api_client, sample_uploads)
+    upload_files(upload_data, prepared_files, api_client, sample_uploads)

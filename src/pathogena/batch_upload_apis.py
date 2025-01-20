@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 
-from pathogena.constants import DEFAULT_HOST
+from pathogena.constants import DEFAULT_HOST, DEFAULT_UPLOAD_HOST
 from pathogena.util import get_access_token
 
 
@@ -23,6 +23,22 @@ def get_host(cli_host: str | None = None) -> str:
     )
 
 
+def get_upload_host(cli_host: str | None = None) -> str:
+    """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
+
+    Args:
+        cli_host (str | None): The host provided via CLI argument.
+
+    Returns:
+        str: The resolved hostname.
+    """
+    return (
+        cli_host
+        if cli_host is not None
+        else os.environ.get("PATHOGENA_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
+    )
+
+
 class APIError(Exception):
     """Custom exception for API errors."""
 
@@ -36,7 +52,7 @@ class APIClient:
 
     def __init__(
         self,
-        base_url: str = "api.upload.eit-pathogena.com",
+        base_url: str = get_upload_host(),
         client: httpx.Client | None = None,
         upload_session: int | None = None,
     ):
@@ -71,7 +87,10 @@ class APIClient:
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             response.raise_for_status()
             return response.json()
@@ -99,12 +118,15 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
 
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             self.upload_session = response.json().get("upload_session")
 
@@ -121,7 +143,7 @@ class APIClient:
         self,
         batch_pk: int,
         data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> httpx.Response:
         """Starts a upload by making a POST request.
 
         Args:
@@ -134,14 +156,17 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             response.raise_for_status()
-            return response.json()
+            return response
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to start batch upload: {response.text}",
@@ -166,11 +191,14 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             response.raise_for_status()
             return response.json()
@@ -198,11 +226,14 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
         response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             response.raise_for_status()
             return response.json()
@@ -215,8 +246,8 @@ class APIClient:
     def batches_samples_end_upload_session_create(
         self,
         batch_pk: int,
-        upload_id: int | None = None,
-    ) -> dict[str, Any]:
+        upload_session: int | None = None,
+    ) -> httpx.Response:
         """Ends a sample upload session by making a POST request to the backend.
 
         Args:
@@ -230,20 +261,23 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        if upload_id is not None:
-            data = {"upload_id": upload_id}
+        if upload_session is not None:
+            data = {"upload_session": upload_session}
         else:
-            data = {"upload_id": self.upload_session}
+            data = {"upload_session": self.upload_session}
 
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session"
+        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
 
         response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
-                url, json=data, headers={"Authorization": f"Bearer {self.token}"}
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
             response.raise_for_status()  # Raise an HTTPError for bad responses
-            return response.json()
+            return response
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to end upload session: {response.text}",
