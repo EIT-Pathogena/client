@@ -28,9 +28,9 @@ jobs:
         shell: bash -el {0}
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-22.04" ]; then
-              conda create -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }}
+              conda create -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }} rust==1.84.0
           elif [ "${{ matrix.os }}" == "macos-14" ]; then
-              conda create --platform osx-64 -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }}
+              conda create --platform osx-64 -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }} rust==1.84.0
           fi
           conda activate pathogena-test
           pip install '.[dev]'
