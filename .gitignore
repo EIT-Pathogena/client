@@ -131,3 +131,7 @@ dmypy.json
 .DS_Store
 .vscode
 .idea
+
+# pixi environments
+.pixi
+*.egg-info

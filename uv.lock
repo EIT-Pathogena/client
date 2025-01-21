@@ -109,7 +109,7 @@ name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593 }
 wheels = [
@@ -270,7 +270,6 @@ wheels = [
 
 [[package]]
 name = "pathogena"
-version = "2.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -304,13 +303,13 @@ requires-dist = [
     { name = "flit", marker = "extra == 'dev'", specifier = ">=3.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "packaging", specifier = ">=23.2" },
-    { name = "platformdirs", specifier = ">=3.9.1,<=4.2.0" },
+    { name = "platformdirs", specifier = ">=3.9.1,<=4.4.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0.1" },
     { name = "pydantic", specifier = ">=2.6.2,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7.1" },
     { name = "tenacity", specifier = "==8.2.3" },
-    { name = "tqdm", specifier = "==4.66.3" },
+    { name = "tqdm", specifier = ">=4.66.3" },
 ]
 
 [package.metadata.requires-dev]
@@ -625,7 +624,7 @@ name = "tqdm"
 version = "4.66.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/03/00/6a9b3aedb0b60a80995ade30f718f1a9902612f22a1aaf531c85a02987f7/tqdm-4.66.3.tar.gz", hash = "sha256:23097a41eba115ba99ecae40d06444c15d1c0c698d527a01c6c8bd1c5d0647e5", size = 169551 }
 wheels = [

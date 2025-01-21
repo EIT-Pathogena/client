@@ -1,7 +1,8 @@
 ## Install
 
-There are two recommended methods for installing the Pathogena Client, either by using the popular package and
-environment manager Conda or by using our publicly available Docker container which we build at release time.
+There are three recommended methods for installing the Pathogena Client, either by using the popular package and
+environment manager Conda, by using our publicly available Docker container which we build at release time, or
+using [Pixi](https://pixi.sh/) a faster alternative to conda.
 
 ### Installing Miniconda
 
@@ -65,5 +66,25 @@ pip install --upgrade pathogena
 A simple test to verify installation would be to run a version check:
 
 ```bash
+pathogena --version
+```
+
+### Installing via Pixi
+
+To install and use pixi, instructions apply to both MacOS and Linux
+
+#### Installing Pixi
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+# or
+brew install pixi # on MacOS
+```
+
+#### Installing Pathogena
+
+```bash
+pixi install
+pixi shell
 pathogena --version
 ```

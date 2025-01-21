@@ -24,8 +24,8 @@ keywords = [
 dependencies = [
   "httpx>=0.27.0",
   "packaging>=23.2",
-  "platformdirs>=3.9.1,<=4.2.0",
-  "tqdm==4.66.3",
+  "platformdirs>=3.9.1,<=4.4.0",
+  "tqdm>=4.66.3",
   "pydantic>=2.6.2,<3",
   "tenacity==8.2.3",
   "click>=8.1.7",
@@ -91,3 +91,15 @@ dev-dependencies = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')"
 ]
+
+[tool.pixi.project]
+channels = ["conda-forge", "bioconda"]
+platforms = ["osx-64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+pathogena = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+hostile = "==1.1.0"
