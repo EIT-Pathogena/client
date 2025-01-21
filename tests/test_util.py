@@ -3,22 +3,6 @@ from pathlib import Path
 from pathogena import util
 
 
-def test_reads_lines_from_gzip() -> None:
-    """Test that the `reads_lines_from_gzip` function correctly reads the expected number of lines from a gzip file."""
-    expected_lines = 4
-    file_path = Path(__file__).parent / "data" / "reads" / "tuberculosis_1_1.fastq.gz"
-    lines = util.reads_lines_from_gzip(file_path=file_path)
-    assert lines == expected_lines
-
-
-def test_reads_lines_from_fastq() -> None:
-    """Test that the `reads_lines_from_fastq` function correctly reads the expected number of lines from a fastq file."""
-    expected_lines = 4
-    file_path = Path(__file__).parent / "data" / "reads" / "tuberculosis_1_1.fastq"
-    lines = util.reads_lines_from_fastq(file_path=file_path)
-    assert lines == expected_lines
-
-
 def test_fail_command_exists() -> None:
     """Test that the `command_exists` function correctly identifies a non-existent command."""
     assert not util.command_exists("notarealcommandtest")

@@ -431,58 +431,6 @@ def gzip_file(input_file: Path, output_file: str) -> Path:
     return Path(output_file)
 
 
-def reads_lines_from_gzip(file_path: Path) -> int:
-    """Count the number of lines in a gzipped file.
-
-    Args:
-        file_path (Path): The path to the gzipped file.
-
-    Returns:
-        int: The number of lines in the file.
-    """
-    line_count = 0
-    # gunzip offers a ~4x faster speed when opening GZip files, use it if we can.
-    if command_exists("gunzip"):
-        logging.debug("Reading lines using gunzip")
-        result = subprocess.run(
-            ["gunzip", "-c", file_path.as_posix()], stdout=subprocess.PIPE, text=True
-        )
-        line_count = result.stdout.count("\n")
-    if line_count == 0:  # gunzip didn't work, try the long method
-        logging.debug("Using gunzip failed, using Python's gzip implementation")
-        try:
-            with gzip.open(file_path, "r") as contents:
-                line_count = sum(1 for _ in contents)
-        except gzip.BadGzipFile as e:
-            logging.error(f"Failed to open the Gzip file: {e}")
-    return line_count
-
-
-def reads_lines_from_fastq(file_path: Path) -> int:
-    """Count the number of lines in a FASTQ file.
-
-    Args:
-        file_path (Path): The path to the FASTQ file.
-
-    Returns:
-        int: The number of lines in the file.
-    """
-    try:
-        with open(file_path) as contents:
-            line_count = sum(1 for _ in contents)
-        return line_count
-    except PermissionError:
-        logging.error(
-            f"You do not have permission to access this file {file_path.name}."
-        )
-    except OSError as e:
-        logging.error(f"An OS error occurred trying to open {file_path.name}: {e}")
-    except Exception as e:
-        logging.error(
-            f"An unexpected error occurred trying to open {file_path.name}: {e}"
-        )
-
-
 def find_duplicate_entries(inputs: list[str]) -> list[str]:
     """Return a list of items that appear more than once in the input list.
 
