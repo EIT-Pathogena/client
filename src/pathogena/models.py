@@ -201,11 +201,11 @@ class UploadSample(UploadBase):
             ) from e
         logging.info(f"{self.reads_in} reads in FASTQ file")
 
-    def get_read_paths(self) -> list[Path]:
+    def get_read_paths(self) -> list[str]:
         """Get the paths of the read files.
 
         Returns:
-            list[Path]: A list of paths to the read files.
+            list[str]: A list of paths to the read files.
         """
         reads = [self.reads_1_resolved_path.as_posix()]
         if self.is_illumina():
