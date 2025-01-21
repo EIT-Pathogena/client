@@ -631,7 +631,6 @@ def upload_files(
                 logging.error(f"Error uploading file: {e}")
 
     # end the upload session
-    api_client = APIClient()
     end_session = api_client.batches_samples_end_upload_session_create(
         upload_data.batch_pk, upload_data.upload_session
     )

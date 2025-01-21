@@ -609,11 +609,14 @@ class TestUploadFiles:
 
         # call
         upload_files(
-            mock_upload_data, prepared_files, mock_api_client, mock_sample_uploads
+            mock_upload_data,
+            prepared_files,
+            mock_api_client,
+            mock_sample_uploads,
         )
 
         assert mock_upload_chunks.call_count == 2  # upload chunks called for each file
-        APIClient.batches_samples_end_upload_session_create.assert_called_once()
+        mock_api_client.batches_samples_end_upload_session_create.assert_called_once()
         # end session once
 
     def test_upload_files_prepare_api_error(
