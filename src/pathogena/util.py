@@ -394,22 +394,6 @@ def display_cli_version() -> None:
     logging.info(f"EIT Pathogena client version {pathogena.__version__}")
 
 
-def command_exists(command: str) -> bool:
-    """Check if a command exists in the system.
-
-    Args:
-        command (str): The command to check.
-
-    Returns:
-        bool: True if the command exists, False otherwise.
-    """
-    try:
-        result = subprocess.run(["type", command], capture_output=True)
-    except FileNotFoundError:  # Catch Python parsing related errors
-        return False
-    return result.returncode == 0
-
-
 def gzip_file(input_file: Path, output_file: str) -> Path:
     """Gzip a file and save it with a new name.
 
