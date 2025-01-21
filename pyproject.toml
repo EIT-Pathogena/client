@@ -29,7 +29,7 @@ dependencies = [
   "pydantic>=2.6.2,<3",
   "tenacity==8.2.3",
   "click>=8.1.7",
-  "fastq-validation==1.0.4",
+  "fastq-validation==1.0.5",
 ]
 
 [project.scripts]

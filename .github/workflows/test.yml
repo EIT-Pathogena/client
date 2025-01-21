@@ -30,7 +30,6 @@ jobs:
           if [ "${{ matrix.os }}" == "ubuntu-22.04" ]; then
               conda create -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }}
           elif [ "${{ matrix.os }}" == "macos-14" ]; then
-              rustc --print=deployment-target
               conda create --platform osx-64 -y -n pathogena-test -c conda-forge -c bioconda hostile==1.1.0 python==${{ matrix.python-version }}
           fi
           conda activate pathogena-test
