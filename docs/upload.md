@@ -32,9 +32,9 @@ Credits are required to upload samples and initiate the analysis process. Users 
 header of the Pathogena Portal or by using the `pathogena balance` command. More information can be found in the
 `pathogena balance` section.
 
-Each sample for Mycobacterium genomic sequencing will require 10 credits. During the upload command process,
-a balance check is performed to ensure the user has enough credits for the number of samples in the batch. Credits are
-then deducted when sample files are successfully uploaded and ready for processing.
+Each sample for Mycobacterium genomic sequencing will require 10 credits whereas SARS-CoV-2 sample sequencing will require 1 credits.
+During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch. 
+Credits are then deducted when sample files are successfully uploaded and ready for processing.
 
 ### Human Read Removal
 

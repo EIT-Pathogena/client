@@ -131,10 +131,15 @@ def _write_csv(
         data (list[dict]): The data to write.
         output_csv (Path): The path to the output CSV file.
     """
-    use_amplicon_scheme = (
-        upload_data.amplicon_scheme is not None
-        and upload_data.specimen_organism == "sars-cov-2"
-    )
+    use_amplicon_scheme = upload_data.specimen_organism == "sars-cov-2"
+    if upload_data.amplicon_scheme is None:
+        logging.warning(
+            f"No amplicon scheme has been specified, automatic detection will be used."
+        )
+        logging.warning(
+            "Note that selecting automatic detection may occasionally result in misclassification "
+            "during sample analysis."
+        )
 
     # Note that csv module uses CRLF line endings
     with open(filename, "w", newline="", encoding="utf-8") as outfile:
