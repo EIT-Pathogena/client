@@ -40,6 +40,40 @@ def test_build_csv_illumina(
     )
 
 
+def test_build_csv_illumina_sars_cov_2_amp(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    upload_data_sars_cov_2_amp: UploadData,
+) -> None:
+    """Test building CSV for Illumina platform.
+
+    This test checks that the output illumina csv is the same as the temp output csv, that the csv creation
+    can be seen in the log output, and that some help text can be seen in the log output.
+
+    Args:
+        tmp_path (Path): Temporary path for output files.
+        caplog (pytest.LogCaptureFixture): Fixture to capture log output.
+        upload_data_sars_cov_2_amp (UploadData): Data required for building the upload CSV.
+    """
+    caplog.set_level(logging.INFO)
+    build_upload_csv(
+        "tests/data/empty_files",
+        f"{tmp_path}/output.csv",
+        upload_data_sars_cov_2_amp,
+    )
+
+    assert filecmp.cmp(
+        "tests/data/auto_upload_csvs/sars_cov_2_illumina_amp_scheme.csv",
+        f"{tmp_path}/output.csv",
+    )
+
+    assert "Created 1 CSV files: output.csv" in caplog.text
+    assert (
+        "You can use `pathogena validate` to check the CSV files before uploading."
+        in caplog.text
+    )
+
+
 def test_build_csv_ont(
     tmp_path: Path, caplog: pytest.LogCaptureFixture, upload_data: UploadData
 ) -> None:
@@ -57,7 +91,7 @@ def test_build_csv_ont(
     upload_data.instrument_platform = "ont"
     upload_data.district = "dis"
     upload_data.subdivision = "sub"
-    upload_data.specimen_organism = "pipe"
+    upload_data.specimen_organism = "mycobacteria"
     upload_data.host_organism = "unicorn"
     upload_data.ont_read_suffix = "_2.fastq.gz"
     build_upload_csv(
@@ -159,6 +193,30 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
             upload_data,
         )
     assert "Invalid instrument platform" in str(e_info.value)
+
+
+def test_build_csv_invalid_specimen_organism(
+    tmp_path: Path, upload_data: UploadData
+) -> None:
+    """Test building CSV with an invalid specimen organism.
+
+    This test checks that an invalid specimen organism
+    raises an error, and that the corresponding error message is as expected.
+
+    Note that this should be caught by the model validation.
+
+    Args:
+        tmp_path (Path): Temporary path for output files.
+        upload_data (UploadData): Data required for building the upload CSV.
+    """
+    upload_data.specimen_organism = "invalid"
+    with pytest.raises(ValueError) as e_info:
+        build_upload_csv(
+            "tests/data/empty_files",
+            f"{tmp_path}/output.csv",
+            upload_data,
+        )
+    assert "Invalid pipeline" in str(e_info.value)
 
 
 def test_upload_data_model() -> None:

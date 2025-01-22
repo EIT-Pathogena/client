@@ -1,0 +1,2 @@
+batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform,amplicon_scheme
+mybatch,sars-cov-2_1,reads/sars-cov-2_1_1.fastq.gz,reads/sars-cov-2_1_2.fastq.gz,,2024-11-25,GBR,,,sars-cov-2,homo sapiens,illumina,COVID-AMPLISEQ-V1

@@ -1,5 +1,11 @@
 ## Unreleased
 
+## 2.1.0 (2025-01-22)
+
+### Added
+
+- Support for the SARS-CoV-2 pipeline.
+
 ## 2.0.1 (2024-11-07)
 
 ## 2.0.1rc1 (2024-11-07)
