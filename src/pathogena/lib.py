@@ -168,7 +168,7 @@ def create_batch_on_server(
     number_of_samples: int,
     amplicon_scheme: str | None,
     validate_only: bool = False,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -221,7 +221,11 @@ def create_batch_on_server(
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
             return None, None
-    return response.json()["id"], response.json()["name"]
+    return (
+        response.json()["id"],
+        response.json()["name"],
+        response.json()["legacy_batch_id"],
+    )
 
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
@@ -385,7 +389,7 @@ def upload_batch(
         threads (int): The number of threads to use.
         output_dir (Path): The output directory for the uploaded files.
     """
-    batch_id, batch_name = create_batch_on_server(
+    batch_id, batch_name, legacy_batch_id = create_batch_on_server(
         batch=batch,
         host=host,
         number_of_samples=len(batch.samples),
@@ -475,10 +479,8 @@ def upload_batch(
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"{get_protocol()}://{host}/batches/{batch_id}"
+        f"{get_protocol()}://{host}/batches/{legacy_batch_id}"
     )
-    # REMEBER T?HAT HAVE ISSUE WITHC CONTROL TYPE - allows none but api endpoint does not - do any samples have this?
-    # need discussion around sample metadata, logging
 
     batch_status = get_batch_upload_status(batch_id)
 

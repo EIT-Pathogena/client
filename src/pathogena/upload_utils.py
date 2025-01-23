@@ -16,10 +16,28 @@ from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from pathogena.batch_upload_apis import APIClient, APIError
-from pathogena.constants import DEFAULT_CHUNK_SIZE, DEFAULT_HOST, DEFAULT_UPLOAD_HOST
+from pathogena.constants import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_HOST,
+    DEFAULT_PROTOCOL,
+    DEFAULT_UPLOAD_HOST,
+)
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadSample
 from pathogena.util import get_access_token
+
+
+def get_protocol() -> str:
+    """Get the protocol to use for communication.
+
+    Returns:
+        str: The protocol (e.g., 'http', 'https').
+    """
+    if "PATHOGENA_PROTOCOL" in os.environ:
+        protocol = os.environ["PATHOGENA_PROTOCOL"]
+        return protocol
+    else:
+        return DEFAULT_PROTOCOL
 
 
 def get_host(cli_host: str | None = None) -> str:
@@ -301,8 +319,7 @@ def get_batch_upload_status(
         APIError: If the API returns a non-2xx status code.
     """
     api = APIClient()
-    url = f"https://{api.base_url}/api/v1/batches/{batch_pk}/samples/state"
-    response = httpx.Response(httpx.codes.OK)
+    url = f"{get_protocol()}://{api.base_url}/api/v1/batches/{batch_pk}/samples/state"
     try:
         response = api.client.get(
             url, headers={"Authorization": f"Bearer {api.token}"}, follow_redirects=True
@@ -554,7 +571,9 @@ def upload_chunks(
                         complete_event = OnComplete(file["upload_id"], file["batch_pk"])
                         upload_data.on_complete(complete_event)
 
-                    end_status = end_upload(file["batch_pk"], file["uploadSession"])
+                    end_status = APIClient().batches_uploads_end_create(
+                        file["batch_pk"], data={"upload_session": file["uploadSession"]}
+                    )
                     if end_status["status"] == 400:
                         logging.error(
                             f"Failed to end upload for file: {file['upload_id']} (Batch ID: {file['batch_pk']})"
@@ -780,22 +799,6 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
             completed.append(future)
         for future in completed:  # remove completed futures from queue
             chunk_queue.remove(future)
-
-
-def end_upload(batch_pk: int, upload_session: int) -> dict[str, Any]:
-    """End the upload of a sample.
-
-    Args:
-        batch_pk (int):ID of the uploaded sample.
-        upload_session (int): ID of the upload session.
-
-    Returns:
-        dict[str, Any]: The response JSON from the API.
-    """
-    data = {"upload_session": upload_session}
-    api_client = APIClient()
-
-    return api_client.batches_uploads_end_create(batch_pk, data)
 
 
 def upload_fastq(

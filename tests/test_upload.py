@@ -325,12 +325,13 @@ class TestUploadChunks:
         mocker.patch("pathogena.upload_utils.process_queue", return_value=None)
 
         # mock as_completed to simulate completed futures
-        self.mock_end_upload = mocker.MagicMock()
-        self.mock_end_upload.return_value = {
-            "status": 200,
-            "message": "Upload complete",
-        }
-        mocker.patch("pathogena.upload_utils.end_upload", self.mock_end_upload)
+        self.mock_end_upload = mocker.patch.object(
+            APIClient,
+            "batches_uploads_end_create",
+            return_value=httpx.Response(
+                status_code=httpx.codes.OK,
+            ),
+        )
 
     # fixture for mock_upload_data
     @pytest.fixture(autouse=True)
@@ -421,7 +422,7 @@ class TestUploadChunks:
             mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
             == mock_file["total_chunks"]
         )
-        assert self.mock_end_upload.calledonce  # end_upload called once
+        assert self.mock_end_upload.calledonce  # batches_uploads_end_create called once
 
     def test_upload_chunks_stop_on_400(
         self,
@@ -457,7 +458,7 @@ class TestUploadChunks:
         assert mock_upload_data.on_progress.call_count == 1  # only chunk 1 was uploaded
         assert (
             not self.mock_end_upload.called
-        )  # end_upload should not be called as 2nd upload failed
+        )  # batches_uploads_end_create should not be called as 2nd upload failed
 
     def test_upload_chunks_error_handling(
         self,
@@ -482,7 +483,7 @@ class TestUploadChunks:
         )  # no chunk was successfully uploaded
         assert (
             not self.mock_end_upload.called
-        )  # end_upload should not be called since there was an error
+        )  # batches_uploads_end_create should not be called since there was an error
         assert (
             "Error uploading chunk 0 of batch 123:" in caplog.text
         )  # error, chunk number and batch pk captured in logging

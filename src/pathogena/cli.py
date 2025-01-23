@@ -214,12 +214,12 @@ def upload(
         lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
         if skip_decontamination:
             batch.validate_all_sample_fastqs()
-            x = batch.update_sample_metadata()
+            batch.update_sample_metadata()
         else:
             cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
                 batch, threads, output_dir=output_dir
             )
-            x = batch.update_sample_metadata(metadata=cleaned_batch_metadata)
+            batch.update_sample_metadata(metadata=cleaned_batch_metadata)
         lib.upload_batch(batch=batch, host=host, save=save)
         lib.get_credit_balance(host=host)
     else:

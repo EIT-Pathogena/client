@@ -3,8 +3,22 @@ from typing import Any
 
 import httpx
 
-from pathogena.constants import DEFAULT_HOST, DEFAULT_UPLOAD_HOST
+from pathogena.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
+from pathogena.log_utils import httpx_hooks
 from pathogena.util import get_access_token
+
+
+def get_protocol() -> str:
+    """Get the protocol to use for communication.
+
+    Returns:
+        str: The protocol (e.g., 'http', 'https').
+    """
+    if "PATHOGENA_PROTOCOL" in os.environ:
+        protocol = os.environ["PATHOGENA_PROTOCOL"]
+        return protocol
+    else:
+        return DEFAULT_PROTOCOL
 
 
 def get_host(cli_host: str | None = None) -> str:
@@ -83,7 +97,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -118,9 +132,8 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
-
-        response = httpx.Response(httpx.codes.OK)
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
+        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -156,8 +169,8 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
-        response = httpx.Response(httpx.codes.OK)
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
+        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -191,8 +204,8 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
-        response = httpx.Response(httpx.codes.OK)
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
+        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -226,8 +239,10 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
-        response: httpx.Response = httpx.Response(httpx.codes.OK)
+        url = (
+            f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
+        )
+        # response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -266,9 +281,9 @@ class APIClient:
         else:
             data = {"upload_session": self.upload_session}
 
-        url = f"https://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
 
-        response: httpx.Response = httpx.Response(httpx.codes.OK)
+        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
