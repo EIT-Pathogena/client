@@ -11,6 +11,8 @@ from pytest_mock.plugin import _mocker
 
 from pathogena.batch_upload_apis import APIClient, APIError
 from pathogena.upload_utils import (
+    OnComplete,
+    OnProgress,
     PreparedFiles,
     SampleMetadata,
     SampleUploadStatus,
@@ -359,8 +361,8 @@ class TestUploadChunks:
             batch_pk=123,
             env="env",
             samples=samples,
-            on_complete=mocker.MagicMock(),
-            on_progress=mocker.MagicMock(),
+            # on_complete=mocker.MagicMock(),
+            # on_progress=mocker.MagicMock(),
             max_concurrent_chunks=2,
             max_concurrent_files=2,
             upload_session=456,
@@ -396,10 +398,7 @@ class TestUploadChunks:
         mocker: Callable[..., Generator[MockerFixture, None, None]],
     ):
         # mock return values for chunk_upload_result
-        mock_chunk_upload_response = {
-            "status_code": 200,
-            "data": {"metrics": "some_metrics"},
-        }
+        mock_chunk_upload_response = {"metrics": "some_metrics"}
 
         # mock upload_chunk to return a successful result
         mock_upload = mocker.MagicMock()
@@ -410,13 +409,9 @@ class TestUploadChunks:
         # call
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
-        assert (
-            mock_upload_data.on_progress.call_count == 4
-        )  # called once for each chunk
-        assert mock_upload_data.on_complete.called_once_with(
-            mock_file["upload_id"], mock_file["batch_pk"]
-        )  # on_complete called once
-        # 4 chunks uploaded
+        assert mock_upload_data.on_complete == OnComplete(
+            mock_file["upload_id"], mock_upload_data.batch_pk
+        )  # all 4 chunks uploaded
         assert mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"] == 4
         assert (
             mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
@@ -436,10 +431,7 @@ class TestUploadChunks:
         mock_upload_1 = mocker.Mock()
         mock_upload_1.status_code = 200
         mock_upload_1.text = "OK"
-        mock_upload_1.json = lambda: {
-            "status_code": 200,
-            "data": {"metrics": "some_metrics"},
-        }
+        mock_upload_1.json = lambda: {"metrics": "some_metrics"}
 
         mock_upload_2 = mocker.MagicMock()
         mock_upload_2.status_code = 400
@@ -455,7 +447,13 @@ class TestUploadChunks:
         # call
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
-        assert mock_upload_data.on_progress.call_count == 1  # only chunk 1 was uploaded
+        assert mock_upload_data.on_progress == OnProgress(
+            upload_id=mock_file["upload_id"],
+            batch_pk=mock_upload_data.batch_pk,
+            progress=25,
+            metrics="some_metrics",
+        )  # only chunk 1 of 4 was uploaded
+        assert mock_upload_data.on_complete is None  # not completed all chunks
         assert (
             not self.mock_end_upload.called
         )  # batches_uploads_end_create should not be called as 2nd upload failed
@@ -478,9 +476,8 @@ class TestUploadChunks:
         # call
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
-        assert (
-            mock_upload_data.on_progress.call_count == 0
-        )  # no chunk was successfully uploaded
+        assert mock_upload_data.on_progress is None  # no progress, errors before
+        assert mock_upload_data.on_complete is None  # not completed all chunks
         assert (
             not self.mock_end_upload.called
         )  # batches_uploads_end_create should not be called since there was an error

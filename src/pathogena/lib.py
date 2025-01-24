@@ -21,12 +21,11 @@ from pathogena.constants import (
     CPU_COUNT,
     DEFAULT_HOST,
     DEFAULT_PROTOCOL,
-    DEFAULT_UPLOAD_HOST,
     HOSTILE_INDEX_NAME,
 )
 from pathogena.errors import MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
+from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
     UploadFileType,
     get_batch_upload_status,
@@ -165,7 +164,6 @@ def get_credit_balance(host: str) -> None:
 def create_batch_on_server(
     batch: UploadBatch,
     host: str,
-    number_of_samples: int,
     amplicon_scheme: str | None,
     validate_only: bool = False,
 ) -> tuple[str, str, str]:
@@ -204,7 +202,7 @@ def create_batch_on_server(
         url += "/validate_creation"
 
     with httpx.Client(
-        # event_hooks=httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
         follow_redirects=True,
@@ -220,7 +218,7 @@ def create_batch_on_server(
         )
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
-            return None, None
+            return None, None, None  # type: ignore
     return (
         response.json()["id"],
         response.json()["name"],
@@ -392,7 +390,6 @@ def upload_batch(
     batch_id, batch_name, legacy_batch_id = create_batch_on_server(
         batch=batch,
         host=host,
-        number_of_samples=len(batch.samples),
         amplicon_scheme=batch.samples[0].amplicon_scheme,
         validate_only=validate_only,
     )
@@ -420,52 +417,6 @@ def upload_batch(
     upload_session_name = prepared_files["uploadSessionData"]["name"]
 
     for file in prepared_files["files"]:
-        # generate metadata
-        #     sample_id = create_sample(
-        #         host=host,
-        #         batch_id=batch_id,
-        #         sample=sample,
-        #     )
-        #     logging.debug(f"{sample_id=}")
-        #     if sample.reads_1_cleaned_path and batch.ran_through_hostile:
-        #         sample.reads_1_upload_file = prepare_upload_files(
-        #             target_filepath=sample.reads_1_cleaned_path,
-        #             sample_id=sample_id,
-        #             decontaminated=batch.ran_through_hostile,
-        #             read_num=1,
-        #         )
-        #     else:
-        #         sample.reads_1_upload_file = sample.reads_1_resolved_path
-        #     if (
-        #         sample.is_illumina()
-        #         and batch.ran_through_hostile
-        #         and sample.reads_2_cleaned_path
-        #     ):
-        #         sample.reads_2_upload_file = prepare_upload_files(
-        #             target_filepath=sample.reads_2_cleaned_path,
-        #             sample_id=sample_id,
-        #             decontaminated=batch.ran_through_hostile,
-        #             read_num=2,
-        #         )
-        #     elif sample.is_illumina() and sample.reads_2_resolved_path:
-        #         sample.reads_2_upload_file = prepare_upload_files(
-        #             target_filepath=sample.reads_2_resolved_path,
-        #             sample_id=sample_id,
-        #             decontaminated=batch.ran_through_hostile,
-        #             read_num=2,
-        #         )
-
-        #     upload_meta.append(
-        #         (
-        #             sample.sample_name,
-        #             sample_id,
-        #             sample.reads_1_upload_file,
-        #             sample.reads_2_upload_file if sample.is_illumina() else None,
-        #             sample.reads_1_dirty_checksum,
-        #             sample.reads_2_dirty_checksum if sample.is_illumina() else None,
-        #         )
-        #     )
-
         mapping_csv_records.append(
             {
                 "batch_name": upload_session_name,
@@ -491,13 +442,11 @@ def upload_batch(
         sample_uploads=batch_status.get("samples"),
     )
 
-    # check what this func does
-
-    # run_sample(sample_id=sample_id, host=host)
-    # if not save:
-    #     remove_file(file_path=reads1_to_upload)
-    #     if batch.is_illumina():
-    #         remove_file(file_path=reads2_to_upload)
+    if not save:
+        for file in batch.samples:
+            remove_file(file_path=file.reads_1_upload_file)  # type: ignore
+            if batch.is_illumina():
+                remove_file(file_path=file.reads_2_upload_file)  # type: ignore
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 

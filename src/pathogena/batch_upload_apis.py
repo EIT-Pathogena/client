@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from pathogena.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
+from pathogena.errors import APIError
 from pathogena.log_utils import httpx_hooks
 from pathogena.util import get_access_token
 
@@ -51,14 +52,6 @@ def get_upload_host(cli_host: str | None = None) -> str:
         if cli_host is not None
         else os.environ.get("PATHOGENA_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
     )
-
-
-class APIError(Exception):
-    """Custom exception for API errors."""
-
-    def __init__(self, message: str, status_code: int):
-        super().__init__(message)
-        self.status_code = status_code
 
 
 class APIClient:
@@ -133,7 +126,6 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
-        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -170,7 +162,6 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
-        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -205,7 +196,6 @@ class APIClient:
             APIError: If the API returns a non-2xx status code.
         """
         url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
-        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -226,7 +216,7 @@ class APIClient:
         self,
         batch_pk: int,
         data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> httpx.Response:
         """End a batch upload by making a POST request.
 
         Args:
@@ -242,7 +232,6 @@ class APIClient:
         url = (
             f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
         )
-        # response: httpx.Response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,
@@ -251,7 +240,7 @@ class APIClient:
                 follow_redirects=True,
             )
             response.raise_for_status()
-            return response.json()
+            return response
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to end batch upload: {response.text}", response.status_code
@@ -282,8 +271,6 @@ class APIClient:
             data = {"upload_session": self.upload_session}
 
         url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
-
-        # response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
                 url,

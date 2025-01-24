@@ -83,3 +83,11 @@ class InsufficientFundsError(Exception):
             "You can request more credits by contacting support (pathogena.support@eit.org)."
         )
         super().__init__(self.message)
+
+
+class APIError(Exception):
+    """Custom exception for API errors."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code

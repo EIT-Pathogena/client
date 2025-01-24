@@ -195,13 +195,13 @@ class OnProgress:
         upload_id (int): The ID the upload.
         batch_pk (int): The batch ID associated with the file upload.
         progress (float): The percentage of upload completion.
-        metrics (Metrics): The metrics associated with the upload.
+        metrics (UploadMetrics): The metrics associated with the upload.
     """
 
     upload_id: int
     batch_pk: int
     progress: float
-    metrics: Metrics
+    metrics: UploadMetrics
 
 
 @dataclass
@@ -227,8 +227,8 @@ class UploadFileType:
         batch_pk,
         env,
         samples: list[UploadSample],
-        on_complete: Callable[[OnComplete], None] | None = None,
-        on_progress: Callable[[OnProgress], None] | None = None,
+        on_complete: OnComplete | None = None,
+        on_progress: OnProgress | None = None,
         max_concurrent_chunks: int = 5,
         max_concurrent_files: int = 3,
         upload_session=None,
@@ -339,7 +339,11 @@ def prepare_files(
     api_client: APIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> PreparedFiles:
-    """Prepares multiple files for upload by checking credits, resuming sessions, and validating file states.
+    """Prepares multiple files for upload.
+
+    This function starts the upload session, checks the upload status of the current
+    sample and if it has not already been uploaded or partially uploaded prepares
+    the sample from scratch.
 
     Args:
         batch_pk (int): The ID of the batch.
@@ -353,7 +357,7 @@ def prepare_files(
     """
     selected_files = []
 
-    ## check if we have enough credits to upload the files
+    # create sample metadata depending on if illumina or ont
     samples: list[SampleMetadata] = []
     for sample in files:
         if sample.is_illumina():
@@ -392,6 +396,7 @@ def prepare_files(
                 }
             )
 
+    # create payload for starting upload session from sample metadata
     files_to_upload = []
     for sample in samples:
         sample_payload = {}
@@ -527,7 +532,7 @@ def upload_chunks(
         chunk_upload = upload_chunk(
             batch_pk=upload_data.batch_pk,
             host=get_host(),
-            protocol="https",
+            protocol=get_protocol(),
             chunk=file_chunk,
             chunk_index=i,
             upload_id=file["upload_id"],
@@ -545,38 +550,37 @@ def upload_chunks(
                 break
 
             # process result of chunk upload for upload chunks that don't return 400 status
-            metrics = chunk_upload_result.get("data", {}).get("metrics", {})
+            metrics = chunk_upload_result.get("metrics", {})
             if metrics:
                 chunks_uploaded += 1
                 file_status[file["upload_id"]] = {
                     "chunks_uploaded": chunks_uploaded,
                     "total_chunks": file["total_chunks"],
-                    "metrics": chunk_upload_result["data"]["metrics"],
+                    "metrics": chunk_upload_result["metrics"],
                 }
                 progress = (chunks_uploaded / file["total_chunks"]) * 100
+
                 # Create an OnProgress instance
-                if upload_data.on_progress:
-                    progress_event = OnProgress(
-                        upload_id=file["upload_id"],
-                        batch_pk=file["batch_pk"],
-                        progress=progress,
-                        metrics=chunk_upload_result["data"]["metrics"],
-                    )
-                    upload_data.on_progress(progress_event)
+                progress_event = OnProgress(
+                    upload_id=file["upload_id"],
+                    batch_pk=upload_data.batch_pk,
+                    progress=progress,
+                    metrics=chunk_upload_result["metrics"],
+                )
+                upload_data.on_progress = progress_event
 
                 # If all chunks have been uploaded, complete the file upload
-
                 if chunks_uploaded == file["total_chunks"]:
-                    if upload_data.on_complete:
-                        complete_event = OnComplete(file["upload_id"], file["batch_pk"])
-                        upload_data.on_complete(complete_event)
+                    complete_event = OnComplete(file["upload_id"], upload_data.batch_pk)
+                    upload_data.on_complete = complete_event
 
                     end_status = APIClient().batches_uploads_end_create(
-                        file["batch_pk"], data={"upload_session": file["uploadSession"]}
+                        upload_data.batch_pk,
+                        data={"upload_id": file["upload_id"]},
                     )
-                    if end_status["status"] == 400:
+                    if end_status.status_code == 400:
                         logging.error(
-                            f"Failed to end upload for file: {file['upload_id']} (Batch ID: {file['batch_pk']})"
+                            f"Failed to end upload for file: {file['upload_id']} (Batch ID: {upload_data.batch_pk})"
                         )
 
         except Exception as e:
