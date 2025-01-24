@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from pathogena import util
+from pathogena import __version__, util
 from pathogena.util import find_duplicate_entries
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
@@ -49,7 +49,7 @@ class UploadBase(BaseModel):
     host_organism: str = Field(
         default=None, description="Host organism scientific name"
     )
-    amplicon_scheme: str | None = Field(
+    amplicon_scheme: Optional[str] = Field(
         default=None,
         description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
@@ -219,8 +219,9 @@ class UploadBatch(BaseModel):
         description="Skip checking FastQ files", default=False
     )
     ran_through_hostile: bool = False
-    instrument_platform: str = None
+    instrument_platform: Optional[str] = None
     amplicon_scheme: Optional[str] = None
+    specimen_organism: Optional[str] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -410,7 +411,11 @@ def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> Upload
         UploadBatch: The created UploadBatch instance.
     """
     records = util.parse_csv(upload_csv)
+    samples = [UploadSample(**r, **{"upload_csv": upload_csv}) for r in records]
+    specimen_organism = samples[0].specimen_organism if len(samples) > 0 else None
+
     return UploadBatch(  # Include upload_csv to enable relative fastq path validation
-        samples=[UploadSample(**r, **{"upload_csv": upload_csv}) for r in records],
+        samples=samples,
         skip_reading_fastqs=skip_checks,
+        specimen_organism=specimen_organism,
     )

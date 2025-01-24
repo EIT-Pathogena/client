@@ -166,7 +166,8 @@ def create_batch_on_server(
     number_of_samples: int,
     amplicon_scheme: str | None,
     validate_only: bool = False,
-) -> tuple[str, str]:
+    specimen_organism: str | None = None,
+) -> tuple[str, str] | tuple[None, None]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -177,6 +178,7 @@ def create_batch_on_server(
         number_of_samples (int): The expected number of samples in the batch.
         amplicon_scheme (str | None): The amplicon scheme to use.
         validate_only (bool): Whether to validate only. Defaults to False.
+        specimen_organism (str | None): The specimen organism of the first sample
 
     Returns:
         tuple[str, str]: The batch ID and name.
@@ -191,6 +193,10 @@ def create_batch_on_server(
             "version": hostile.__version__,
         },
     }
+
+    if specimen_organism:
+        telemetry_data["specimen_organism"] = specimen_organism
+
     data = {
         "telemetry_data": telemetry_data,
         "expected_sample_count": number_of_samples,
