@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Literal, Optional
 
+import fastq_validation
 from pydantic import BaseModel, Field, model_validator
 
 from pathogena import util
@@ -168,30 +169,47 @@ class UploadSample(UploadBase):
         """
         reads = self.get_read_paths()
         logging.info("Performing FastQ checks and gathering total reads")
-        valid_lines_per_read = 4
-        self.reads_in = 0
-        for read in reads:
-            logging.info(f"Calculating read count in: {read}")
-            if read.suffix == ".gz":
-                line_count = util.reads_lines_from_gzip(file_path=read)
+        try:
+            if self.is_illumina():
+                stats1, stats2 = fastq_validation.check_illumina(*reads)
+                self.reads_in = stats1.num_reads + stats2.num_reads
+                if not stats1.is_illumina():
+                    raise ValueError(
+                        f"FastQ file {reads[0]} doesn't appear to be Illumina! "
+                        f"Mean read length {stats1.mean_read_length} bp, "
+                        f"Percentage of reads the same length {round(stats1.percent_same_length * 100, 2)}%"
+                    )
+                if not stats2.is_illumina():
+                    raise ValueError(
+                        f"FastQ file {reads[1]} doesn't appear to be Illumina! "
+                        f"Mean read length {stats2.mean_read_length} bp, "
+                        f"Percentage of reads the same length {round(stats2.percent_same_length * 100, 2)}%"
+                    )
             else:
-                line_count = util.reads_lines_from_fastq(file_path=read)
-            if line_count % valid_lines_per_read != 0:
-                raise ValueError(
-                    f"FASTQ file {read.name} does not have a multiple of 4 lines"
-                )
-            self.reads_in += line_count / valid_lines_per_read
+                stats = fastq_validation.check_ont(*reads)
+                self.reads_in = stats.num_reads
+                if not stats.is_ont():
+                    raise ValueError(
+                        f"FastQ file {reads[0]} doesn't appear to be ONT! "
+                        f"Mean read length {stats.mean_read_length} bp, "
+                        f"Percentage of reads the same length {round(stats.percent_same_length * 100, 2)}%"
+                    )
+        except Exception as e:
+            logging.info(e)
+            raise ValueError(
+                f"Invalid FastQ file(s) for sample {self.sample_name}. Please check the file(s) and try again."
+            ) from e
         logging.info(f"{self.reads_in} reads in FASTQ file")
 
-    def get_read_paths(self) -> list[Path]:
+    def get_read_paths(self) -> list[str]:
         """Get the paths of the read files.
 
         Returns:
-            list[Path]: A list of paths to the read files.
+            list[str]: A list of paths to the read files.
         """
-        reads = [self.reads_1_resolved_path]
+        reads = [self.reads_1_resolved_path.as_posix()]
         if self.is_illumina():
-            reads.append(self.reads_2_resolved_path)
+            reads.append(self.reads_2_resolved_path.as_posix())
         return reads
 
     def is_ont(self) -> bool:
