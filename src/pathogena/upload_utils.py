@@ -1,11 +1,9 @@
-import base64
-import io
-import json
 import logging
 import math
 import os
 import sys
-from collections.abc import Callable, Generator
+import time
+from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,7 +17,9 @@ from pathogena.batch_upload_apis import APIClient, APIError
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_HOST,
+    DEFAULT_MAX_UPLOAD_RETRIES,
     DEFAULT_PROTOCOL,
+    DEFAULT_RETRY_DELAY,
     DEFAULT_UPLOAD_HOST,
 )
 from pathogena.log_utils import httpx_hooks
@@ -508,6 +508,7 @@ def upload_chunks(
         upload_data (UploadFileType): The upload data including batch_id, session info, etc.
         file (SelectedFile): The file to upload (with file data, total chunks, etc.)
         file_status (dict): The dictionary to track the file upload progress.
+        chunk size (int): Default size of of file chunk to upload (5mb)
 
     Returns:
         None: This function does not return anything, but updates the `file_status` dictionary
@@ -516,8 +517,11 @@ def upload_chunks(
     chunks_uploaded = 0
     chunk_queue = []
     stop_uploading = False
+
+    max_retries = DEFAULT_MAX_UPLOAD_RETRIES
+    retry_delay = DEFAULT_RETRY_DELAY
+
     for i in range(file["total_chunks"]):  # total chunks = file.size/chunk_size
-        # stop uploading chunks if one returns a 400 error
         if stop_uploading:
             break
 
@@ -528,65 +532,90 @@ def upload_chunks(
         end = start + chunk_size
         file_chunk = file["file_data"][start:end]
 
-        # upload chunk
-        chunk_upload = upload_chunk(
-            batch_pk=upload_data.batch_pk,
-            host=get_host(),
-            protocol=get_protocol(),
-            chunk=file_chunk,
-            chunk_index=i,
-            upload_id=file["upload_id"],
-        )
-        chunk_queue.append(chunk_upload)
-        try:
-            # get result of upload chunk
-            chunk_upload_result = chunk_upload.json()
-            # stop uploading subsequent chunks if upload chunk retuns a 400
-            if chunk_upload_result.get("status_code") == 400:
-                logging.error(
-                    f"Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
-                )
-                stop_uploading = True
-                break
+        success = False
+        attempt = 0
 
-            # process result of chunk upload for upload chunks that don't return 400 status
-            metrics = chunk_upload_result.get("metrics", {})
-            if metrics:
-                chunks_uploaded += 1
-                file_status[file["upload_id"]] = {
-                    "chunks_uploaded": chunks_uploaded,
-                    "total_chunks": file["total_chunks"],
-                    "metrics": chunk_upload_result["metrics"],
-                }
-                progress = (chunks_uploaded / file["total_chunks"]) * 100
-
-                # Create an OnProgress instance
-                progress_event = OnProgress(
-                    upload_id=file["upload_id"],
-                    batch_pk=upload_data.batch_pk,
-                    progress=progress,
-                    metrics=chunk_upload_result["metrics"],
-                )
-                upload_data.on_progress = progress_event
-
-                # If all chunks have been uploaded, complete the file upload
-                if chunks_uploaded == file["total_chunks"]:
-                    complete_event = OnComplete(file["upload_id"], upload_data.batch_pk)
-                    upload_data.on_complete = complete_event
-
-                    end_status = APIClient().batches_uploads_end_create(
-                        upload_data.batch_pk,
-                        data={"upload_id": file["upload_id"]},
-                    )
-                    if end_status.status_code == 400:
-                        logging.error(
-                            f"Failed to end upload for file: {file['upload_id']} (Batch ID: {upload_data.batch_pk})"
-                        )
-
-        except Exception as e:
-            logging.error(
-                f"Error uploading chunk {i} of batch {upload_data.batch_pk}: {str(e)}"
+        while attempt < max_retries and not success:
+            # upload chunk
+            chunk_upload = upload_chunk(
+                batch_pk=upload_data.batch_pk,
+                host=get_host(),
+                protocol=get_protocol(),
+                chunk=file_chunk,
+                chunk_index=i,
+                upload_id=file["upload_id"],
             )
+            chunk_queue.append(chunk_upload)
+            try:
+                # get result of upload chunk
+                chunk_upload_result = chunk_upload.json()
+
+                # retry if resposne is 400 and not reached max number of retries
+                if chunk_upload_result.get("status_code") == 400:
+                    logging.error(
+                        f"Attempt {attempt+1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
+                    )
+                    attempt += 1
+
+                    if attempt < max_retries:
+                        logging.info(f"Retrying upload of chunk {i}")
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        stop_uploading = (
+                            True  # stop retrying if have reached max retry attempts
+                        )
+                        break
+
+                # process result of chunk upload for upload chunks that don't return 400 status
+                metrics = chunk_upload_result.get("metrics", {})
+                if metrics:
+                    chunks_uploaded += 1
+                    file_status[file["upload_id"]] = {
+                        "chunks_uploaded": chunks_uploaded,
+                        "total_chunks": file["total_chunks"],
+                        "metrics": chunk_upload_result["metrics"],
+                    }
+                    progress = (chunks_uploaded / file["total_chunks"]) * 100
+
+                    # Create an OnProgress instance
+                    progress_event = OnProgress(
+                        upload_id=file["upload_id"],
+                        batch_pk=upload_data.batch_pk,
+                        progress=progress,
+                        metrics=chunk_upload_result["metrics"],
+                    )
+                    upload_data.on_progress = progress_event
+
+                    # If all chunks have been uploaded, complete the file upload
+                    if chunks_uploaded == file["total_chunks"]:
+                        complete_event = OnComplete(
+                            file["upload_id"], upload_data.batch_pk
+                        )
+                        upload_data.on_complete = complete_event
+
+                        end_status = APIClient().batches_uploads_end_create(
+                            upload_data.batch_pk,
+                            data={"upload_id": file["upload_id"]},
+                        )
+                        if end_status.status_code == 400:
+                            logging.error(
+                                f"Failed to end upload for file: {file['upload_id']} (Batch ID: {upload_data.batch_pk})"
+                            )
+                success = True
+
+            except Exception as e:
+                logging.error(
+                    f"Attempt {attempt} of {max_retries}: Error uploading chunk {i} of batch {upload_data.batch_pk}: {str(e)}"
+                )
+                attempt += 1
+                if attempt < max_retries:
+                    logging.info(f"Retrying upload of chunk {i}")
+                    time.sleep(retry_delay)
+                else:
+                    stop_uploading = True
+                    break
+        if not success:
             stop_uploading = (
                 True  # Stop uploading further chunks if some other error occurs
             )
