@@ -553,7 +553,7 @@ def upload_chunks(
                 # retry if resposne is 400 and not reached max number of retries
                 if chunk_upload_result.get("status_code") == 400:
                     logging.error(
-                        f"Attempt {attempt+1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
+                        f"Attempt {attempt + 1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
                     )
                     attempt += 1
 
