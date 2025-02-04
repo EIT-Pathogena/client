@@ -326,6 +326,12 @@ class TestUploadChunks:
         # Mock process_queue to prevent it from blocking the test
         mocker.patch("pathogena.upload_utils.process_queue", return_value=None)
 
+        # Mock access_token
+        dummy_token = "dummy-token"
+        mocker.patch(
+            "pathogena.upload_utils.get_access_token", return_value=dummy_token
+        )
+
         # mock as_completed to simulate completed futures
         self.mock_end_upload = mocker.patch.object(
             APIClient,
@@ -361,8 +367,6 @@ class TestUploadChunks:
             batch_pk=123,
             env="env",
             samples=samples,
-            # on_complete=mocker.MagicMock(),
-            # on_progress=mocker.MagicMock(),
             max_concurrent_chunks=2,
             max_concurrent_files=2,
             upload_session=456,
@@ -397,14 +401,19 @@ class TestUploadChunks:
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
     ):
-        # mock return values for chunk_upload_result
-        mock_chunk_upload_response = {"metrics": "some_metrics"}
+        mock_upload_success = mocker.Mock()
+        mock_upload_success.status_code = 200
+        mock_upload_success.json = lambda: {"metrics": "some_metrics"}
 
-        # mock upload_chunk to return a successful result
-        mock_upload = mocker.MagicMock()
-        mock_upload.json.return_value = mock_chunk_upload_response
-
-        mocker.patch("pathogena.upload_utils.upload_chunk", return_value=mock_upload)
+        mocker.patch(
+            "pathogena.upload_utils.upload_chunk",
+            side_effect=[
+                mock_upload_success,
+                mock_upload_success,
+                mock_upload_success,
+                mock_upload_success,
+            ],
+        )
 
         # call
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
@@ -419,29 +428,45 @@ class TestUploadChunks:
         )
         assert self.mock_end_upload.calledonce  # batches_uploads_end_create called once
 
-    def test_upload_chunks_stop_on_400(
+    def test_upload_chunks_retry_on_400(
         self,
         mock_upload_data: UploadFileType,
         mock_file: SelectedFile,
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
+        caplog: pytest.LogCaptureFixture,
     ):
-        # mock the first chunk to succeed and the second to fail with a 400
+        # mock the first chunk to succeed and the following to fail with a 400
         # need response json too as check it in code
-        mock_upload_1 = mocker.Mock()
-        mock_upload_1.status_code = 200
-        mock_upload_1.text = "OK"
-        mock_upload_1.json = lambda: {"metrics": "some_metrics"}
+        mock_upload_success = mocker.Mock()
+        mock_upload_success.status_code = 200
+        mock_upload_success.text = "OK"
+        mock_upload_success.json = lambda: {"metrics": "some_metrics"}
 
-        mock_upload_2 = mocker.MagicMock()
-        mock_upload_2.status_code = 400
-        mock_upload_2.text = "Bad Request"
-        mock_upload_2.json = lambda: {"status_code": 400}
+        mock_upload_fail = mocker.MagicMock()
+        mock_upload_fail.status_code = 400
+        mock_upload_fail.text = "Bad Request"
+        mock_upload_fail.json = lambda: {"status_code": 400}
+
+        mock_upload_fail_2 = mocker.MagicMock()
+        mock_upload_fail_2.status_code = 400
+        mock_upload_fail_2.text = "Bad Request Retry"
+        mock_upload_fail_2.json = lambda: {"status_code": 400}
+
+        mock_upload_fail_3 = mocker.MagicMock()
+        mock_upload_fail_3.status_code = 400
+        mock_upload_fail_3.text = "Bad Request Third"
+        mock_upload_fail_3.json = lambda: {"status_code": 400}
 
         # mock upload_chunk to return the above mocks
-        mocker.patch(
+        mock_upload_chunk = mocker.patch(
             "pathogena.upload_utils.upload_chunk",
-            side_effect=[mock_upload_1, mock_upload_2],
+            side_effect=[
+                mock_upload_success,
+                mock_upload_fail,
+                mock_upload_fail_2,
+                mock_upload_fail_3,
+            ],
         )
 
         # call
@@ -457,6 +482,13 @@ class TestUploadChunks:
         assert (
             not self.mock_end_upload.called
         )  # batches_uploads_end_create should not be called as 2nd upload failed
+        assert mock_upload_chunk.call_count == 4
+        assert (
+            "Retrying upload of chunk 1" in caplog.text
+        )  # retrying upload captured in logging
+        assert (
+            "Attempt 3 of 3" in caplog.text
+        )  # retry has been done DEFAULT_MAX_UPLOAD_RETRIES times
 
     def test_upload_chunks_error_handling(
         self,
@@ -470,8 +502,17 @@ class TestUploadChunks:
         mock_upload_1 = mocker.MagicMock()
         mock_upload_1.json.side_effect = Exception("Some error")
 
+        mock_upload_2 = mocker.MagicMock()
+        mock_upload_2.json.side_effect = Exception("Some error")
+
+        mock_upload_3 = mocker.MagicMock()
+        mock_upload_3.json.side_effect = Exception("Some error")
+
         # mock upload_chunk to return the above mock
-        mocker.patch("pathogena.upload_utils.upload_chunk", side_effect=[mock_upload_1])
+        mocker.patch(
+            "pathogena.upload_utils.upload_chunk",
+            side_effect=[mock_upload_1, mock_upload_2, mock_upload_3],
+        )
 
         # call
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
@@ -481,6 +522,9 @@ class TestUploadChunks:
         assert (
             not self.mock_end_upload.called
         )  # batches_uploads_end_create should not be called since there was an error
+        assert (
+            "Retrying upload of chunk 0" in caplog.text
+        )  # retrying upload captured in logging
         assert (
             "Error uploading chunk 0 of batch 123:" in caplog.text
         )  # error, chunk number and batch pk captured in logging
