@@ -401,21 +401,32 @@ class TestUploadChunks:
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
     ):
-        mock_upload_success = mocker.Mock()
-        mock_upload_success.status_code = 200
-        mock_upload_success.json = lambda: {"metrics": "some_metrics"}
+        # mock_upload_success = mocker.Mock()
+        # mock_upload_success.status_code = 200
+        # mock_upload_success.json = lambda: {"metrics": "some_metrics"}
 
-        mocker.patch(
-            "pathogena.upload_utils.upload_chunk",
-            side_effect=[
-                mock_upload_success,
-                mock_upload_success,
-                mock_upload_success,
-                mock_upload_success,
-            ],
-        )
+        # mocker.patch(
+        #     "pathogena.upload_utils.upload_chunk",
+        #     side_effect=[
+        #         mock_upload_success,
+        #         mock_upload_success,
+        #         mock_upload_success,
+        #         mock_upload_success,
+        #     ],
+        # )
+
+        # mock return values for chunk_upload_result
+        mock_chunk_upload_response = {"metrics": "some_metrics"}
+
+        # mock upload_chunk to return a successful result
+        mock_upload = mocker.MagicMock()
+        mock_upload.json.return_value = mock_chunk_upload_response
+        mock_upload.status_code = 200
+
+        mocker.patch("pathogena.upload_utils.upload_chunk", return_value=mock_upload)
 
         # call
+        # breakpoint()
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
         assert mock_upload_data.on_complete == OnComplete(
