@@ -33,8 +33,8 @@ def get_protocol() -> str:
     Returns:
         str: The protocol (e.g., 'http', 'https').
     """
-    if "PATHOGENA_PROTOCOL" in os.environ:
-        protocol = os.environ["PATHOGENA_PROTOCOL"]
+    protocol = os.environ.get("PATHOGENA_PROTOCOL")
+    if protocol is not None:
         return protocol
     else:
         return DEFAULT_PROTOCOL
@@ -520,7 +520,6 @@ def upload_chunks(
 
     max_retries = DEFAULT_MAX_UPLOAD_RETRIES
     retry_delay = DEFAULT_RETRY_DELAY
-
     for i in range(file["total_chunks"]):  # total chunks = file.size/chunk_size
         if stop_uploading:
             break
@@ -537,6 +536,7 @@ def upload_chunks(
 
         while attempt < max_retries and not success:
             # upload chunk
+
             chunk_upload = upload_chunk(
                 batch_pk=upload_data.batch_pk,
                 host=get_host(),
@@ -550,8 +550,8 @@ def upload_chunks(
                 # get result of upload chunk
                 chunk_upload_result = chunk_upload.json()
 
-                # retry if resposne is 400 and not reached max number of retries
-                if chunk_upload_result.get("status_code") == 400:
+                # retry if response >= 400 and not reached max number of retries
+                if chunk_upload.status_code >= 400:
                     logging.error(
                         f"Attempt {attempt + 1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
                     )
@@ -615,6 +615,8 @@ def upload_chunks(
                 else:
                     stop_uploading = True
                     break
+
+        logging.error(f"{chunks_uploaded=}")
         if not success:
             stop_uploading = (
                 True  # Stop uploading further chunks if some other error occurs
