@@ -403,48 +403,31 @@ class TestUploadChunks:
     ):
         mock_upload_success = httpx.Response(200, json={"metrics": "some_metrics"})
 
-        # mocker.patch(
-        #     "pathogena.upload_utils.upload_chunk",
-        #     side_effect=[
-        #         mock_upload_success,
-        #         mock_upload_success,
-        #         mock_upload_success,
-        #         mock_upload_success,
-        #     ],
-        # )
+        mocker.patch(
+            "pathogena.upload_utils.upload_chunk",
+            return_value=mock_upload_success,
+            # side_effect=mock_upload_success,
+        )
+        mock_client = mocker.patch(
+            "pathogena.upload_utils.APIClient",
+        )
+        mock_batches_uploads_end_create = mocker.MagicMock()
+        mock_batches_uploads_end_create.side_effect = httpx.Response(
+            200, json={"metrics": "some_metrics"}
+        )
+        mock_client.batches_uploads_end_create = mock_batches_uploads_end_create
 
-        # mock return values for chunk_upload_result
-        # mock_chunk_upload_response = {"metrics": "some_metrics"}
+        upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
-        # mock upload_chunk to return a successful result
-        # mock_upload = mocker.MagicMock()
-        # mock_upload.json.return_value = mock_chunk_upload_response
-        # mock_upload.status_code = 200
-
-        with (
-            mocker.patch(
-                "pathogena.upload_utils.upload_chunk",
-                return_value=mock_upload_success,
-                # side_effect=mock_upload_success,
-            ),
-            mocker.patch(
-                "pathogena.upload_utils.api_client.APIClient.batches_uploads_end_create"
-            ) as mock_end,
-        ):
-            mock_end.return_value.status_code = 200
-            upload_chunks(mock_upload_data, mock_file, mock_file_status)
-
-            assert mock_upload_data.on_complete == OnComplete(
-                mock_file["upload_id"], mock_upload_data.batch_pk
-            )  # all 4 chunks uploaded
-            assert mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"] == 4
-            assert (
-                mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
-                == mock_file["total_chunks"]
-            )
-            assert (
-                self.mock_end_upload.calledonce
-            )  # batches_uploads_end_create called once
+        assert mock_upload_data.on_complete == OnComplete(
+            mock_file["upload_id"], mock_upload_data.batch_pk
+        )  # all 4 chunks uploaded
+        assert mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"] == 4
+        assert (
+            mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
+            == mock_file["total_chunks"]
+        )
+        assert self.mock_end_upload.calledonce  # batches_uploads_end_create called once
 
     def test_upload_chunks_retry_on_400(
         self,

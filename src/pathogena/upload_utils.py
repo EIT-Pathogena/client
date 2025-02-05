@@ -593,8 +593,8 @@ def upload_chunks(
                             file["upload_id"], upload_data.batch_pk
                         )
                         upload_data.on_complete = complete_event
-
-                        end_status = APIClient().batches_uploads_end_create(
+                        client = APIClient()
+                        end_status = client.batches_uploads_end_create(
                             upload_data.batch_pk,
                             data={"upload_id": file["upload_id"]},
                         )
@@ -616,7 +616,6 @@ def upload_chunks(
                     stop_uploading = True
                     break
 
-        logging.error(f"{chunks_uploaded=}")
         if not success:
             stop_uploading = (
                 True  # Stop uploading further chunks if some other error occurs
