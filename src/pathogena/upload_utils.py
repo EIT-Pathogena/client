@@ -70,6 +70,7 @@ class SampleMetadata(TypedDict):
     size: int
     control: str
     content_type: str
+    specimen_organism: str
 
 
 class UploadMetrics(TypedDict):
@@ -370,6 +371,7 @@ def prepare_files(
                     if sample.reads_1_resolved_path is not None
                     and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
                     else "text/plain",
+                    "specimen_organism": sample.specimen_organism,
                 }
             )
             samples.append(
@@ -381,6 +383,7 @@ def prepare_files(
                     if sample.reads_2_resolved_path is not None
                     and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
                     else "text/plain",
+                    "specimen_organism": sample.specimen_organism,
                 }
             )
         else:
@@ -393,6 +396,7 @@ def prepare_files(
                     if sample.reads_1_resolved_path is not None
                     and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
                     else "text/plain",
+                    "specimen_organism": sample.specimen_organism,
                 }
             )
 
@@ -406,12 +410,17 @@ def prepare_files(
 
         if len(sample.get("control", "")) > 0:
             sample_payload["control"] = sample.get("control")
-        if sample.get("specimen_organism"):
-            sample_payload["specimen_organism"] = sample.get("specimen_organism")
+
+        # if sample.get("specimen_organism"):
+        #     sample_payload["specimen_organism"] = sample.get("specimen_organism")
 
         files_to_upload.append(sample_payload)
 
-    form_details = {"files_to_upload": files_to_upload}
+    form_details = {
+        "files_to_upload": files_to_upload,
+        "specimen_organism": samples[0].get("specimen_organism"),
+    }
+
     try:
         # start upload session
         start_session = api_client.batches_samples_start_upload_session_create(

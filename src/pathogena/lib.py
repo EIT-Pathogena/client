@@ -185,6 +185,18 @@ def create_batch_on_server(
     instrument_platform = batch.samples[0].instrument_platform
     collection_date = batch.samples[0].collection_date
     country = batch.samples[0].country
+    telemetry_data = {
+        "client": {
+            "name": "pathogena-client",
+            "version": pathogena.__version__,
+        },
+        "decontamination": {
+            "name": "hostile",
+            "version": hostile.__version__,
+        },
+        "specimen_organism": batch.samples[0].specimen_organism,
+    }
+
     batch_name = (
         batch.samples[0].batch_name
         if batch.samples[0].batch_name not in ["", " ", None]
@@ -196,7 +208,9 @@ def create_batch_on_server(
         "country": country,
         "name": batch_name,
         "amplicon_scheme": amplicon_scheme,
+        "telemetry_data": json.dumps(telemetry_data),
     }
+
     url = f"{get_protocol()}://{host}/api/v1/batches"
     if validate_only:
         url += "/validate_creation"
@@ -224,92 +238,6 @@ def create_batch_on_server(
         response.json()["name"],
         response.json()["legacy_batch_id"],
     )
-
-
-@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def create_sample(
-    host: str,
-    batch_id: str,
-    sample: UploadSample,
-) -> str:
-    """Create a sample on the server with retries.
-
-    Args:
-        host (str): The host server.
-        batch_id (str): The batch ID.
-        sample (UploadSample): The sample to create.
-
-    Returns:
-        str: The sample ID.
-    """
-    data = {
-        "batch_id": batch_id,
-        "status": "Created",
-        "collection_date": str(sample.collection_date),
-        "control": util.map_control_value(sample.control),
-        "country": sample.country,
-        "subdivision": sample.subdivision,
-        "district": sample.district,
-        "client_decontamination_reads_removed_proportion": sample.reads_removed,
-        "client_decontamination_reads_in": sample.reads_in,
-        "client_decontamination_reads_out": sample.reads_out,
-        "checksum": sample.reads_1_pre_upload_checksum,
-        "instrument_platform": sample.instrument_platform,
-        "specimen_organism": sample.specimen_organism,
-        "host_organism": sample.host_organism,
-    }
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    logging.debug(f"Sample {data=}")
-    with httpx.Client(
-        event_hooks=httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=60,
-    ) as client:
-        response = client.post(
-            f"{get_protocol()}://{host}/api/v1/samples",
-            headers=headers,
-            json=data,
-            follow_redirects=True,
-        )
-    return response.json()["id"]
-
-
-@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def run_sample(sample_id: str, host: str) -> str:
-    """Patch sample status, create run, and patch run status to trigger processing.
-
-    Args:
-        sample_id (str): The sample ID.
-        host (str): The host server.
-
-    Returns:
-        str: The result of the sample run.
-    """
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(
-        event_hooks=httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=30,
-    ) as client:
-        client.patch(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
-            headers=headers,
-            json={"status": "Ready"},
-        )
-        post_run_response = client.post(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs",
-            headers=headers,
-            json={"sample_id": sample_id},
-            follow_redirects=True,
-        )
-        run_id = post_run_response.json()["id"]
-        client.patch(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
-            headers=headers,
-            json={"status": "Ready"},
-        )
-        logging.debug(f"{run_id=}")
-        return run_id
 
 
 def decontaminate_samples_with_hostile(
