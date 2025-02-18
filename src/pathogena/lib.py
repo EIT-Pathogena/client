@@ -24,7 +24,7 @@ from pathogena.constants import (
     DEFAULT_PROTOCOL,
     HOSTILE_INDEX_NAME,
 )
-from pathogena.errors import MissingError, UnsupportedClientError, APIError
+from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
