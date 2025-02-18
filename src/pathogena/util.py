@@ -6,188 +6,19 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 import uuid
 from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
-from types import TracebackType
 from typing import Literal
 
-import httpx
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+from dotenv import load_dotenv
 
 import pathogena
 
+load_dotenv()
+
 PLATFORMS = Literal["illumina", "ont"]
-
-
-class InvalidPathError(Exception):
-    """Custom exception for giving nice user errors around missing paths."""
-
-    def __init__(self, message: str):
-        """Constructor, used to pass a custom message to user.
-
-        Args:
-            message (str): Message about this path
-        """
-        self.message = message
-        super().__init__(self.message)
-
-
-class UnsupportedClientError(Exception):
-    """Exception raised for unsupported client versions."""
-
-    def __init__(self, this_version: str, current_version: str):
-        """Raise this exception with a sensible message.
-
-        Args:
-            this_version (str): The version of installed version
-            current_version (str): The version returned by the API
-        """
-        self.message = (
-            f"\n\nThe installed client version ({this_version}) is no longer supported."
-            " To update the client, please run:\n\n"
-            "conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0 && conda activate pathogena && pip install --upgrade pathogena"
-        )
-        super().__init__(self.message)
-
-
-# Python errors for neater client errors
-class AuthorizationError(Exception):
-    """Custom exception for authorization issues. 401."""
-
-    def __init__(self):
-        """Initialize the AuthorizationError with a custom message."""
-        self.message = "Authorization checks failed! Please re-authenticate with `pathogena auth` and try again.\n"
-        "If the problem persists please contact support (pathogena.support@eit.org)."
-        super().__init__(self.message)
-
-
-class PermissionError(Exception):  # noqa: A001
-    """Custom exception for permission issues. 403."""
-
-    def __init__(self):
-        """Initialize the PermissionError with a custom message."""
-        self.message = (
-            "You don't have access to this resource! Check logs for more details.\n"
-            "Please contact support if you think you should be able to access this resource (pathogena.support@eit.org)."
-        )
-        super().__init__(self.message)
-
-
-class MissingError(Exception):
-    """Custom exception for missing issues. (HTTP Status 404)."""
-
-    def __init__(self):
-        self.message = (
-            "Resource not found! It's possible you asked for something which doesn't exist. "
-            "Please double check that the resource exists."
-        )
-        super().__init__(self.message)
-
-
-class ServerSideError(Exception):
-    """Custom exception for all other server side errors. (HTTP Status 5xx)."""
-
-    def __init__(self):
-        self.message = (
-            "We had some trouble with the server, please double check your command and try again in a moment.\n"
-            "If the problem persists, please contact support (pathogena.support@eit.org)."
-        )
-        super().__init__(self.message)
-
-
-class InsufficientFundsError(Exception):
-    """Custom exception for insufficient funds."""
-
-    def __init__(self):
-        self.message = (
-            "Your account doesn't have enough credits to fulfil the number of Samples in your Batch. "
-            "You can request more credits by contacting support (pathogena.support@eit.org)."
-        )
-        super().__init__(self.message)
-
-
-def configure_debug_logging(debug: bool) -> None:
-    """Configure logging for debug mode.
-
-    Args:
-        debug (bool): Whether to enable debug logging.
-    """
-    if debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.debug("Debug logging enabled")
-    else:
-        logging.getLogger().setLevel(logging.INFO)
-        # Supress tracebacks on exceptions unless in debug mode.
-        sys.excepthook = exception_handler
-
-
-def exception_handler(
-    exception_type: type[BaseException], exception: Exception, traceback: TracebackType
-) -> None:
-    """Handle uncaught exceptions by logging them.
-
-    Args:
-        exc_type (type): Exception type.
-        exc_value (BaseException): Exception instance.
-        exc_traceback (TracebackType): Traceback object.
-    """
-    logging.error(f"{exception_type.__name__}: {exception}")
-
-
-def log_request(request: httpx.Request) -> None:
-    """Log HTTP request details.
-
-    Args:
-        request (httpx.Request): The HTTP request object.
-    """
-    logging.debug(f"Request: {request.method} {request.url}")
-
-
-def log_response(response: httpx.Response) -> None:
-    """Log HTTP response details.
-
-    Args:
-        response (httpx.Response): The HTTP response object.
-    """
-    if response.is_error:
-        request = response.request
-        response.read()
-        message = response.json().get("message")
-        logging.error(f"{request.method} {request.url} ({response.status_code})")
-        logging.error(message)
-
-
-def raise_for_status(response: httpx.Response) -> None:
-    """Raise an exception for HTTP error responses.
-
-    Args:
-        response (httpx.Response): The HTTP response object.
-
-    Raises:
-        httpx.HTTPStatusError: If the response contains an HTTP error status.
-    """
-    if response.is_error:
-        response.read()
-        if response.status_code == 401:
-            logging.error("Have you tried running `pathogena auth`?")
-            raise AuthorizationError()
-        elif response.status_code == 402:
-            raise InsufficientFundsError()
-        elif response.status_code == 403:
-            raise PermissionError()
-        elif response.status_code == 404:
-            raise MissingError()
-        elif response.status_code // 100 == 5:
-            raise ServerSideError()
-
-    # Default to httpx errors in other cases
-    response.raise_for_status()
-
-
-httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
 
 
 def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
@@ -271,75 +102,7 @@ def hash_file(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
-@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def upload_file(
-    sample_id: int,
-    file_path: Path,
-    host: str,
-    protocol: str,
-    checksum: str,
-    dirty_checksum: str,
-) -> None:
-    """Upload a file to the server with retries.
-
-    Args:
-        sample_id (int): The ID of the sample.
-        file_path (Path): The path to the file to be uploaded.
-        host (str): The host server.
-        protocol (str): The protocol to use (e.g., 'http', 'https').
-        checksum (str): The checksum of the file.
-        dirty_checksum (str): The dirty checksum of the file.
-    """
-    with (
-        httpx.Client(
-            event_hooks=httpx_hooks,
-            transport=httpx.HTTPTransport(retries=5),
-            timeout=7200,  # 2 hours
-        ) as client,
-        open(file_path, "rb") as fh,
-    ):
-        client.post(
-            f"{protocol}://{host}/api/v1/samples/{sample_id}/files",
-            headers={"Authorization": f"Bearer {get_access_token(host)}"},
-            files={"file": fh},
-            data={"checksum": checksum, "dirty_checksum": dirty_checksum},
-        )
-
-
-def upload_fastq(
-    sample_id: int,
-    sample_name: str,
-    reads: Path,
-    host: str,
-    protocol: str,
-    dirty_checksum: str,
-) -> None:
-    """Upload a FASTQ file to the server.
-
-    Args:
-        sample_id (int): The ID of the sample.
-        sample_name (str): The name of the sample.
-        reads (Path): The path to the FASTQ file.
-        host (str): The host server.
-        protocol (str): The protocol to use (e.g., 'http', 'https').
-        dirty_checksum (str): The dirty checksum of the file.
-    """
-    reads = Path(reads)
-    logging.debug(f"upload_fastq(): {sample_id=}, {sample_name=}, {reads=}")
-    logging.info(f"Uploading {sample_name}")
-    checksum = hash_file(reads)
-    upload_file(
-        sample_id,
-        reads,
-        host=host,
-        protocol=protocol,
-        checksum=checksum,
-        dirty_checksum=dirty_checksum,
-    )
-    logging.info(f"  Uploaded {reads.name}")
-
-
-def parse_comma_separated_string(string) -> set[str]:
+def parse_comma_separated_string(string: str) -> set[str]:
     """Parse a comma-separated string into a set of strings.
 
     Args:
@@ -351,7 +114,7 @@ def parse_comma_separated_string(string) -> set[str]:
     return set(string.strip(",").split(","))
 
 
-def validate_guids(guids: list[str]) -> bool:
+def validate_guids(guids: set[str]) -> bool:
     """Validate a list of GUIDs.
 
     Args:
@@ -360,12 +123,10 @@ def validate_guids(guids: list[str]) -> bool:
     Returns:
         bool: True if all GUIDs are valid, False otherwise.
     """
-    for guid in guids:
-        try:
-            uuid.UUID(str(guid))
-            return True
-        except ValueError:
-            return False
+    try:
+        return all(uuid.UUID(str(guid)) for guid in guids)
+    except ValueError:
+        return False
 
 
 def map_control_value(v: str) -> bool | None:
@@ -475,12 +236,15 @@ def reads_lines_from_fastq(file_path: Path) -> int:
         logging.error(
             f"You do not have permission to access this file {file_path.name}."
         )
+        return -1
     except OSError as e:
         logging.error(f"An OS error occurred trying to open {file_path.name}: {e}")
+        return -1
     except Exception as e:
         logging.error(
             f"An unexpected error occurred trying to open {file_path.name}: {e}"
         )
+        return -1
 
 
 def find_duplicate_entries(inputs: list[str]) -> list[str]:

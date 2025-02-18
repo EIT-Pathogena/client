@@ -1,7 +1,6 @@
 import csv
 import json
 import logging
-import multiprocessing
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -17,30 +16,28 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-from pathogena import models, util
+from pathogena import batch_upload_apis, models, upload_utils, util
+from pathogena.constants import (
+    CPU_COUNT,
+    DEFAULT_HOST,
+    DEFAULT_PROTOCOL,
+    HOSTILE_INDEX_NAME,
+)
+from pathogena.errors import MissingError, UnsupportedClientError
+from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
-from pathogena.util import MissingError, get_access_token, get_token_path
+from pathogena.upload_utils import (
+    UploadFileType,
+    get_batch_upload_status,
+    get_upload_host,
+    prepare_files,
+)
+from pathogena.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-CPU_COUNT = multiprocessing.cpu_count()
-DEFAULT_HOST = "portal.eit-pathogena.com"
-DEFAULT_PROTOCOL = "https"
-DEFAULT_METADATA = {
-    "country": None,
-    "district": "",
-    "subdivision": "",
-    "instrument_platform": "illumina",
-    "pipeline": "mycobacteria",
-    "ont_read_suffix": ".fastq.gz",
-    "illumina_read1_suffix": "_1.fastq.gz",
-    "illumina_read2_suffix": "_2.fastq.gz",
-    "max_batch_size": 50,
-}
-HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 
-
-def get_host(cli_host: str | None) -> str:
+def get_host(cli_host: str | None = None) -> str:
     """Return hostname using 1) CLI argument, 2) environment variable, 3) default value.
 
     Args:
@@ -78,10 +75,11 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password (hidden): ")
-    with httpx.Client(event_hooks=util.httpx_hooks) as client:
+    with httpx.Client(event_hooks=httpx_hooks) as client:
         response = client.post(
             f"{get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
+            follow_redirects=True,
         )
     data = response.json()
 
@@ -107,10 +105,11 @@ def check_authentication(host: str) -> None:
     Raises:
         RuntimeError: If authentication fails.
     """
-    with httpx.Client(event_hooks=util.httpx_hooks):
+    with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
             headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            follow_redirects=True,
         )
     if response.is_error:
         logging.error(f"Authentication failed for host {host}")
@@ -125,7 +124,7 @@ def get_amplicon_schemes(host: str | None = None) -> list[str]:
     Returns:
         list[str]: List of valid amplicon schemes.
     """
-    with httpx.Client(event_hooks=util.httpx_hooks):
+    with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
         )
@@ -145,13 +144,14 @@ def get_credit_balance(host: str) -> None:
     """
     logging.info(f"Getting credit balance for {host}")
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=15,
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/credits/balance",
             headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            follow_redirects=True,
         )
         if response.status_code == 200:
             logging.info(f"Your remaining account balance is {response.text} credits")
@@ -162,11 +162,11 @@ def get_credit_balance(host: str) -> None:
 
 
 def create_batch_on_server(
+    batch: UploadBatch,
     host: str,
-    number_of_samples: int,
     amplicon_scheme: str | None,
     validate_only: bool = False,
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -181,6 +181,10 @@ def create_batch_on_server(
     Returns:
         tuple[str, str]: The batch ID and name.
     """
+    # Assume every sample in batch has same collection date and country etc
+    instrument_platform = batch.samples[0].instrument_platform
+    collection_date = batch.samples[0].collection_date
+    country = batch.samples[0].country
     telemetry_data = {
         "client": {
             "name": "pathogena-client",
@@ -190,114 +194,50 @@ def create_batch_on_server(
             "name": "hostile",
             "version": hostile.__version__,
         },
+        "specimen_organism": batch.samples[0].specimen_organism,
     }
+
+    batch_name = (
+        batch.samples[0].batch_name
+        if batch.samples[0].batch_name not in ["", " ", None]
+        else f"batch_{collection_date}"
+    )
     data = {
-        "telemetry_data": telemetry_data,
-        "expected_sample_count": number_of_samples,
+        "collection_date": str(collection_date),
+        "instrument": instrument_platform,
+        "country": country,
+        "name": batch_name,
         "amplicon_scheme": amplicon_scheme,
+        "telemetry_data": json.dumps(telemetry_data),
     }
+
     url = f"{get_protocol()}://{host}/api/v1/batches"
     if validate_only:
         url += "/validate_creation"
 
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
+        follow_redirects=True,
     ) as client:
         response = client.post(
-            url,
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
+            headers={
+                "Authorization": f"Bearer {util.get_access_token(host)}",
+                "accept": "application/json",
+            },
             json=data,
+            follow_redirects=True,
         )
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
-            return None, None
-    return response.json()["id"], response.json()["name"]
-
-
-@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def create_sample(
-    host: str,
-    batch_id: str,
-    sample: UploadSample,
-) -> str:
-    """Create a sample on the server with retries.
-
-    Args:
-        host (str): The host server.
-        batch_id (str): The batch ID.
-        sample (UploadSample): The sample to create.
-
-    Returns:
-        str: The sample ID.
-    """
-    data = {
-        "batch_id": batch_id,
-        "status": "Created",
-        "collection_date": str(sample.collection_date),
-        "control": util.map_control_value(sample.control),
-        "country": sample.country,
-        "subdivision": sample.subdivision,
-        "district": sample.district,
-        "client_decontamination_reads_removed_proportion": sample.reads_removed,
-        "client_decontamination_reads_in": sample.reads_in,
-        "client_decontamination_reads_out": sample.reads_out,
-        "checksum": sample.reads_1_pre_upload_checksum,
-        "instrument_platform": sample.instrument_platform,
-        "specimen_organism": sample.specimen_organism,
-        "host_organism": sample.host_organism,
-    }
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    logging.debug(f"Sample {data=}")
-    with httpx.Client(
-        event_hooks=util.httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=60,
-    ) as client:
-        response = client.post(
-            f"{get_protocol()}://{host}/api/v1/samples",
-            headers=headers,
-            json=data,
-        )
-    return response.json()["id"]
-
-
-@retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
-def run_sample(sample_id: str, host: str) -> str:
-    """Patch sample status, create run, and patch run status to trigger processing.
-
-    Args:
-        sample_id (str): The sample ID.
-        host (str): The host server.
-
-    Returns:
-        str: The result of the sample run.
-    """
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
-    with httpx.Client(
-        event_hooks=util.httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=30,
-    ) as client:
-        client.patch(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
-            headers=headers,
-            json={"status": "Ready"},
-        )
-        post_run_response = client.post(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs",
-            headers=headers,
-            json={"sample_id": sample_id},
-        )
-        run_id = post_run_response.json()["id"]
-        client.patch(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/runs/{run_id}",
-            headers=headers,
-            json={"status": "Ready"},
-        )
-        logging.debug(f"{run_id=}")
-        return run_id
+            return None, None, None  # type: ignore
+    return (
+        response.json()["id"],
+        response.json()["name"],
+        response.json()["legacy_batch_id"],
+    )
 
 
 def decontaminate_samples_with_hostile(
@@ -317,7 +257,7 @@ def decontaminate_samples_with_hostile(
     """
     logging.debug(f"decontaminate_samples_with_hostile() {threads=} {output_dir=}")
     logging.info(
-        f"Removing human reads from {batch.instrument_platform.upper()} FastQ files and storing in {output_dir.absolute()}"
+        f"Removing human reads from {str(batch.instrument_platform).upper()} FastQ files and storing in {output_dir.absolute()}"
     )
     fastq_paths = []
     decontamination_metadata = {}
@@ -375,9 +315,9 @@ def upload_batch(
         threads (int): The number of threads to use.
         output_dir (Path): The output directory for the uploaded files.
     """
-    batch_id, batch_name = create_batch_on_server(
+    batch_id, batch_name, legacy_batch_id = create_batch_on_server(
+        batch=batch,
         host=host,
-        number_of_samples=len(batch.samples),
         amplicon_scheme=batch.samples[0].amplicon_scheme,
         validate_only=validate_only,
     )
@@ -385,50 +325,31 @@ def upload_batch(
         logging.info(f"Batch creation for {batch_name} validated successfully")
         return
     mapping_csv_records = []
-    upload_meta = []
-    for sample in batch.samples:  # generate metadata
-        sample_id = create_sample(
-            host=host,
-            batch_id=batch_id,
-            sample=sample,
-        )
-        logging.debug(f"{sample_id=}")
-        sample.reads_1_upload_file = prepare_upload_files(
-            target_filepath=(
-                sample.reads_1_cleaned_path
-                if batch.ran_through_hostile
-                else sample.reads_1_resolved_path
-            ),
-            sample_id=sample_id,
-            decontaminated=batch.ran_through_hostile,
-            read_num=1,
-        )
-        if sample.is_illumina():
-            sample.reads_2_upload_file = prepare_upload_files(
-                target_filepath=(
-                    sample.reads_2_cleaned_path
-                    if batch.ran_through_hostile
-                    else sample.reads_2_resolved_path
-                ),
-                sample_id=sample_id,
-                decontaminated=batch.ran_through_hostile,
-                read_num=2,
-            )
-        upload_meta.append(
-            (
-                sample.sample_name,
-                sample_id,
-                sample.reads_1_upload_file,
-                sample.reads_2_upload_file if sample.is_illumina() else None,
-                sample.reads_1_dirty_checksum,
-                sample.reads_2_dirty_checksum if sample.is_illumina() else None,
-            )
-        )
+    # upload_meta = []
+
+    prepared_files = prepare_files(
+        batch_pk=int(batch_id),
+        files=batch.samples,
+        api_client=batch_upload_apis.APIClient(),
+    )
+
+    # initialise class
+    upload_file_type = UploadFileType(
+        access_token=util.get_access_token(get_host(None)),
+        batch_pk=int(batch_id),
+        env=get_upload_host(),
+        samples=batch.samples,
+        upload_session=prepared_files["uploadSession"],
+    )
+
+    upload_session_name = prepared_files["uploadSessionData"]["name"]
+
+    for file in prepared_files["files"]:
         mapping_csv_records.append(
             {
-                "batch_name": sample.batch_name,
-                "sample_name": sample.sample_name,
-                "remote_sample_name": sample_id,
+                "batch_name": upload_session_name,
+                "sample_name": file["file"]["name"],
+                "remote_sample_name": file["sample_id"],
                 "remote_batch_name": batch_name,
                 "remote_batch_id": batch_id,
             }
@@ -437,40 +358,23 @@ def upload_batch(
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"{get_protocol()}://{host}/batches/{batch_id}"
+        f"{get_protocol()}://{host}/batches/{legacy_batch_id}"
     )
 
-    # Upload reads
-    for (
-        name,
-        sample_id,
-        reads1_to_upload,
-        reads2_to_upload,
-        reads_1_dirty_checksum,
-        reads_2_dirty_checksum,
-    ) in upload_meta:
-        util.upload_fastq(
-            sample_id=sample_id,
-            sample_name=name,
-            reads=reads1_to_upload,
-            host=host,
-            protocol=get_protocol(),
-            dirty_checksum=reads_1_dirty_checksum,
-        )
-        if batch.is_illumina():
-            util.upload_fastq(
-                sample_id=sample_id,
-                sample_name=name,
-                reads=reads2_to_upload,
-                host=host,
-                protocol=get_protocol(),
-                dirty_checksum=reads_2_dirty_checksum,
-            )
-        run_sample(sample_id=sample_id, host=host)
-        if not save:
-            remove_file(file_path=reads1_to_upload)
+    batch_status = get_batch_upload_status(batch_id)
+
+    upload_utils.upload_fastq(
+        upload_data=upload_file_type,
+        prepared_files=prepared_files,
+        api_client=batch_upload_apis.APIClient(),
+        sample_uploads=batch_status.get("samples"),
+    )
+
+    if not save:
+        for file in batch.samples:
+            remove_file(file_path=file.reads_1_upload_file)  # type: ignore
             if batch.is_illumina():
-                remove_file(file_path=reads2_to_upload)
+                remove_file(file_path=file.reads_2_upload_file)  # type: ignore
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
@@ -497,7 +401,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
     logging.debug(f"Validating {data=}")
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
         timeout=60,
     ) as client:
@@ -505,6 +409,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
             f"{protocol}://{host}/api/v1/batches/validate",
             headers=headers,
             json=data,
+            follow_redirects=True,
         )
     logging.debug(f"{response.json()=}")
 
@@ -521,12 +426,13 @@ def fetch_sample(sample_id: str, host: str) -> dict:
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
+            follow_redirects=True,
         )
     return response.json()
 
@@ -615,12 +521,13 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
+            follow_redirects=True,
         )
     data = response.json().get("files", [])
     output_files = {
@@ -650,12 +557,13 @@ def fetch_output_files(
     """
     headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
+            follow_redirects=True,
         )
     data = response.json().get("files", [])
     output_files = {
@@ -697,19 +605,19 @@ def check_version_compatibility(host: str) -> None:
         host (str): The host server.
     """
     with httpx.Client(
-        event_hooks=util.httpx_hooks,
+        event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=2),
         timeout=10,
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/cli-version",
+            f"{get_protocol()}://{host}/cli-version", follow_redirects=True
         )
     lowest_cli_version = response.json()["version"]
     logging.debug(
         f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
     )
     if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise util.UnsupportedClientError(pathogena.__version__, lowest_cli_version)
+        raise UnsupportedClientError(pathogena.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
@@ -721,6 +629,7 @@ def check_for_newer_version() -> None:
             response = client.get(
                 pathogena_pypi_url,
                 headers={"Accept": "application/json"},
+                follow_redirects=True,
             )
             if response.status_code == 200:
                 latest_version = Version(
@@ -772,18 +681,18 @@ def download(
         logging.info(f"Using guids {guids}")
     else:
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
-    filenames = util.parse_comma_separated_string(filenames)
+    unique_filenames: set[str] = util.parse_comma_separated_string(filenames)
     for guid, sample in guids_samples.items():
         try:
             output_files = fetch_output_files(sample_id=guid, host=host, latest=True)
         except MissingError:
-            output_files = []  # There are no output files. The run may have failed.
+            output_files = {}  # There are no output files. The run may have failed.
         with httpx.Client(
-            event_hooks=util.httpx_hooks,
+            event_hooks=httpx_hooks,
             transport=httpx.HTTPTransport(retries=5),
             timeout=7200,  # 2 hours
         ) as client:
-            for filename in filenames:
+            for filename in unique_filenames:
                 prefixed_filename = f"{guid}_{filename}"
                 if prefixed_filename in output_files:
                     output_file = output_files[prefixed_filename]
