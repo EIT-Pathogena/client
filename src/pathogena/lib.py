@@ -221,7 +221,7 @@ def create_batch_on_server(
         timeout=60,
         follow_redirects=True,
     ) as client:
-        response = httpx.post(
+        response = client.post(
             f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
             headers={
                 "Authorization": f"Bearer {util.get_access_token(host)}",
