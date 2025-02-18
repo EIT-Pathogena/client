@@ -1,3 +1,0 @@
-batch_name,sample_name,remote_sample_name,remote_batch_name,remote_batch_id
-test_batch_name,ERR4809187_1.fastq.gz,2352,test_batch_name,1073
-test_batch_name,ERR4809187_2.fastq.gz,2353,test_batch_name,1073

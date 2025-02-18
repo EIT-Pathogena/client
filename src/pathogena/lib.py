@@ -5,6 +5,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 from getpass import getpass
+from json import JSONDecodeError
 from pathlib import Path
 
 import hostile
@@ -23,7 +24,7 @@ from pathogena.constants import (
     DEFAULT_PROTOCOL,
     HOSTILE_INDEX_NAME,
 )
-from pathogena.errors import MissingError, UnsupportedClientError
+from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
@@ -214,30 +215,41 @@ def create_batch_on_server(
     url = f"{get_protocol()}://{host}/api/v1/batches"
     if validate_only:
         url += "/validate_creation"
-
-    with httpx.Client(
-        event_hooks=httpx_hooks,
-        transport=httpx.HTTPTransport(retries=5),
-        timeout=60,
-        follow_redirects=True,
-    ) as client:
-        response = client.post(
-            f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
-            headers={
-                "Authorization": f"Bearer {util.get_access_token(host)}",
-                "accept": "application/json",
-            },
-            json=data,
+    try:
+        with httpx.Client(
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=60,
             follow_redirects=True,
+        ) as client:
+            response = client.post(
+                f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
+                headers={
+                    "Authorization": f"Bearer {util.get_access_token(host)}",
+                    "accept": "application/json",
+                },
+                json=data,
+                follow_redirects=True,
+            )
+            if validate_only:
+                # Don't attempt to return data if just validating (as there's none there)
+                return None, None, None  # type: ignore
+        return (
+            response.json()["id"],
+            response.json()["name"],
+            response.json()["legacy_batch_id"],
         )
-        if validate_only:
-            # Don't attempt to return data if just validating (as there's none there)
-            return None, None, None  # type: ignore
-    return (
-        response.json()["id"],
-        response.json()["name"],
-        response.json()["legacy_batch_id"],
-    )
+    except JSONDecodeError:
+        logging.error(
+            f"Unable to communicate with the upload endpoint ({get_upload_host()}). Please check this has been set "
+            f"correctly and try again."
+        )
+        exit(1)
+    except httpx.HTTPError as err:
+        raise APIError(
+            f"Failed to fetch batch status: {response.text}",
+            response.status_code,
+        ) from err
 
 
 def decontaminate_samples_with_hostile(
