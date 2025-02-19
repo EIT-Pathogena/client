@@ -209,7 +209,7 @@ def create_batch_on_server(
         "country": country,
         "name": batch_name,
         "amplicon_scheme": amplicon_scheme,
-        "telemetry_data": json.dumps(telemetry_data),
+        "telemetry_data": telemetry_data,
     }
 
     url = f"{get_protocol()}://{host}/api/v1/batches"
