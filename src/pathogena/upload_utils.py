@@ -13,7 +13,7 @@ import httpx
 from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from pathogena.batch_upload_apis import APIClient, APIError
+from pathogena.batch_upload_apis import UploadAPIClient, APIError
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_HOST,
@@ -307,7 +307,7 @@ def check_if_file_is_in_sample(
 def get_batch_upload_status(
     batch_pk: str,
 ) -> BatchUploadStatus:
-    """Starts a upload by making a POST request.
+    """Starts an upload by making a POST request.
 
     Args:
         batch_pk (int): The primary key of the batch.
@@ -319,7 +319,7 @@ def get_batch_upload_status(
     Raises:
         APIError: If the API returns a non-2xx status code.
     """
-    api = APIClient()
+    api = UploadAPIClient()
     url = f"{get_protocol()}://{api.base_url}/api/v1/batches/{batch_pk}/samples/state"
     try:
         response = api.client.get(
@@ -337,7 +337,7 @@ def get_batch_upload_status(
 def prepare_files(
     batch_pk: int,
     files: list[UploadSample],
-    api_client: APIClient,
+    api_client: UploadAPIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> PreparedFiles:
     """Prepares multiple files for upload.
@@ -348,10 +348,9 @@ def prepare_files(
 
     Args:
         batch_pk (int): The ID of the batch.
-        instrument_code (str): The instrument code.
         files (list[UploadSample]): List of files to prepare.
         sample_uploads (dict[str, Any] | None): State of sample uploads, if available.
-        api_client (APIClient): Instance of the APIClient class.
+        api_client (UploadAPIClient): Instance of the APIClient class.
 
     Returns:
         PreparedFiles: Prepared file metadata, upload session information, and session data.
@@ -422,7 +421,6 @@ def prepare_files(
     }
 
     try:
-        # start upload session
         start_session = api_client.batches_samples_start_upload_session_create(
             batch_pk=batch_pk, data=form_details
         )
@@ -440,8 +438,10 @@ def prepare_files(
         raise APIError(
             "No upload session returned by the API.", codes.INTERNAL_SERVER_ERROR
         )
-    # Upload session
+
     upload_session = start_session["upload_session"]
+    sample_ids = start_session["sample_ids"]  # TODO(jackalexander): extract the sample IDs created from the upload
+    # session and then use them in the start-file-upload call.
 
     if sample_uploads is None:
         sample_uploads = {}
@@ -485,6 +485,7 @@ def prepare_files(
                 f"File '{sample_upload_status['uploaded_file_name']}': {sample['name']} has already been uploaded."
             )
         else:
+            file_ready = False
             # Prepare new file and add to selected files
             for file in files:
                 if (
@@ -517,7 +518,7 @@ def upload_chunks(
         upload_data (UploadFileType): The upload data including batch_id, session info, etc.
         file (SelectedFile): The file to upload (with file data, total chunks, etc.)
         file_status (dict): The dictionary to track the file upload progress.
-        chunk size (int): Default size of of file chunk to upload (5mb)
+        chunk_size (int): Default size of file chunk to upload (5mb)
 
     Returns:
         None: This function does not return anything, but updates the `file_status` dictionary
@@ -544,8 +545,6 @@ def upload_chunks(
         attempt = 0
 
         while attempt < max_retries and not success:
-            # upload chunk
-
             chunk_upload = upload_chunk(
                 batch_pk=upload_data.batch_pk,
                 host=get_host(),
@@ -556,10 +555,8 @@ def upload_chunks(
             )
             chunk_queue.append(chunk_upload)
             try:
-                # get result of upload chunk
                 chunk_upload_result = chunk_upload.json()
 
-                # retry if response >= 400 and not reached max number of retries
                 if chunk_upload.status_code >= 400:
                     logging.error(
                         f"Attempt {attempt + 1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
@@ -602,8 +599,8 @@ def upload_chunks(
                             file["upload_id"], upload_data.batch_pk
                         )
                         upload_data.on_complete = complete_event
-                        client = APIClient()
-                        end_status = client.batches_uploads_end_create(
+                        client = UploadAPIClient()
+                        end_status = client.batches_uploads_end_file_upload(
                             upload_data.batch_pk,
                             data={"upload_id": file["upload_id"]},
                         )
@@ -635,7 +632,7 @@ def upload_chunks(
 def upload_files(
     upload_data: UploadFileType,
     prepared_files: PreparedFiles,
-    api_client: APIClient,
+    api_client: UploadAPIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
     """Uploads files in chunks and manages the upload process.
@@ -649,7 +646,7 @@ def upload_files(
             including the batch ID, access token, environment, and file details.
         instrument_code (str): The instrument code used to generate the data. This is
             passed to the backend API for processing.
-        api_client (APIClient): Instance of the APIClient class.
+        api_client (UploadAPIClient): Instance of the APIClient class.
         sample_uploads (dict[str, Any] | None): State of sample uploads, if available.
 
     Returns:
@@ -708,17 +705,18 @@ def prepare_file(
     file: SampleMetadata,
     batch_pk: int,
     upload_session: int,
-    api_client: APIClient,
+    api_client: UploadAPIClient,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> dict[str, Any]:
     """Prepares a file for uploading by sending metadata to initialize the process.
 
     Args:
+        upload_data (UploadSample): Sample object to upload with associated files.
         file (Any): A file object with attributes `name`, `size`, and `type`.
         batch_pk (int): The batch ID associated with the file.
         upload_session (int): The current upload session ID.
         chunk_size (int): Size of each file chunk in bytes.
-        api_client (APIClient): Instance of the APIClient class.
+        api_client (UploadAPIClient): Instance of the APIClient class.
 
     Returns:
         dict[str, Any]: File metadata ready for upload or error details.
@@ -728,6 +726,12 @@ def prepare_file(
 
     elif upload_data.read_file2_data() is not None:
         file_data = upload_data.read_file2_data()
+    else:
+        return {
+            "error": "Could not find any read file data for sample",
+            "status code": 500,
+            "upload_session": upload_session,
+        }
 
     original_file_name = file["name"]
     total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
@@ -740,7 +744,7 @@ def prepare_file(
     }
 
     try:
-        start = api_client.batches_uploads_start_create(
+        start = api_client.batches_uploads_start_file_upload(
             batch_pk=batch_pk, data=form_data
         )
         start_data = start.json()
@@ -847,7 +851,7 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
 def upload_fastq(
     upload_data: UploadFileType,
     prepared_files: PreparedFiles,
-    api_client: APIClient,
+    api_client: UploadAPIClient,
     sample_uploads: dict[str, SampleUploadStatus] | None = None,
 ) -> None:
     """Upload a FASTQ file to the server.

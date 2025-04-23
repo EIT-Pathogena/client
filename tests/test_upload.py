@@ -9,7 +9,7 @@ import pytest
 from pytest_mock import MockerFixture
 from pytest_mock.plugin import _mocker
 
-from pathogena.batch_upload_apis import APIClient, APIError
+from pathogena.batch_upload_apis import UploadAPIClient, APIError
 from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
@@ -29,7 +29,7 @@ from pathogena.upload_utils import (
 
 @pytest.fixture
 def mock_api_client(mocker: Callable[..., Generator[MockerFixture, None, None]]):
-    return mocker.MagicMock(spec=APIClient)
+    return mocker.MagicMock(spec=UploadAPIClient)
 
 
 class TestPrepareFile:
@@ -74,7 +74,7 @@ class TestPrepareFile:
 
     def test_prepare_file_success(self, mock_api_client: Any):
         # mock successful api response
-        mock_api_client.batches_uploads_start_create.return_value = httpx.Response(
+        mock_api_client.batches_uploads_start_file_upload.return_value = httpx.Response(
             status_code=httpx.codes.OK, json={"upload_id": "abc123", "sample_id": 456}
         )
 
@@ -100,7 +100,7 @@ class TestPrepareFile:
 
     def test_prepare_file_unsuccessful(self, mock_api_client: Any):
         # mock api response with 400 code
-        mock_api_client.batches_uploads_start_create.return_value = httpx.Response(
+        mock_api_client.batches_uploads_start_file_upload.return_value = httpx.Response(
             status_code=httpx.codes.BAD_REQUEST, json={"error": "Bad Request"}
         )
 
@@ -121,7 +121,7 @@ class TestPrepareFile:
 
     def test_prepare_file_apierror(self, mock_api_client: Any):
         # mock api response
-        mock_api_client.batches_uploads_start_create.side_effect = APIError(
+        mock_api_client.batches_uploads_start_file_upload.side_effect = APIError(
             "API request failed", 500
         )
 
@@ -182,7 +182,7 @@ class TestPrepareFiles:
         self, mocker: Callable[..., Generator[MockerFixture, None, None]]
     ):
         """Fixture for mocking the APIClient."""
-        return mocker.MagicMock(spec=APIClient)
+        return mocker.MagicMock(spec=UploadAPIClient)
 
     def test_prepare_files_success(
         self,
@@ -334,7 +334,7 @@ class TestUploadChunks:
 
         # mock as_completed to simulate completed futures
         self.mock_end_upload = mocker.patch.object(
-            APIClient,
+            UploadAPIClient,
             "batches_uploads_end_create",
             return_value=httpx.Response(
                 status_code=httpx.codes.OK,
@@ -415,7 +415,7 @@ class TestUploadChunks:
         mock_batches_uploads_end_create.side_effect = httpx.Response(
             200, json={"metrics": "some_metrics"}
         )
-        mock_client.batches_uploads_end_create = mock_batches_uploads_end_create
+        mock_client.batches_uploads_end_file_upload = mock_batches_uploads_end_create
 
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
@@ -586,7 +586,7 @@ class TestUploadFiles:
         self, mocker: Callable[..., Generator[MockerFixture, None, None]]
     ):
         """Fixture for mocking the APIClient."""
-        return mocker.MagicMock(spec=APIClient)
+        return mocker.MagicMock(spec=UploadAPIClient)
 
     @pytest.fixture
     def mock_successful_prepare_files(self) -> PreparedFiles:
@@ -643,7 +643,7 @@ class TestUploadFiles:
 
         # mock successful API client response
         mocker.patch.object(
-            APIClient,
+            UploadAPIClient,
             "batches_samples_end_upload_session_create",
             return_value=httpx.Response(
                 status_code=httpx.codes.OK,
@@ -702,7 +702,7 @@ class TestUploadFiles:
 
         # mock successful API client response
         mocker.patch.object(
-            APIClient,
+            UploadAPIClient,
             "batches_samples_end_upload_session_create",
             return_value=httpx.Response(
                 status_code=httpx.codes.OK,

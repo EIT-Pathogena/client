@@ -342,7 +342,7 @@ def upload_batch(
     prepared_files = prepare_files(
         batch_pk=int(batch_id),
         files=batch.samples,
-        api_client=batch_upload_apis.APIClient(),
+        api_client=batch_upload_apis.UploadAPIClient(),
     )
 
     # initialise class
@@ -378,7 +378,7 @@ def upload_batch(
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
         prepared_files=prepared_files,
-        api_client=batch_upload_apis.APIClient(),
+        api_client=batch_upload_apis.UploadAPIClient(),
         sample_uploads=batch_status.get("samples"),
     )
 
