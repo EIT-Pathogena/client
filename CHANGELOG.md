@@ -4,7 +4,7 @@
 
 ### Added
 
-- Support for new upload-api backend with boto3 client - min upload chunk size is increased to 10MB
+- Minimum upload chunk size is increased to 10MB
 - Support for the SARS-CoV-2 pipeline.
 
 ## 2.0.1 (2024-11-07)
