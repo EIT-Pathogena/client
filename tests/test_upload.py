@@ -43,7 +43,7 @@ class TestPrepareFile:
         }
 
         # cast into SampleMetadat
-        self.file = cast(SampleMetadata, file)
+        self.file = cast("SampleMetadata", file)
 
         self.mock_reads_file1_data = mocker.MagicMock()
         self.mock_reads_file1_data.return_value = b"\x1f\x8b\x08\x08\x22\x4e\x01"
@@ -272,7 +272,7 @@ class TestPrepareFiles:
         }
 
         # cast sample uploads to dict[str,SampleUploadStatus]
-        sample_uploads = cast(dict[str, SampleUploadStatus], sample_uploads)
+        sample_uploads = cast("dict[str, SampleUploadStatus]", sample_uploads)
 
         # call prepare_files
         result = prepare_files(
