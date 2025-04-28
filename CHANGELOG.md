@@ -4,6 +4,7 @@
 
 ### Added
 
+- Support for new upload-api backend with boto3 client
 - Support for the SARS-CoV-2 pipeline.
 
 ## 2.0.1 (2024-11-07)
