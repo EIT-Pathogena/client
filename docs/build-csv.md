@@ -33,4 +33,4 @@ Options:
 This command generates a CSV from a given directory of fastq sample files. An [example](./assets/example-input.csv) of such a CSV file is given in the assets directory. A CSV file in this format is required to run the [pathogena upload](./upload.md) command.
 
 
-Note: the CSV file must be located in the same directory as the sample.fastq files to be used with the upload command.  
+Note: the CSV file must be located in the same directory as the sample.fastq files to be used with the upload command.

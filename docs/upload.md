@@ -24,7 +24,7 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
 
-To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation. 
+To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation.
 
 ### Credits
 
@@ -33,7 +33,7 @@ header of the Pathogena Portal or by using the `pathogena balance` command. More
 `pathogena balance` section.
 
 Each sample for Mycobacterium genomic sequencing will require 10 credits whereas SARS-CoV-2 sample sequencing will require 1 credits.
-During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch. 
+During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch.
 Credits are then deducted when sample files are successfully uploaded and ready for processing.
 
 ### Human Read Removal

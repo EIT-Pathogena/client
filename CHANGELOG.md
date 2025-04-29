@@ -4,6 +4,7 @@
 
 ### Added
 
+- Minimum upload chunk size is increased to 10MB
 - Support for the SARS-CoV-2 pipeline.
 
 ## 2.0.1 (2024-11-07)

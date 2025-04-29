@@ -467,7 +467,7 @@ def query(
     check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
-        guids_samples = {guid: None for guid in guids}
+        guids_samples = dict.fromkeys(guids)
         logging.info(f"Using guids {guids}")
     elif mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
@@ -503,7 +503,7 @@ def status(
     check_version_compatibility(host)
     if samples:
         guids = util.parse_comma_separated_string(samples)
-        guids_samples = {guid: None for guid in guids}
+        guids_samples = dict.fromkeys(guids)
         logging.info(f"Using guids {guids}")
     elif mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
@@ -689,7 +689,7 @@ def download(
         logging.debug(guids_samples)
     elif samples:
         guids = util.parse_comma_separated_string(samples)
-        guids_samples = {guid: None for guid in guids}
+        guids_samples = dict.fromkeys(guids)
         logging.info(f"Using guids {guids}")
     else:
         raise RuntimeError("Specify either a list of samples or a mapping CSV")
