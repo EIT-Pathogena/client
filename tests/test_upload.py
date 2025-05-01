@@ -39,7 +39,7 @@ class TestPrepareFile:
             size=1024,  # 1 KB
             control="false",
             content_type="text/plain",
-            specimen_organism="mycobacteria"
+            specimen_organism="mycobacteria",
         )
 
         self.mock_reads_file1_data = mocker.MagicMock()
@@ -73,7 +73,12 @@ class TestPrepareFile:
     def test_prepare_file_success(self, mock_api_client: Any):
         # mock successful api response
         mock_api_client.batches_uploads_start_file_upload.return_value = httpx.Response(
-            status_code=httpx.codes.OK, json={"upload_id": "abc123", "sample_id": "99999999-9999-9999-9999-999999999999", "sample_file_id": 456}
+            status_code=httpx.codes.OK,
+            json={
+                "upload_id": "abc123",
+                "sample_id": "99999999-9999-9999-9999-999999999999",
+                "sample_file_id": 456,
+            },
         )
 
         # call
@@ -421,7 +426,9 @@ class TestUploadChunks:
         mock_batches_uploads_end_file_upload.side_effect = httpx.Response(
             200, json={"metrics": "some_metrics"}
         )
-        mock_client.batches_uploads_end_file_upload = mock_batches_uploads_end_file_upload
+        mock_client.batches_uploads_end_file_upload = (
+            mock_batches_uploads_end_file_upload
+        )
 
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
@@ -433,7 +440,9 @@ class TestUploadChunks:
             mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
             == mock_file["total_chunks"]
         )
-        assert self.mock_end_upload.calledonce  # batches_uploads_end_file_upload called once
+        assert (
+            self.mock_end_upload.calledonce
+        )  # batches_uploads_end_file_upload called once
 
     def test_upload_chunks_retry_on_400(
         self,
@@ -526,9 +535,7 @@ class TestUploadChunks:
 
         assert mock_upload_data.on_progress is None  # no progress, errors before
         assert mock_upload_data.on_complete is None  # not completed all chunks
-        assert (
-            not self.mock_end_upload.called
-        )  # batches_uploads_end_file_upload should not be called since there was an error
+        assert not self.mock_end_upload.called  # batches_uploads_end_file_upload should not be called since there was an error
         assert (
             "Retrying upload of chunk 0" in caplog.text
         )  # retrying upload captured in logging
@@ -714,9 +721,7 @@ class TestUploadFiles:
         )
 
         # call
-        upload_files(
-            mock_upload_data, prepared_files, mock_api_client
-        )
+        upload_files(mock_upload_data, prepared_files, mock_api_client)
 
         assert mock_upload_chunks.call_count == 2  # upload chunks called twice
         assert (

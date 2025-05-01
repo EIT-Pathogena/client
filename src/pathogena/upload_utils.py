@@ -505,7 +505,7 @@ def prepare_files(
                         batch_pk=batch_pk,
                         upload_session=upload_session,
                         sample_id=sample_id,
-                        api_client=api_client
+                        api_client=api_client,
                     )
             if file_ready:
                 selected_files.append(file_ready)
