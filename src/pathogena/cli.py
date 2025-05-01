@@ -305,10 +305,10 @@ def download(
 def query_raw(samples: str, *, host: str | None = None) -> None:
     """Fetch metadata for one or more SAMPLES in JSON format.
 
-    SAMPLES should be command separated list of GUIDs or path to mapping CSV.
+    The provided SAMPLES should be a comma-separated list of GUIDs, or path to a mapping CSV.
 
     Args:
-        samples (str): Command separated list of GUIDs or path to mapping CSV.
+        samples (str): Comma-separated list of GUIDs, or a path to a mapping CSV.
         host (str | None): The host server.
     """
     host = lib.get_host(host)

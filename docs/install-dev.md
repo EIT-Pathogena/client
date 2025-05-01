@@ -58,7 +58,7 @@ pip install --pre pathogena
 ```
 
 ## Using a local development server
-## pahtogena portal runs on port 8000, whilst the upload-api runs on 3000
+## pathogena portal runs on port 8000, whilst the upload-api runs on 8003
 
 ```bash
 export PATHOGENA_HOST="localhost:8000"

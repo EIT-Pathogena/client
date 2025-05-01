@@ -5,7 +5,6 @@ import httpx
 
 from pathogena.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
 from pathogena.errors import APIError
-from pathogena.log_utils import httpx_hooks
 from pathogena.util import get_access_token
 
 
@@ -143,13 +142,13 @@ class UploadAPIClient:
 
     def batches_uploads_start_file_upload(
         self,
-        batch_pk: int,
+        batch_pk: str,
         data: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """Starts an upload by making a POST request.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
         Returns:
@@ -243,13 +242,13 @@ class UploadAPIClient:
 
     def batches_samples_end_upload_session_create(
         self,
-        batch_pk: int,
+        batch_pk: str,
         upload_session: int | None = None,
     ) -> httpx.Response:
         """Ends a sample upload session by making a POST request to the backend.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
 

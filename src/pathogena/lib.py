@@ -26,10 +26,9 @@ from pathogena.constants import (
 )
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch, UploadSample
+from pathogena.models import UploadBatch
 from pathogena.upload_utils import (
-    UploadFileType,
-    get_batch_upload_status,
+    UploadData,
     get_upload_host,
     prepare_files,
 )
@@ -323,9 +322,9 @@ def upload_batch(
 
     Args:
         batch (models.UploadBatch): The batch of samples to upload.
+        save (bool): Whether to keep the files saved.
         host (str): The host server.
-        threads (int): The number of threads to use.
-        output_dir (Path): The output directory for the uploaded files.
+        validate_only (bool): Whether we should actually upload or just validate batch.
     """
     batch_id, batch_name, legacy_batch_id = create_batch_on_server(
         batch=batch,
@@ -337,18 +336,16 @@ def upload_batch(
         logging.info(f"Batch creation for {batch_name} validated successfully")
         return
     mapping_csv_records = []
-    # upload_meta = []
 
     prepared_files = prepare_files(
-        batch_pk=int(batch_id),
+        batch_pk=batch_id,
         samples=batch.samples,
         api_client=batch_upload_apis.UploadAPIClient(),
     )
 
-    # initialise class
-    upload_file_type = UploadFileType(
+    upload_file_type = UploadData(
         access_token=util.get_access_token(get_host(None)),
-        batch_pk=int(batch_id),
+        batch_pk=batch_id,
         env=get_upload_host(),
         samples=batch.samples,
         upload_session=prepared_files["uploadSession"],
@@ -360,9 +357,8 @@ def upload_batch(
         mapping_csv_records.append(
             {
                 "batch_name": upload_session_name,
-                "file_name": file["file"]["name"],
-                "remote_sample_id": file["sample_id"],
-                "remote_sample_name": file["sample_file_id"],
+                "sample_name": file["file"]["name"],
+                "remote_sample_name": file["sample_id"],
                 "remote_batch_name": batch_name,
                 "remote_batch_id": batch_id,
             }

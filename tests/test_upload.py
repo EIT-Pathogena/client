@@ -2,28 +2,27 @@ from collections.abc import Callable, Generator
 from concurrent.futures import Future
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import httpx
 import pytest
 from pytest_mock import MockerFixture
-from pytest_mock.plugin import _mocker
 
 from pathogena.batch_upload_apis import UploadAPIClient, APIError
 from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
     PreparedFiles,
-    SampleFileMetadata,
-    SampleFileUploadStatus,
     SelectedFile,
-    UploadFileType,
+    UploadData,
     UploadSample,
     prepare_file,
     prepare_files,
-    upload_chunk,
     upload_chunks,
     upload_files,
+    SampleFileMetadata,
+    SampleFileUploadStatus,
+    UploadMetrics,
 )
 
 
@@ -35,15 +34,13 @@ def mock_api_client(mocker: Callable[..., Generator[MockerFixture, None, None]])
 class TestPrepareFile:
     @pytest.fixture(autouse=True)
     def setup(self, mocker: Callable[..., Generator[MockerFixture, None, None]]):
-        file = {
-            "name": "file1.txt",
-            "size": 1024,  # 1 KB
-            "control": "false",
-            "content_type": "text/plain",
-        }
-
-        # cast into SampleMetadat
-        self.file = cast("SampleFileMetadata", file)
+        self.file = SampleFileMetadata(
+            name="file1.txt",
+            size=1024,  # 1 KB
+            control="false",
+            content_type="text/plain",
+            specimen_organism="mycobacteria"
+        )
 
         self.mock_reads_file1_data = mocker.MagicMock()
         self.mock_reads_file1_data.return_value = b"\x1f\x8b\x08\x08\x22\x4e\x01"
@@ -64,18 +61,19 @@ class TestPrepareFile:
             is_ont=False,
             # read_file1_data=self.mock_reads_file1_data,
         )
+        self.sample_id = "99999999-9999-9999-9999-999999999999"
 
         # Ensure `reads_1_resolved_path` is set
         self.upload_data.reads_1_resolved_path = self.upload_data.reads_1
         # set values to call prepare files
-        self.batch_pk = 1
+        self.batch_pk = "11111111-1111-1111-1111-111111111111"
         self.upload_session = 1234
         self.file_data = b"\x1f\x8b\x08\x08\x22\x4e\x01"
 
     def test_prepare_file_success(self, mock_api_client: Any):
         # mock successful api response
         mock_api_client.batches_uploads_start_file_upload.return_value = httpx.Response(
-            status_code=httpx.codes.OK, json={"upload_id": "abc123", "sample_id": 456}
+            status_code=httpx.codes.OK, json={"upload_id": "abc123", "sample_id": "99999999-9999-9999-9999-999999999999", "sample_file_id": 456}
         )
 
         # call
@@ -85,14 +83,16 @@ class TestPrepareFile:
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
             api_client=mock_api_client,
+            sample_id=self.sample_id,
             chunk_size=5000000,
         )
 
         assert result == {
             "file": self.file,
             "upload_id": "abc123",
-            "batch_id": 1,
-            "sample_id": 456,
+            "batch_id": "11111111-1111-1111-1111-111111111111",
+            "sample_id": "99999999-9999-9999-9999-999999999999",
+            "sample_file_id": 456,
             "total_chunks": 1,  # 1024/5000000 = 0.0002, rounds to 1 chunk
             "upload_session": 1234,
             "file_data": b"\x1f\x8b\x08\x08\x22\x4e\x01",
@@ -110,6 +110,7 @@ class TestPrepareFile:
             file=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
+            sample_id=self.sample_id,
             api_client=mock_api_client,
             chunk_size=5000000,
         )
@@ -131,6 +132,7 @@ class TestPrepareFile:
             file=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
+            sample_id=self.sample_id,
             api_client=mock_api_client,
             chunk_size=5000000,
         )
@@ -176,6 +178,12 @@ class TestPrepareFiles:
         self.batch_pk = 1
         self.instrument_code = "INST001"
         self.upload_session = 123
+        self.sample_summaries = [
+            dict(sample_id="11111111-1111-1111-1111-111111111111"),
+            dict(sample_id="11111111-1111-1111-1111-111111111111"),
+            dict(sample_id="22222222-2222-2222-2222-222222222222"),
+            dict(sample_id="22222222-2222-2222-2222-222222222222"),
+        ]
 
     @pytest.fixture
     def mock_api_client(
@@ -192,6 +200,7 @@ class TestPrepareFiles:
         # mock a successful start upload session  response
         mock_api_client.batches_samples_start_upload_session_create.return_value = {
             "upload_session": self.upload_session,
+            "sample_summaries": self.sample_summaries,
         }
         # mock prepare_file with successful preparation of new files
         mocker.patch(
@@ -228,51 +237,50 @@ class TestPrepareFiles:
 
         # list of files to pass to prepare_files
         files = [self.file1, self.file2]
-
-        # prepare sample_uploads for prepare_files
         sample_file_uploads = {
-            "sample_file1": {
-                "batch": 123,
-                "file_path": Path("reads/tuberculosis_1_1.fastq.gz"),
-                "uploaded_file_name": "tuberculosis_1_1.fastq.gz",
-                "created_at": datetime(2024, 12, 10, 12, 00, 00),
-                "upload_status": "COMPLETE",
-                "upload_id": "abc123",
-                "total_chunks": 2,
-                "metrics": {
-                    "chunks_received": 1,
-                    "chunks_total": 2,
-                    "upload_status": "COMPLETE",
-                    "percentage_complete": 50.0,
-                    "upload_speed": 10.0,
-                    "time_remaining": 10.0,
-                    "estimated_completion_time": datetime(2024, 12, 10, 12, 10, 00),
-                },
-            },
-            "sample_file2": {
-                "batch": 123,
-                "file_path": Path("reads/tuberculosis_1_2.fastq.gz"),
-                "uploaded_file_name": "tuberculosis_1_2.fastq.gz",
-                "created_at": datetime(2024, 12, 10, 12, 00, 00),
-                "upload_status": "IN_PROGRESS",
-                "upload_id": "def456",
-                "total_chunks": 4,
-                "metrics": {
-                    "chunks_received": 1,
-                    "chunks_total": 4,
-                    "upload_status": "IN_PROGRESS",
-                    "percentage_complete": 25.0,
-                    "upload_speed": 10.0,
-                    "time_remaining": 20.0,
-                    "estimated_completion_time": datetime(2024, 12, 10, 12, 20, 00),
-                },
-            },
+            "sample_file1": SampleFileUploadStatus(
+                id=1,
+                legacy_sample_id="11111111111111111111111111111111",
+                generated_name="SampleFile1",
+                batch=123,
+                file_path="reads/tuberculosis_1_1.fastq.gz",
+                uploaded_file_name="tuberculosis_1_1.fastq.gz",
+                created_at=datetime(2024, 12, 10, 12, 0, 0),
+                upload_status="COMPLETE",
+                upload_id="abc123",
+                total_chunks=2,
+                metrics=UploadMetrics(
+                    chunks_received=1,
+                    chunks_total=2,
+                    upload_status="COMPLETE",
+                    percentage_complete=50.0,
+                    upload_speed=10.0,
+                    time_remaining=10.0,
+                    estimated_completion_time=datetime(2024, 12, 10, 12, 10, 0),
+                ),
+            ),
+            "sample_file2": SampleFileUploadStatus(
+                id=2,
+                legacy_sample_id="22222222222222222222222222222222",
+                generated_name="SampleFile2",
+                batch=123,
+                file_path="reads/tuberculosis_1_2.fastq.gz",
+                uploaded_file_name="tuberculosis_1_2.fastq.gz",
+                created_at=datetime(2024, 12, 10, 12, 0, 0),
+                upload_status="IN_PROGRESS",
+                upload_id="def456",
+                total_chunks=4,
+                metrics=UploadMetrics(
+                    chunks_received=1,
+                    chunks_total=4,
+                    upload_status="IN_PROGRESS",
+                    percentage_complete=25.0,
+                    upload_speed=10.0,
+                    time_remaining=20.0,
+                    estimated_completion_time=datetime(2024, 12, 10, 12, 20, 0),
+                ),
+            ),
         }
-
-        # cast sample uploads to dict[str,SampleUploadStatus]
-        sample_uploads = cast("dict[str, SampleFileUploadStatus]", sample_file_uploads)
-
-        # call prepare_files
         result = prepare_files(
             self.batch_pk,
             files,
@@ -333,7 +341,7 @@ class TestUploadChunks:
         # mock as_completed to simulate completed futures
         self.mock_end_upload = mocker.patch.object(
             UploadAPIClient,
-            "batches_uploads_end_create",
+            "batches_uploads_end_file_upload",
             return_value=httpx.Response(
                 status_code=httpx.codes.OK,
             ),
@@ -360,7 +368,7 @@ class TestUploadChunks:
                 is_ont=False,
             ),
         ]
-        return UploadFileType(
+        return UploadData(
             access_token="access_token",
             batch_pk=123,
             env="env",
@@ -394,7 +402,7 @@ class TestUploadChunks:
 
     def test_upload_chunks_success(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_file: SelectedFile,
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
@@ -407,13 +415,13 @@ class TestUploadChunks:
             # side_effect=mock_upload_success,
         )
         mock_client = mocker.patch(
-            "pathogena.upload_utils.APIClient",
+            "pathogena.upload_utils.UploadAPIClient",
         )
-        mock_batches_uploads_end_create = mocker.MagicMock()
-        mock_batches_uploads_end_create.side_effect = httpx.Response(
+        mock_batches_uploads_end_file_upload = mocker.MagicMock()
+        mock_batches_uploads_end_file_upload.side_effect = httpx.Response(
             200, json={"metrics": "some_metrics"}
         )
-        mock_client.batches_uploads_end_file_upload = mock_batches_uploads_end_create
+        mock_client.batches_uploads_end_file_upload = mock_batches_uploads_end_file_upload
 
         upload_chunks(mock_upload_data, mock_file, mock_file_status)
 
@@ -425,11 +433,11 @@ class TestUploadChunks:
             mock_file_status[mock_file.get("upload_id")]["chunks_uploaded"]
             == mock_file["total_chunks"]
         )
-        assert self.mock_end_upload.calledonce  # batches_uploads_end_create called once
+        assert self.mock_end_upload.calledonce  # batches_uploads_end_file_upload called once
 
     def test_upload_chunks_retry_on_400(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_file: SelectedFile,
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
@@ -480,7 +488,7 @@ class TestUploadChunks:
         assert mock_upload_data.on_complete is None  # not completed all chunks
         assert (
             not self.mock_end_upload.called
-        )  # batches_uploads_end_create should not be called as 2nd upload failed
+        )  # batches_uploads_end_file_upload should not be called as 2nd upload failed
         assert mock_upload_chunk.call_count == 4
         assert (
             "Retrying upload of chunk 1" in caplog.text
@@ -491,7 +499,7 @@ class TestUploadChunks:
 
     def test_upload_chunks_error_handling(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_file: SelectedFile,
         mock_file_status: dict,
         mocker: Callable[..., Generator[MockerFixture, None, None]],
@@ -520,7 +528,7 @@ class TestUploadChunks:
         assert mock_upload_data.on_complete is None  # not completed all chunks
         assert (
             not self.mock_end_upload.called
-        )  # batches_uploads_end_create should not be called since there was an error
+        )  # batches_uploads_end_file_upload should not be called since there was an error
         assert (
             "Retrying upload of chunk 0" in caplog.text
         )  # retrying upload captured in logging
@@ -560,7 +568,7 @@ class TestUploadFiles:
             ),
         ]
 
-        return UploadFileType(
+        return UploadData(
             access_token="access_token",
             batch_pk=123,
             env="env",
@@ -625,7 +633,7 @@ class TestUploadFiles:
 
     def test_upload_files_success(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_sample_uploads: None,
         mock_api_client: Any,
         mock_successful_prepare_files: PreparedFiles,
@@ -653,7 +661,6 @@ class TestUploadFiles:
             mock_upload_data,
             prepared_files,
             mock_api_client,
-            mock_sample_uploads,
         )
 
         assert mock_upload_chunks.call_count == 2  # upload chunks called for each file
@@ -662,7 +669,7 @@ class TestUploadFiles:
 
     def test_upload_files_prepare_api_error(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_unsuccessful_prepare_files,
         mock_sample_uploads: None,
         mock_api_client: Any,
@@ -674,7 +681,6 @@ class TestUploadFiles:
             mock_upload_data,
             mock_unsuccessful_prepare_files,
             mock_api_client,
-            mock_sample_uploads,
         )
 
         # assert correct error is logged
@@ -682,7 +688,7 @@ class TestUploadFiles:
 
     def test_upload_files_chunk_upload_error(
         self,
-        mock_upload_data: UploadFileType,
+        mock_upload_data: UploadData,
         mock_successful_prepare_files: PreparedFiles,
         mock_sample_uploads: None,
         mock_api_client: Any,
@@ -709,7 +715,7 @@ class TestUploadFiles:
 
         # call
         upload_files(
-            mock_upload_data, prepared_files, mock_api_client, mock_sample_uploads
+            mock_upload_data, prepared_files, mock_api_client
         )
 
         assert mock_upload_chunks.call_count == 2  # upload chunks called twice
