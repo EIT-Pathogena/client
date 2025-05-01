@@ -8,21 +8,21 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from pathogena.batch_upload_apis import UploadAPIClient, APIError
+from pathogena.batch_upload_apis import APIError, UploadAPIClient
 from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
     PreparedFiles,
+    SampleFileMetadata,
+    SampleFileUploadStatus,
     SelectedFile,
     UploadData,
+    UploadMetrics,
     UploadSample,
     prepare_file,
     prepare_files,
     upload_chunks,
     upload_files,
-    SampleFileMetadata,
-    SampleFileUploadStatus,
-    UploadMetrics,
 )
 
 
@@ -184,10 +184,10 @@ class TestPrepareFiles:
         self.instrument_code = "INST001"
         self.upload_session = 123
         self.sample_summaries = [
-            dict(sample_id="11111111-1111-1111-1111-111111111111"),
-            dict(sample_id="11111111-1111-1111-1111-111111111111"),
-            dict(sample_id="22222222-2222-2222-2222-222222222222"),
-            dict(sample_id="22222222-2222-2222-2222-222222222222"),
+            {"sample_id": "11111111-1111-1111-1111-111111111111"},
+            {"sample_id": "11111111-1111-1111-1111-111111111111"},
+            {"sample_id": "22222222-2222-2222-2222-222222222222"},
+            {"sample_id": "22222222-2222-2222-2222-222222222222"},
         ]
 
     @pytest.fixture

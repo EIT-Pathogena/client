@@ -13,7 +13,7 @@ import httpx
 from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from pathogena.batch_upload_apis import UploadAPIClient, APIError
+from pathogena.batch_upload_apis import APIError, UploadAPIClient
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_HOST,
