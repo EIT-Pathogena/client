@@ -123,7 +123,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
         try:
             response = self.client.post(
                 url,
@@ -264,7 +264,7 @@ class UploadAPIClient:
         else:
             data = {"upload_session": self.upload_session}
 
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/end-upload-session/"
         try:
             response = self.client.post(
                 url,

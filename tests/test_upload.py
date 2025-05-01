@@ -14,8 +14,8 @@ from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
     PreparedFiles,
-    SampleMetadata,
-    SampleUploadStatus,
+    SampleFileMetadata,
+    SampleFileUploadStatus,
     SelectedFile,
     UploadFileType,
     UploadSample,
@@ -43,7 +43,7 @@ class TestPrepareFile:
         }
 
         # cast into SampleMetadat
-        self.file = cast("SampleMetadata", file)
+        self.file = cast("SampleFileMetadata", file)
 
         self.mock_reads_file1_data = mocker.MagicMock()
         self.mock_reads_file1_data.return_value = b"\x1f\x8b\x08\x08\x22\x4e\x01"
@@ -230,8 +230,8 @@ class TestPrepareFiles:
         files = [self.file1, self.file2]
 
         # prepare sample_uploads for prepare_files
-        sample_uploads = {
-            "sample1": {
+        sample_file_uploads = {
+            "sample_file1": {
                 "batch": 123,
                 "file_path": Path("reads/tuberculosis_1_1.fastq.gz"),
                 "uploaded_file_name": "tuberculosis_1_1.fastq.gz",
@@ -239,7 +239,6 @@ class TestPrepareFiles:
                 "upload_status": "COMPLETE",
                 "upload_id": "abc123",
                 "total_chunks": 2,
-                "hyphenated_legacy_sample_id": "sample-123",
                 "metrics": {
                     "chunks_received": 1,
                     "chunks_total": 2,
@@ -250,7 +249,7 @@ class TestPrepareFiles:
                     "estimated_completion_time": datetime(2024, 12, 10, 12, 10, 00),
                 },
             },
-            "sample2": {
+            "sample_file2": {
                 "batch": 123,
                 "file_path": Path("reads/tuberculosis_1_2.fastq.gz"),
                 "uploaded_file_name": "tuberculosis_1_2.fastq.gz",
@@ -258,7 +257,6 @@ class TestPrepareFiles:
                 "upload_status": "IN_PROGRESS",
                 "upload_id": "def456",
                 "total_chunks": 4,
-                "hyphenated_legacy_sample_id": "sample-456",
                 "metrics": {
                     "chunks_received": 1,
                     "chunks_total": 4,
@@ -272,14 +270,14 @@ class TestPrepareFiles:
         }
 
         # cast sample uploads to dict[str,SampleUploadStatus]
-        sample_uploads = cast("dict[str, SampleUploadStatus]", sample_uploads)
+        sample_uploads = cast("dict[str, SampleFileUploadStatus]", sample_file_uploads)
 
         # call prepare_files
         result = prepare_files(
             self.batch_pk,
             files,
             mock_api_client,
-            sample_uploads,
+            sample_file_uploads,
         )
 
         assert len(result["files"]) == 1  # file1.txt is complete and so is skipped

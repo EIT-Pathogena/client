@@ -341,7 +341,7 @@ def upload_batch(
 
     prepared_files = prepare_files(
         batch_pk=int(batch_id),
-        files=batch.samples,
+        samples=batch.samples,
         api_client=batch_upload_apis.UploadAPIClient(),
     )
 
@@ -360,8 +360,9 @@ def upload_batch(
         mapping_csv_records.append(
             {
                 "batch_name": upload_session_name,
-                "sample_name": file["file"]["name"],
-                "remote_sample_name": file["sample_id"],
+                "file_name": file["file"]["name"],
+                "remote_sample_id": file["sample_id"],
+                "remote_sample_name": file["sample_file_id"],
                 "remote_batch_name": batch_name,
                 "remote_batch_id": batch_id,
             }
@@ -373,13 +374,10 @@ def upload_batch(
         f"{get_protocol()}://{host}/batches/{legacy_batch_id}"
     )
 
-    batch_status = get_batch_upload_status(batch_id)
-
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
         prepared_files=prepared_files,
         api_client=batch_upload_apis.UploadAPIClient(),
-        sample_uploads=batch_status.get("samples"),
     )
 
     if not save:
