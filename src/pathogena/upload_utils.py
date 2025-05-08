@@ -444,6 +444,7 @@ def prepare_files(
     sample_summaries = session_response["sample_summaries"]
 
     # assume order is consistent and map out the sample summaries to the files
+    # ie. illumina samples have two files and ont samples have one
     per_file_sample_summaries = (
         [item for item in sample_summaries for _ in range(2)]
         if len(sample_summaries) * 2 == len(files_to_upload)
