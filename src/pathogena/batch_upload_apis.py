@@ -223,7 +223,9 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
+        url = (
+            f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
+        )
         try:
             response = self.client.post(
                 url,
