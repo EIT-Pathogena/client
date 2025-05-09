@@ -5,7 +5,6 @@ import httpx
 
 from pathogena.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
 from pathogena.errors import APIError
-from pathogena.log_utils import httpx_hooks
 from pathogena.util import get_access_token
 
 
@@ -54,7 +53,7 @@ def get_upload_host(cli_host: str | None = None) -> str:
     )
 
 
-class APIClient:
+class UploadAPIClient:
     """A class to handle API requests for batch uploads and related operations."""
 
     def __init__(
@@ -74,7 +73,6 @@ class APIClient:
         self.token = get_access_token(get_host())
         self.upload_session = upload_session
 
-    # create batch
     def batches_create(
         self,
         data: dict[str, Any] | None = None,
@@ -106,7 +104,6 @@ class APIClient:
                 f"Failed to create: {response.text}", response.status_code
             ) from e
 
-    ## start upload session for a batches samples
     def batches_samples_start_upload_session_create(
         self,
         batch_pk: int,
@@ -125,7 +122,7 @@ class APIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/start-upload-session/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
         try:
             response = self.client.post(
                 url,
@@ -143,16 +140,15 @@ class APIClient:
                 response.status_code,
             ) from e
 
-    # start batch upload
-    def batches_uploads_start_create(
+    def batches_uploads_start_file_upload(
         self,
-        batch_pk: int,
+        batch_pk: str,
         data: dict[str, Any] | None = None,
     ) -> httpx.Response:
-        """Starts a upload by making a POST request.
+        """Starts an upload by making a POST request.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
         Returns:
@@ -177,8 +173,7 @@ class APIClient:
                 response.status_code,
             ) from e
 
-    # start a chunking session
-    def batches_uploads_upload_chunk_create(
+    def batches_uploads_upload_chunk(
         self,
         batch_pk: int,
         data: dict[str, Any] | None = None,
@@ -211,8 +206,7 @@ class APIClient:
                 response.status_code,
             ) from e
 
-    # end batch upload
-    def batches_uploads_end_create(
+    def batches_uploads_end_file_upload(
         self,
         batch_pk: int,
         data: dict[str, Any] | None = None,
@@ -246,16 +240,15 @@ class APIClient:
                 f"Failed to end batch upload: {response.text}", response.status_code
             ) from e
 
-    ## end upload session for a batches samples
     def batches_samples_end_upload_session_create(
         self,
-        batch_pk: int,
+        batch_pk: str,
         upload_session: int | None = None,
     ) -> httpx.Response:
         """Ends a sample upload session by making a POST request to the backend.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
 
@@ -270,7 +263,7 @@ class APIClient:
         else:
             data = {"upload_session": self.upload_session}
 
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/samples/end-upload-session/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/end-upload-session/"
         try:
             response = self.client.post(
                 url,
