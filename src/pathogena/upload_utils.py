@@ -321,7 +321,7 @@ def get_batch_upload_status(
         APIError: If the API returns a non-2xx status code.
     """
     api = UploadAPIClient()
-    url = f"{get_protocol()}://{api.base_url}/api/v1/batches/{batch_pk}/sample-files/state"
+    url = f"{get_protocol()}://{api.base_url}/api/v1/batches/{batch_pk}/state"
     try:
         response = api.client.get(
             url, headers={"Authorization": f"Bearer {api.token}"}, follow_redirects=True
