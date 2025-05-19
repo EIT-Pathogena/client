@@ -1,4 +1,4 @@
-# EIT Pathogena client
+# EIT Pathogena Client
 
 The command line interface for the EIT Pathogena platform.
 
