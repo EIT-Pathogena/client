@@ -47,6 +47,7 @@ The client requires the Conda platform to be using `x86_64` when creating the en
     ```
 
 ### Installing or updating the client with Miniconda
+<a id="installing-or-updating-the-client-with-miniconda"></a>
 
 The client has at least one dependency that requires `bioconda`, which itself
 depends on `conda-forge`. Note that for the `conda create` step (see below), installation can be very slow,
@@ -179,6 +180,7 @@ pathogena balance
 15:56:57 INFO: Your remaining account balance is 1000 credits
 ```
 ## `pathogena upload`
+<a id="pathogena-upload"></a>
 
 ```text
 Usage: pathogena upload [OPTIONS] UPLOAD_CSV
@@ -204,7 +206,7 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
 
-To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation. 
+To generate a CSV file to use with this command see the [build-csv](#pathogena-build-csv) documentation.
 
 ### Credits
 
@@ -213,7 +215,7 @@ header of the Pathogena Portal or by using the `pathogena balance` command. More
 `pathogena balance` section.
 
 Each sample for Mycobacterium genomic sequencing will require 10 credits whereas SARS-CoV-2 sample sequencing will require 1 credits.
-During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch. 
+During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch.
 Credits are then deducted when sample files are successfully uploaded and ready for processing.
 
 ### Human Read Removal
@@ -280,6 +282,43 @@ pathogena upload --skip-decontamination my-first-batch.csv
 15:49:21 INFO: Getting credit balance for portal.eit-pathogena.com
 15:49:23 INFO: Your remaining account balance is 990 credits
 ```
+## `pathogena build-csv`
+<a id="pathogena-build-csv"></a>
+
+```text
+Usage: pathogena build-csv [OPTIONS] SAMPLES_FOLDER
+
+  Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.
+
+  Use max_batch_size to split into multiple separate upload csvs.
+
+  Adjust the read_suffix parameters to match the file endings for your read
+  files.
+
+Options:
+  --output-csv FILE               Path to output CSV file  [required]
+  --batch-name TEXT               Batch name  [required]
+  --collection-date [%Y-%m-%d]    Collection date (YYYY-MM-DD)  [default:
+                                  2024-10-24; required]
+  --country TEXT                  3-letter Country Code  [required]
+  --instrument-platform [illumina|ont]
+                                  Sequencing technology
+  --subdivision TEXT              Subdivision
+  --district TEXT                 District
+  --ont_read_suffix TEXT          Read file ending for ONT fastq files
+                                  [default: .fastq.gz]
+  --illumina_read1_suffix TEXT    Read file ending for Illumina read 1 files
+                                  [default: _1.fastq.gz]
+  --illumina_read2_suffix TEXT    Read file ending for Illumina read 2 files
+                                  [default: _2.fastq.gz]
+  --max-batch-size INTEGER        [default: 50]
+  -h, --help                      Show this message and exit.
+```
+
+This command generates a CSV from a given directory of fastq sample files. An [example](https://github.com/EIT-Pathogena/client/tree/main/docs/assets) of such a CSV file is given in the assets directory. A CSV file in this format is required to run the [pathogena upload](#pathogena-upload) command.
+
+
+Note: the CSV file must be located in the same directory as the sample.fastq files to be used with the upload command.
 ## `pathogena decontaminate`
 
 ```text
@@ -297,7 +336,7 @@ Options:
  ```
 
 This command will attempt to remove human reads from a given input CSV file, in the same structure as the input CSV that
-would be used for uploading to EIT Pathogena, an [example can be found here](assets/example-input.csv).
+would be used for uploading to EIT Pathogena, an [example can be found here](https://github.com/EIT-Pathogena/client/tree/main/docs/assets).
 
 By default, the processed files will be output in the same directory that the command is run in, but you can choose a
 different directory with the `--output-dir` argument.

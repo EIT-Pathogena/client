@@ -16,7 +16,7 @@ required to use the client. When running human read removal prior to upload a co
 processor and at least 16GB of RAM is recommended.
 " > README_pypi.md
 
-docs=("install" "auth" "balance" "upload" "decontaminate" "download" "validate" "query-raw" "query-status" "autocomplete")
+docs=("install" "auth" "balance" "upload" "build-csv" "decontaminate" "download" "validate" "query-raw" "query-status" "autocomplete")
 
 for i in "${docs[@]}"; do
   cat docs/"$i".md >> README_pypi.md;
