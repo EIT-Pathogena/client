@@ -26,3 +26,9 @@ echo "
 ## Support
 " >> README_pypi.md
 echo "For technical support, please open an issue or contact pathogena.support@eit.org" >> README_pypi.md
+
+# Extract version from __init__.py
+VERSION=$(grep '__version__' src/pathogena/__init__.py | cut -d '"' -f2)
+
+# Replace __version__ in links with actual version
+sed -i '' "s|__version__|$VERSION|g" README_pypi.md
