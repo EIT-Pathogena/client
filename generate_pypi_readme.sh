@@ -6,26 +6,26 @@
 # maintaining of documentation.
 
 # shellcheck disable=SC2028
-echo "# EIT Pathogena Client
+cat docs/intro.md > README_pypi.md
+cat docs/install.md >> README_pypi.md
 
-The command line interface for the EIT Pathogena platform.
+commands=("auth" "balance" "upload" "build-csv" "decontaminate" "download" "validate" "query-raw" "query-status" "autocomplete")
 
-The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
-upload, sample identifiers are anonymised and human host sequences are removed. A computer with Linux or MacOS is
-required to use the client. When running human read removal prior to upload a computer with a modern multi-core
-processor and at least 16GB of RAM is recommended.
-" > README_pypi.md
+for i in "${commands[@]}"; do
+  COMMAND_OUTPUT=$(pathogena "$i" -h)
+  DOC_CONTENT=$(< "docs/$i.md")
+  UPDATED_DOC=$(awk -v cmd="$i" -v help="$COMMAND_OUTPUT" '{
+    if ($0 == "__help__") {
+      print "## `pathogena " cmd "`\n<a id=\"pathogena-" cmd "\"></a>\n\n```text\n" help "\n```"
+    } else {
+      print $0
+    }
+  }' <<< "$DOC_CONTENT")
+  echo "$UPDATED_DOC" >> README_pypi.md
+  echo "" >> README_pypi.md
+done
 
-docs=("install" "auth" "balance" "upload" "build-csv" "decontaminate" "download" "validate" "query-raw" "query-status" "autocomplete")
-
-for i in "${docs[@]}"; do
-  cat docs/"$i".md >> README_pypi.md;
-done;
-
-echo "
-## Support
-" >> README_pypi.md
-echo "For technical support, please open an issue or contact pathogena.support@eit.org" >> README_pypi.md
+cat docs/support.md >> README_pypi.md
 
 # Extract version from __init__.py
 VERSION=$(grep '__version__' src/pathogena/__init__.py | cut -d '"' -f2)

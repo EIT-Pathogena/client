@@ -1,18 +1,4 @@
-## `pathogena decontaminate`
-
-```text
-Usage: pathogena decontaminate [OPTIONS] INPUT_CSV
-
-  Decontaminate reads from a CSV file.
-
-Options:
-  --output-dir DIRECTORY  Output directory for the cleaned FastQ files,
-                          defaults to the current working directory.
-  --threads INTEGER       Number of alignment threads used during
-                          decontamination
-  --skip-fastq-check      Skip checking FASTQ files for validity
-  -h, --help              Show this message and exit.
- ```
+__help__
 
 This command will attempt to remove human reads from a given input CSV file, in the same structure as the input CSV that
 would be used for uploading to EIT Pathogena, an [example can be found here](https://github.com/EIT-Pathogena/client/tree/__version__/docs/assets).

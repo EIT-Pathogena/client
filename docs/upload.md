@@ -1,23 +1,4 @@
-## `pathogena upload`
-<a id="pathogena-upload"></a>
-
-```text
-Usage: pathogena upload [OPTIONS] UPLOAD_CSV
-
-  Validate, decontaminate and upload reads to EIT Pathogena. Creates a mapping
-  CSV file which can be used to download output files with original sample
-  names.
-
-Options:
-  --threads INTEGER               Number of alignment threads used during decontamination
-  --save                          Retain decontaminated reads after upload completion
-  --host                           API hostname (for development)
-  --skip-fastq-check              Skip checking FASTQ files for validity
-  --skip-decontamination          Run decontamination prior to upload
-  --output-dir DIRECTORY          Output directory for the cleaned FastQ files,
-                                  defaults to the current working directory.
-  -h, --help                      Show this message and exit.
-```
+__help__
 
 > Where samples may contain human reads we strongly recommend using the provided decontamination functionality. This is
 best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
