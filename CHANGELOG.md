@@ -1,5 +1,11 @@
 ## Unreleased
 
+## 2.1.1 (2025-05-27)
+
+### Chore
+
+- Updated cli documentations and fixed broken links.
+
 ## 2.1.0 (2025-01-22)
 
 ### Added

@@ -1,22 +1,4 @@
-## `pathogena upload`
-
-```text
-Usage: pathogena upload [OPTIONS] UPLOAD_CSV
-
-  Validate, decontaminate and upload reads to EIT Pathogena. Creates a mapping
-  CSV file which can be used to download output files with original sample
-  names.
-
-Options:
-  --threads INTEGER               Number of alignment threads used during decontamination
-  --save                          Retain decontaminated reads after upload completion
-  --host                           API hostname (for development)
-  --skip-fastq-check              Skip checking FASTQ files for validity
-  --skip-decontamination          Run decontamination prior to upload
-  --output-dir DIRECTORY          Output directory for the cleaned FastQ files,
-                                  defaults to the current working directory.
-  -h, --help                      Show this message and exit.
-```
+__help__
 
 > Where samples may contain human reads we strongly recommend using the provided decontamination functionality. This is
 best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
@@ -24,7 +6,7 @@ best practice to minimise the risk of personally identifiable information being 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
 
-To generate a CSV file to use with this command see the [build-csv](./build-csv.md) documentation. 
+To generate a CSV file to use with this command see the [build-csv](#pathogena-build-csv) documentation.
 
 ### Credits
 
@@ -33,7 +15,7 @@ header of the Pathogena Portal or by using the `pathogena balance` command. More
 `pathogena balance` section.
 
 Each sample for Mycobacterium genomic sequencing will require 10 credits whereas SARS-CoV-2 sample sequencing will require 1 credits.
-During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch. 
+During the upload command process, a balance check is performed to ensure the user has enough credits for the number of samples in the batch.
 Credits are then deducted when sample files are successfully uploaded and ready for processing.
 
 ### Human Read Removal
