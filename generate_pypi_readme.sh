@@ -7,6 +7,8 @@
 
 # shellcheck disable=SC2028
 cat docs/intro.md > README_pypi.md
+# commitlint doesn't allow an extra EOF at the end of files, so we are adding an extra line between sections here
+echo "" >> README_pypi.md
 cat docs/install.md >> README_pypi.md
 
 commands=("auth" "balance" "upload" "build-csv" "decontaminate" "download" "validate" "query-raw" "query-status" "autocomplete")
