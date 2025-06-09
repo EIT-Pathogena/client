@@ -403,7 +403,7 @@ def prepare_files(
     for file in files:
         file_payload = {
             "original_file_name": file.get("name"),
-            "file_size_in_kb": file.get("size")
+            "file_size_in_kb": file.get("size"),
         }
 
         if file.get("specimen_organism"):
