@@ -81,7 +81,8 @@ def test_cli_fail_decontaminate_output_dir(cli_main, illumina_sample_csv: Path) 
         ["decontaminate", str(illumina_sample_csv), "--output-dir", "totallyfakedir"],
     )
     assert result.exit_code != 0
-    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+    assert ("Directory 'totallyfakedir' does not exist" in result.stdout
+            or "Directory 'totallyfakedir' does not exist" in result.stderr)
 
 
 def test_cli_fail_upload_output_dir(cli_main, illumina_sample_csv: Path) -> None:
@@ -95,7 +96,8 @@ def test_cli_fail_upload_output_dir(cli_main, illumina_sample_csv: Path) -> None
         cli_main, ["upload", str(illumina_sample_csv), "--output-dir", "totallyfakedir"]
     )
     assert result.exit_code != 0
-    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+    assert ("Directory 'totallyfakedir' does not exist" in result.stdout
+            or "Directory 'totallyfakedir' does not exist" in result.stderr)
 
 
 def test_cli_fail_download_output_dir(cli_main, illumina_sample_csv: Path) -> None:
@@ -107,7 +109,8 @@ def test_cli_fail_download_output_dir(cli_main, illumina_sample_csv: Path) -> No
     runner = CliRunner()
     result = runner.invoke(cli_main, ["download", "--output-dir", "totallyfakedir"])
     assert result.exit_code != 0
-    assert "Directory 'totallyfakedir' does not exist" in result.stdout
+    assert ("Directory 'totallyfakedir' does not exist" in result.stdout
+        or "Directory 'totallyfakedir' does not exist" in result.stderr)
 
 
 def test_validation_fail_control(cli_main, invalid_control_csv: Path) -> None:
