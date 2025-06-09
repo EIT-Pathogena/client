@@ -37,7 +37,6 @@ class TestPrepareFile:
         self.file = SampleFileMetadata(
             name="file1.txt",
             size=1024,  # 1 KB
-            control="false",
             content_type="text/plain",
             specimen_organism="mycobacteria",
         )
@@ -84,7 +83,7 @@ class TestPrepareFile:
         # call
         result = prepare_file(
             upload_data=self.upload_data,
-            file=self.file,
+            file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
             api_client=mock_api_client,
@@ -112,7 +111,7 @@ class TestPrepareFile:
         # call
         result = prepare_file(
             upload_data=self.upload_data,
-            file=self.file,
+            file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
             sample_id=self.sample_id,
@@ -134,7 +133,7 @@ class TestPrepareFile:
         # call
         result = prepare_file(
             upload_data=self.upload_data,
-            file=self.file,
+            file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
             sample_id=self.sample_id,

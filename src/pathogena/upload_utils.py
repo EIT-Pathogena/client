@@ -62,14 +62,12 @@ class SampleFileMetadata(TypedDict):
     Args:
         name: The name of the sample file
         size: The size of the sample file in bytes
-        control: Whether this is a control sample
         content_type: The content type
         specimen_organism: The organism from which the sample was taken
     """
 
     name: str
     size: int
-    control: str
     content_type: str
     specimen_organism: str
 
@@ -280,26 +278,26 @@ def get_upload_host(cli_host: str | None = None) -> str:
 
 def check_if_file_is_in_all_sample_files(
     sample_files: dict[str, SampleFileUploadStatus] | None = None,
-    file: SampleFileMetadata | None = None,
+    file_metadata: SampleFileMetadata | None = None,
 ) -> tuple[bool, SampleFileUploadStatus | dict]:
     """Checks if a given file is already present in the set of files ready for upload.
 
     Args:
         sample_files (dict[str, SampleFileUploadStatus]): The sample files ready for upload.
         That is, a dictionary where keys are sample file IDs and values are dictionaries containing file data.
-        file (UploadSample | None): A dictionary representing the file, expected to have a 'name' key.
+        file_metadata (UploadSample | None): A dictionary representing the file, expected to have a 'name' key.
 
     Returns:
         tuple[bool, SampleFileUploadStatus | dict]: A bool if it was found and the result if
             true.
     """
     # Extract samples from sample_uploads, defaulting to an empty dictionary if None
-    if not sample_files or not file:
+    if not sample_files or not file_metadata:
         return (False, {})
 
     # Iterate through sample IDs and check if the uploaded file name matches the file's name
     for sample_data in sample_files.values():
-        if sample_data.get("uploaded_file_name") == file["name"]:
+        if sample_data.get("uploaded_file_name") == file_metadata["name"]:
             return (True, sample_data)
 
     return (False, {})
@@ -358,7 +356,7 @@ def prepare_files(
     """
     selected_files = []
 
-    # create sample metadata depending on if illumina or ont
+    # create file metadata depending on if illumina or ont
     files: list[SampleFileMetadata] = []
     for sample in samples:
         if sample.is_illumina():
@@ -403,13 +401,10 @@ def prepare_files(
     # create payload for starting upload session from sample metadata
     files_to_upload = []
     for file in files:
-        file_payload = {}
-
-        file_payload["original_file_name"] = file.get("name")
-        file_payload["file_size_in_kb"] = file.get("size")
-
-        if len(file.get("control", "")) > 0:
-            file_payload["control"] = file.get("control")
+        file_payload = {
+            "original_file_name": file.get("name"),
+            "file_size_in_kb": file.get("size"),
+        }
 
         if file.get("specimen_organism"):
             file_payload["specimen_organism"] = file.get("specimen_organism")
@@ -502,7 +497,7 @@ def prepare_files(
                 ):
                     file_ready = prepare_file(
                         upload_data=file,
-                        file=file_metadata,
+                        file_metadata=file_metadata,
                         batch_pk=batch_pk,
                         upload_session=upload_session,
                         sample_id=sample_id,
@@ -712,7 +707,7 @@ def upload_files(
 
 def prepare_file(
     upload_data: UploadSample,
-    file: SampleFileMetadata,
+    file_metadata: SampleFileMetadata,
     batch_pk: str,
     upload_session: int,
     sample_id: str,
@@ -723,7 +718,7 @@ def prepare_file(
 
     Args:
         upload_data (UploadSample): Sample object to upload with associated files.
-        file (Any): A file object with attributes `name`, `size`, and `type`.
+        file_metadata (Any): A file object with attributes `name`, `size`, `content_type` and `specimen_oragnism`.
         batch_pk (str): The batch ID associated with the file.
         upload_session (int): The current upload session ID.
         sample_id (str): The ID of the sample that the file will be associated with.
@@ -745,9 +740,9 @@ def prepare_file(
             "upload_session": upload_session,
         }
 
-    original_file_name = file["name"]
+    original_file_name = file_metadata["name"]
     total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
-    content_type = file["content_type"]
+    content_type = file_metadata["content_type"]
 
     form_data = {
         "original_file_name": original_file_name,
@@ -763,7 +758,7 @@ def prepare_file(
         start_file_upload_json = start_file_upload_response.json()
         if start_file_upload_response.status_code == 200:
             file_ready = {
-                "file": file,
+                "file": file_metadata,
                 "upload_id": start_file_upload_json.get("upload_id"),
                 "batch_id": batch_pk,
                 "sample_id": start_file_upload_json.get("sample_id"),
