@@ -1,22 +1,4 @@
-## `pathogena download`
-
-```text
-$ pathogena download -h
-16:07:34 INFO: EIT Pathogena client version 2.0.0rc1
-Usage: pathogena download [OPTIONS] SAMPLES
-
-  Download input and output files associated with sample IDs or a mapping CSV
-  file created during upload.
-
-Options:
-  --filenames TEXT        Comma-separated list of output filenames to download
-  --inputs                Also download decontaminated input FASTQ file(s)
-  --output-dir DIRECTORY  Output directory for the downloaded files.
-  --rename / --no-rename  Rename downloaded files using sample names when
-                          given a mapping CSV
-  --host TEXT             API hostname (for development)
-  -h, --help              Show this message and exit.
-```
+__help__
 
 The download command retrieves the output (and/or input) files associated with a batch of samples given a mapping CSV
 generated during upload, or one or more sample GUIDs. When a mapping CSV is used, by default downloaded file names are

@@ -1,10 +1,18 @@
 ## Unreleased
 
 ### Fixed
+
 - [EV-1787](https://eit-oxford.atlassian.net/browse/EV-1787): Update client to make compliant with upload API sample modelling
 
 ### Changed
+
 - [EV-2089](https://eit-oxford.atlassian.net/browse/EV-2089): Do not pass control for validation at start of upload session
+
+## 2.1.1 (2025-05-27)
+
+### Chore
+
+- Updated cli documentations and fixed broken links.
 
 ## 2.1.0 (2025-01-22)
 

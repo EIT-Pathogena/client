@@ -1,4 +1,4 @@
-## `pathogena autocomplete`
+__help__
 
 This command will output the steps required to enable auto-completion in either a Bash or ZSH shell, follow the output
 to enable autocompletion, this will need to be executed on every new shell session, instructions are provided on how to
