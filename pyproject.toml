@@ -5,11 +5,10 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "pathogena"
 authors = [
-    {name = "Jay Dhillon", email = "jdhillon@eit.org"},
+    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"}
 ]
 maintainers = [
-    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"},
-    {name = "Jay Dhillon", email = "jdhillon@eit.org"}
+    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"}
 ]
 license = {file = "LICENSE"}
 readme = "README_pypi.md"
@@ -18,8 +17,7 @@ requires-python = ">=3.10"
 keywords = [
     "pathogen",
     "pathogena",
-    "eit",
-    "gpas"
+    "eit"
 ]
 dependencies = [
   "httpx>=0.27.0",
@@ -29,6 +27,7 @@ dependencies = [
   "pydantic>=2.6.2,<3",
   "tenacity==8.2.3",
   "click>=8.1.7",
+  "python-dotenv>=1.0",
 ]
 
 [project.scripts]
@@ -40,6 +39,7 @@ dev = [
     "pre-commit>=4.0.1",
     "pytest>=8.3.3",
     "ruff>=0.7.1",
+    "pytest-mock>=3.14.0"
 ]
 
 [tool.ruff.lint]
@@ -84,6 +84,7 @@ dev-dependencies = [
     "pre-commit>=4.0.1",
     "pytest>=8.3.3",
     "ruff>=0.7.1",
+    "pytest-mock>=3.14.0",
 ]
 
 

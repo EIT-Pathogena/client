@@ -12,7 +12,10 @@ ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 
 def is_valid_file_extension(
-    filename: str, allowed_extensions: tuple[str] = ALLOWED_EXTENSIONS
+    filename: str,
+    allowed_extensions: tuple[
+        Literal[".fastq"], Literal[".fq"], Literal[".fastq.gz"], Literal[".fq.gz"]
+    ] = ALLOWED_EXTENSIONS,
 ) -> bool:
     """Check if the file has a valid extension.
 
@@ -29,7 +32,7 @@ def is_valid_file_extension(
 class UploadBase(BaseModel):
     """Base model for any uploaded data."""
 
-    batch_name: str = Field(
+    batch_name: str | None = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
     instrument_platform: util.PLATFORMS = Field(
@@ -39,14 +42,14 @@ class UploadBase(BaseModel):
     country: str = Field(
         min_length=3, max_length=3, description="ISO 3166-2 alpha-3 country code"
     )
-    subdivision: str = Field(
+    subdivision: str | None = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
     district: str = Field(default=None, description="Granular location")
     specimen_organism: Literal["mycobacteria", "sars-cov-2", ""] = Field(
         default="mycobacteria", description="Target specimen organism scientific name"
     )
-    host_organism: str = Field(
+    host_organism: str | None = Field(
         default=None, description="Host organism scientific name"
     )
     amplicon_scheme: Optional[str] = Field(
@@ -63,41 +66,41 @@ class UploadSample(UploadBase):
     )
     upload_csv: Path = Field(description="Absolute path of upload CSV file")
     reads_1: Path = Field(description="Relative path of first FASTQ file")
-    reads_2: Path = Field(
+    reads_2: Path | None = Field(
         description="Relative path of second FASTQ file", default=None
     )
     control: Literal["positive", "negative", ""] = Field(
         description="Control status of sample"
     )
     # Metadata added to a sample prior to upload.
-    reads_1_resolved_path: Path = Field(
+    reads_1_resolved_path: Path | None = Field(
         description="Resolved path of first FASTQ file", default=None
     )
-    reads_2_resolved_path: Path = Field(
+    reads_2_resolved_path: Path | None = Field(
         description="Resolved path of second FASTQ file", default=None
     )
-    reads_1_dirty_checksum: str = Field(
+    reads_1_dirty_checksum: str | None = Field(
         description="Checksum of first FASTQ file", default=None
     )
-    reads_2_dirty_checksum: str = Field(
+    reads_2_dirty_checksum: str | None = Field(
         description="Checksum of second FASTQ file", default=None
     )
-    reads_1_cleaned_path: Path = Field(
+    reads_1_cleaned_path: Path | None = Field(
         description="Path of first FASTQ file after decontamination", default=None
     )
-    reads_2_cleaned_path: Path = Field(
+    reads_2_cleaned_path: Path | None = Field(
         description="Path of second FASTQ file after decontamination", default=None
     )
-    reads_1_pre_upload_checksum: str = Field(
+    reads_1_pre_upload_checksum: str | None = Field(
         description="Checksum of first FASTQ file after decontamination", default=None
     )
-    reads_2_pre_upload_checksum: str = Field(
+    reads_2_pre_upload_checksum: str | None = Field(
         description="Checksum of second FASTQ file after decontamination", default=None
     )
-    reads_1_upload_file: Path = Field(
+    reads_1_upload_file: Path | None = Field(
         description="Path of first FASTQ file to be uploaded", default=None
     )
-    reads_2_upload_file: Path = Field(
+    reads_2_upload_file: Path | None = Field(
         description="Path of second FASTQ file to be uploaded", default=None
     )
     reads_in: int = Field(description="Number of reads in FASTQ file", default=0)
@@ -122,15 +125,21 @@ class UploadSample(UploadBase):
             ValueError: If any validation checks fail.
         """
         self.reads_1_resolved_path = self.upload_csv.resolve().parent / self.reads_1
-        self.reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
+        if self.reads_2 is not None:
+            self.reads_2_resolved_path = self.upload_csv.resolve().parent / self.reads_2
+        else:
+            self.reads_2_resolved_path = None
         self.check_fastq_paths_are_different()
         fastq_paths = [self.reads_1_resolved_path]
         if self.is_ont():
-            if self.reads_2_resolved_path.is_file():
+            if (
+                self.reads_2_resolved_path is not None
+                and self.reads_2_resolved_path.is_file()
+            ):
                 raise ValueError(
                     f"reads_2 must not be set to a file where instrument_platform is ont ({self.sample_name})"
                 )
-        elif self.is_illumina():
+        elif self.is_illumina() and self.reads_2_resolved_path is not None:
             fastq_paths.append(self.reads_2_resolved_path)
         for count, file_path in enumerate(fastq_paths, start=1):
             if not file_path.is_file():
@@ -144,6 +153,34 @@ class UploadSample(UploadBase):
                     f"Invalid file extension for {file_path.name}. Allowed extensions are {ALLOWED_EXTENSIONS}"
                 )
         return self
+
+    @property
+    def file1_size(self) -> int:
+        """Get the size of the first reads file in bytes.
+
+        Returns:
+            int: The size of the second file associated with sample.
+
+        """
+        return (
+            self.reads_1_resolved_path.stat().st_size
+            if self.reads_1_resolved_path
+            else 0
+        )
+
+    @property
+    def file2_size(self):
+        """Get the size of the second reads file in bytes.
+
+        Returns:
+            int: The size of the second file associated with sample (illumina only).
+
+        """
+        return (
+            self.reads_2_resolved_path.stat().st_size
+            if self.reads_2_resolved_path
+            else 0
+        )
 
     def check_fastq_paths_are_different(self):
         """Check that the FASTQ paths are different.
@@ -180,7 +217,7 @@ class UploadSample(UploadBase):
                 raise ValueError(
                     f"FASTQ file {read.name} does not have a multiple of 4 lines"
                 )
-            self.reads_in += line_count / valid_lines_per_read
+            self.reads_in += int(line_count / valid_lines_per_read)
         logging.info(f"{self.reads_in} reads in FASTQ file")
 
     def get_read_paths(self) -> list[Path]:
@@ -189,10 +226,19 @@ class UploadSample(UploadBase):
         Returns:
             list[Path]: A list of paths to the read files.
         """
-        reads = [self.reads_1_resolved_path]
-        if self.is_illumina():
-            reads.append(self.reads_2_resolved_path)
-        return reads
+        match (self.reads_1_resolved_path, self.reads_2_resolved_path):
+            case None, None:
+                return []
+            case x, None:
+                return [x]
+            case None, x:
+                return [x]
+            case x, y if self.is_illumina():
+                return [x, y]
+            case x, y if self.is_ont():  # ont only one file
+                return [x]
+            case _:
+                return []
 
     def is_ont(self) -> bool:
         """Check if the instrument platform is ONT.
@@ -209,6 +255,18 @@ class UploadSample(UploadBase):
             bool: True if the instrument platform is Illumina, False otherwise.
         """
         return self.instrument_platform == "illumina"
+
+    def read_file1_data(self):
+        """Read the contents of the first fastq file."""
+        if self.reads_1_resolved_path:
+            with open(self.reads_1_resolved_path, "rb") as file:
+                return file.read()
+
+    def read_file2_data(self):
+        """Read the contents of the second fastq file."""
+        if self.reads_2_resolved_path:
+            with open(self.reads_2_resolved_path, "rb") as file:
+                return file.read()
 
 
 class UploadBatch(BaseModel):
@@ -255,7 +313,9 @@ class UploadBatch(BaseModel):
         reads = []
         reads.append([str(sample.reads_1.name) for sample in self.samples])
         if self.is_illumina():
-            reads.append([str(sample.reads_2.name) for sample in self.samples])
+            reads.append(
+                [str(sample.reads_2.name) for sample in self.samples if sample.reads_2]
+            )
         for count, reads_list in enumerate(reads, start=1):
             if len(reads_list) > 0 and len(reads_list) != len(set(reads_list)):
                 duplicates = find_duplicate_entries(reads_list)
@@ -341,7 +401,13 @@ class UploadBatch(BaseModel):
             sample.reads_out = cleaned_sample_data.get(
                 "reads_out", sample.reads_in
             )  # Assume no change in default
-            sample.reads_1_dirty_checksum = util.hash_file(sample.reads_1_resolved_path)
+
+            if sample.reads_1_resolved_path is not None:
+                sample.reads_1_dirty_checksum = util.hash_file(
+                    sample.reads_1_resolved_path
+                )
+            else:
+                sample.reads_1_dirty_checksum = ""
             if self.ran_through_hostile:
                 sample.reads_1_cleaned_path = Path(
                     cleaned_sample_data.get("fastq1_out_path")
@@ -351,7 +417,7 @@ class UploadBatch(BaseModel):
                 )
             else:
                 sample.reads_1_pre_upload_checksum = sample.reads_1_dirty_checksum
-            if sample.is_illumina():
+            if sample.is_illumina() and sample.reads_2_resolved_path:
                 sample.reads_2_dirty_checksum = util.hash_file(
                     sample.reads_2_resolved_path
                 )

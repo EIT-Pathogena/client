@@ -7,8 +7,10 @@ from pathlib import Path
 
 import click
 
-from pathogena import lib, models, util
+from pathogena import constants, lib, models, util
 from pathogena.create_upload_csv import UploadData, build_upload_csv
+from pathogena.errors import AuthorizationError
+from pathogena.log_utils import configure_debug_logging
 
 
 @click.group(name="Pathogena", context_settings={"help_option_names": ["-h", "--help"]})
@@ -20,7 +22,7 @@ def main(*, debug: bool = False) -> None:
     """EIT Pathogena command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
-    util.configure_debug_logging(debug)
+    configure_debug_logging(debug)
 
 
 @main.command()
@@ -103,7 +105,7 @@ def decontaminate(
     input_csv: Path,
     *,
     output_dir: Path = Path("."),
-    threads: int = None,
+    threads: int = 1,
     skip_fastq_check: bool = False,
 ) -> None:
     """Decontaminate reads from provided csv samples."""
@@ -191,7 +193,7 @@ def upload(
         lib.upload_batch(batch=batch, host=host, save=save)
         lib.get_credit_balance(host=host)
     else:
-        raise util.AuthorizationError()
+        raise AuthorizationError()
 
 
 @main.command()
@@ -244,7 +246,7 @@ def download(
             )
         elif Path(samples).is_file():
             lib.download(
-                mapping_csv=samples,
+                mapping_csv=Path(samples),
                 filenames=filenames,
                 inputs=inputs,
                 out_dir=output_dir,
@@ -256,7 +258,7 @@ def download(
                 f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
             )
     else:
-        raise util.AuthorizationError()
+        raise AuthorizationError()
 
 
 @main.command()
@@ -270,8 +272,8 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         result = lib.query(samples=samples, host=host)
-    elif Path(samples).is_file():
-        result = lib.query(mapping_csv=samples, host=host)
+    elif (sample_path := Path(samples)).is_file():
+        result = lib.query(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
@@ -291,8 +293,8 @@ def query_status(samples: str, *, json: bool = False, host: str | None = None) -
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
         result = lib.status(samples=samples, host=host)
-    elif Path(samples).is_file():
-        result = lib.status(mapping_csv=samples, host=host)
+    elif (sample_path := Path(samples)).is_file():
+        result = lib.status(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
@@ -350,27 +352,27 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     type=str,
     help="3-letter Country Code",
     required=True,
-    default=lib.DEFAULT_METADATA["country"],
+    default=constants.DEFAULT_METADATA["country"],
     show_default=True,
 )
 @click.option(
     "--instrument-platform",
     type=click.Choice(["illumina", "ont"]),
-    default=lib.DEFAULT_METADATA["instrument_platform"],
+    default=constants.DEFAULT_METADATA["instrument_platform"],
     help="Sequencing technology",
 )
 @click.option(
     "--subdivision",
     type=str,
     help="Subdivision",
-    default=lib.DEFAULT_METADATA["subdivision"],
+    default=constants.DEFAULT_METADATA["subdivision"],
     show_default=True,
 )
 @click.option(
     "--district",
     type=str,
     help="District",
-    default=lib.DEFAULT_METADATA["district"],
+    default=constants.DEFAULT_METADATA["district"],
     show_default=True,
 )
 @click.option(
@@ -378,7 +380,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     "pipeline",
     type=click.Choice(["mycobacteria", "sars-cov-2"]),
     help="Specimen organism",
-    default=lib.DEFAULT_METADATA["pipeline"],
+    default=constants.DEFAULT_METADATA["pipeline"],
     show_default=True,
 )
 @click.option(
@@ -391,21 +393,21 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 @click.option(
     "--ont_read_suffix",
     type=str,
-    default=lib.DEFAULT_METADATA["ont_read_suffix"],
+    default=constants.DEFAULT_METADATA["ont_read_suffix"],
     help="Read file ending for ONT fastq files",
     show_default=True,
 )
 @click.option(
     "--illumina_read1_suffix",
     type=str,
-    default=lib.DEFAULT_METADATA["illumina_read1_suffix"],
+    default=constants.DEFAULT_METADATA["illumina_read1_suffix"],
     help="Read file ending for Illumina read 1 files",
     show_default=True,
 )
 @click.option(
     "--illumina_read2_suffix",
     type=str,
-    default=lib.DEFAULT_METADATA["illumina_read2_suffix"],
+    default=constants.DEFAULT_METADATA["illumina_read2_suffix"],
     help="Read file ending for Illumina read 2 files",
     show_default=True,
 )
@@ -417,15 +419,15 @@ def build_csv(
     batch_name: str,
     collection_date: datetime,
     country: str,
-    subdivision: str = lib.DEFAULT_METADATA["subdivision"],
-    district: str = lib.DEFAULT_METADATA["district"],
-    pipeline: str = lib.DEFAULT_METADATA["pipeline"],
+    subdivision: str = constants.DEFAULT_METADATA["subdivision"],
+    district: str = constants.DEFAULT_METADATA["district"],
+    pipeline: str = constants.DEFAULT_METADATA["pipeline"],
     amplicon_scheme: str | None = None,
     host_organism: str = "homo sapiens",
-    ont_read_suffix: str = lib.DEFAULT_METADATA["ont_read_suffix"],
-    illumina_read1_suffix: str = lib.DEFAULT_METADATA["illumina_read1_suffix"],
-    illumina_read2_suffix: str = lib.DEFAULT_METADATA["illumina_read2_suffix"],
-    max_batch_size: int = lib.DEFAULT_METADATA["max_batch_size"],
+    ont_read_suffix: str = constants.DEFAULT_METADATA["ont_read_suffix"],
+    illumina_read1_suffix: str = constants.DEFAULT_METADATA["illumina_read1_suffix"],
+    illumina_read2_suffix: str = constants.DEFAULT_METADATA["illumina_read2_suffix"],
+    max_batch_size: int = constants.DEFAULT_METADATA["max_batch_size"],
 ) -> None:
     r"""Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.
 
