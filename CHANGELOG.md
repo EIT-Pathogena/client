@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 2.2.0-RC1 (2025-06-10)
+
 ### Fixed
 
 - [EV-1787](https://eit-oxford.atlassian.net/browse/EV-1787): Update client to make compliant with upload API sample modelling
@@ -79,7 +81,7 @@
 - Check for a new version in PyPi.
 - Added `gpas autocomplete` sub-command to enable tab completion
 - Introduce tab completion with host example.
-- Added __main__ to enable easier IDE debugging.
+- Added **main** to enable easier IDE debugging.
 - Add debug to all commands, print cli version always.
 
 ### Fix
