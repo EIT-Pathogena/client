@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Fixed
+
+- [EV-2131](https://eit-oxford.atlassian.net/browse/EV-2131): cli uploading same file for both Illumina read files in a pair
+
+
 ## 2.2.0-RC1 (2025-06-10)
 
 ### Fixed

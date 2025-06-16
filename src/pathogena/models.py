@@ -256,18 +256,6 @@ class UploadSample(UploadBase):
         """
         return self.instrument_platform == "illumina"
 
-    def read_file1_data(self):
-        """Read the contents of the first fastq file."""
-        if self.reads_1_resolved_path:
-            with open(self.reads_1_resolved_path, "rb") as file:
-                return file.read()
-
-    def read_file2_data(self):
-        """Read the contents of the second fastq file."""
-        if self.reads_2_resolved_path:
-            with open(self.reads_2_resolved_path, "rb") as file:
-                return file.read()
-
 
 class UploadBatch(BaseModel):
     """Model for a batch of upload samples."""
