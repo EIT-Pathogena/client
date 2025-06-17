@@ -71,7 +71,7 @@ class SampleFileMetadata(TypedDict):
     size: int
     content_type: str
     specimen_organism: str
-    resolved_path: Path | str
+    resolved_path: Path | None
     control: str
 
 
@@ -309,6 +309,30 @@ def get_batch_upload_status(
         ) from e
 
 
+def get_file_data_from_resolved_path(reads_resolved_path: Path | None):
+    """Get the file name, content type, and Path object based on a resolved file path.
+
+    Args:
+        reads_resolved_path (Path | None): Path to the file to inspect.
+
+    Returns:
+        tuple[str, str, Path | None]:
+            name: The file's name, or an empty string if the path is None or doesn't exist.
+            content_type: "application/gzip" if the file suffix is 'gzip' or 'gz'; otherwise "text/plain".
+            resolved_path: The Path object if the file exists; otherwise None.
+    """
+    if reads_resolved_path is None or not reads_resolved_path.exists():
+        return "", "text/plain", None
+
+    return (
+        reads_resolved_path.name,
+        "application/gzip"
+        if reads_resolved_path.suffix in ("gzip", "gz")
+        else "text/plain",
+        reads_resolved_path,
+    )
+
+
 def prepare_files(
     batch_pk: str,
     samples: list[UploadSample],
@@ -334,56 +358,44 @@ def prepare_files(
     files: list[SampleFileMetadata] = []
     for sample in samples:
         if sample.is_illumina():
+            file1_name, file1_content_type, file1_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_1_resolved_path)
+            )
+            file2_name, file2_content_type, file2_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_2_resolved_path)
+            )
             files.append(
                 {
-                    "name": sample.reads_1_resolved_path.name
-                    if sample.reads_1_resolved_path is not None
-                    else "",
+                    "name": file1_name,
                     "size": sample.file1_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file1_content_type,
                     "specimen_organism": sample.specimen_organism,
-                    "resolved_path": sample.reads_1_resolved_path
-                    if sample.reads_1_resolved_path is not None
-                    else "",
+                    "resolved_path": file1_resolved_path,
                 }
             )
             files.append(
                 {
-                    "name": sample.reads_2_resolved_path.name
-                    if sample.reads_2_resolved_path is not None
-                    else "",
+                    "name": file2_name,
                     "size": sample.file2_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_2_resolved_path is not None
-                    and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file2_content_type,
                     "specimen_organism": sample.specimen_organism,
-                    "resolved_path": sample.reads_2_resolved_path
-                    if sample.reads_2_resolved_path is not None
-                    else "",
+                    "resolved_path": file2_resolved_path,
                 }
             )
         else:
+            file1_name, file1_content_type, file1_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_1_resolved_path)
+            )
             files.append(
                 {
-                    "name": sample.reads_1_resolved_path.name
-                    if sample.reads_1_resolved_path is not None
-                    else "",
+                    "name": file1_name,
                     "size": sample.file1_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file1_content_type,
                     "specimen_organism": sample.specimen_organism,
-                    "resolved_path": sample.reads_1_resolved_path
-                    if sample.reads_1_resolved_path is not None
-                    else "",
+                    "resolved_path": file1_resolved_path,
                 }
             )
 
@@ -649,7 +661,7 @@ def upload_files(
 
 
 def prepare_file(
-    resolved_path: Path | str,
+    resolved_path: Path | None,
     file_metadata: SampleFileMetadata,
     batch_pk: str,
     upload_session: int,
@@ -671,14 +683,14 @@ def prepare_file(
     Returns:
         dict[str, Any]: File metadata ready for upload or error details.
     """
-    if resolved_path == "":
+    if resolved_path is None:
         return {
             "error": "Could not find any read file data for sample",
             "status code": 500,
             "upload_session": upload_session,
         }
 
-    with open(resolved_path, "rb") as file:
+    with resolved_path.open("rb") as file:
         file_data = file.read()
 
     original_file_name = file_metadata["name"]
