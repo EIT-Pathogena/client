@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Fixed
+
+- [EV-2132](https://eit-oxford.atlassian.net/browse/EV-2132): update app link in upload completion message
+
 ## 2.2.0-RC1 (2025-06-10)
 
 ### Fixed

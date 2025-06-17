@@ -3,6 +3,7 @@ import os
 
 CPU_COUNT = multiprocessing.cpu_count()
 DEFAULT_HOST = "portal.eit-pathogena.com"
+DEFAULT_APP_HOST = "app.eit-pathogena.com"
 DEFAULT_UPLOAD_HOST = "api.upload.eit-pathogena.com"
 DEFAULT_PROTOCOL = "https"
 DEFAULT_METADATA = {
