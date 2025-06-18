@@ -20,6 +20,7 @@ import pathogena
 from pathogena import batch_upload_apis, models, upload_utils, util
 from pathogena.constants import (
     CPU_COUNT,
+    DEFAULT_APP_HOST,
     DEFAULT_HOST,
     DEFAULT_PROTOCOL,
     HOSTILE_INDEX_NAME,
@@ -367,7 +368,7 @@ def upload_batch(
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"{get_protocol()}://{host}/batches/{legacy_batch_id}"
+        f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
 
     upload_utils.upload_fastq(

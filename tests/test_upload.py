@@ -41,12 +41,6 @@ class TestPrepareFile:
             specimen_organism="mycobacteria",
         )
 
-        self.mock_reads_file1_data = mocker.MagicMock()
-        self.mock_reads_file1_data.return_value = b"\x1f\x8b\x08\x08\x22\x4e\x01"
-        mocker.patch(
-            "pathogena.models.UploadSample.read_file1_data", self.mock_reads_file1_data
-        )
-
         # define upload_data
         self.upload_data = UploadSample(
             sample_name="sample1",
@@ -58,12 +52,9 @@ class TestPrepareFile:
             country="GBR",
             is_illumina=True,
             is_ont=False,
-            # read_file1_data=self.mock_reads_file1_data,
         )
         self.sample_id = "99999999-9999-9999-9999-999999999999"
 
-        # Ensure `reads_1_resolved_path` is set
-        self.upload_data.reads_1_resolved_path = self.upload_data.reads_1
         # set values to call prepare files
         self.batch_pk = "11111111-1111-1111-1111-111111111111"
         self.upload_session = 1234
@@ -82,7 +73,7 @@ class TestPrepareFile:
 
         # call
         result = prepare_file(
-            upload_data=self.upload_data,
+            resolved_path=self.upload_data.reads_1_resolved_path,
             file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
@@ -90,6 +81,9 @@ class TestPrepareFile:
             sample_id=self.sample_id,
             chunk_size=5000000,
         )
+
+        with open("tests/data/reads/tuberculosis_1_1.fastq", "rb") as file:
+            file_data_to_compare = file.read()
 
         assert result == {
             "file": self.file,
@@ -99,7 +93,7 @@ class TestPrepareFile:
             "sample_file_id": 456,
             "total_chunks": 1,  # 1024/5000000 = 0.0002, rounds to 1 chunk
             "upload_session": 1234,
-            "file_data": b"\x1f\x8b\x08\x08\x22\x4e\x01",
+            "file_data": file_data_to_compare,
         }
 
     def test_prepare_file_unsuccessful(self, mock_api_client: Any):
@@ -110,7 +104,7 @@ class TestPrepareFile:
 
         # call
         result = prepare_file(
-            upload_data=self.upload_data,
+            resolved_path=self.upload_data.reads_1_resolved_path,
             file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
@@ -132,7 +126,7 @@ class TestPrepareFile:
 
         # call
         result = prepare_file(
-            upload_data=self.upload_data,
+            resolved_path=self.upload_data.reads_1_resolved_path,
             file_metadata=self.file,
             batch_pk=self.batch_pk,
             upload_session=self.upload_session,
@@ -236,64 +230,32 @@ class TestPrepareFiles:
                     "upload_session": self.upload_session,
                     "file_data": "file2_data",
                 },
+                {
+                    "file": {
+                        "name": "file1.txt",
+                        "size": 10000000,
+                        "type": "text/plain",
+                    },
+                    "upload_id": "qwe456",
+                    "batch_id": self.batch_pk,
+                    "sample_id": 3,
+                    "total_chunks": 2,
+                    "upload_session": self.upload_session,
+                    "file_data": "file2_data",
+                },
             ],
         )
 
         # list of files to pass to prepare_files
         files = [self.file1, self.file2]
-        sample_file_uploads = {
-            "sample_file1": SampleFileUploadStatus(
-                id=1,
-                legacy_sample_id="11111111111111111111111111111111",
-                generated_name="SampleFile1",
-                batch=123,
-                file_path="reads/tuberculosis_1_1.fastq.gz",
-                uploaded_file_name="tuberculosis_1_1.fastq.gz",
-                created_at=datetime(2024, 12, 10, 12, 0, 0),
-                upload_status="COMPLETE",
-                upload_id="abc123",
-                total_chunks=2,
-                metrics=UploadMetrics(
-                    chunks_received=1,
-                    chunks_total=2,
-                    upload_status="COMPLETE",
-                    percentage_complete=50.0,
-                    upload_speed=10.0,
-                    time_remaining=10.0,
-                    estimated_completion_time=datetime(2024, 12, 10, 12, 10, 0),
-                ),
-            ),
-            "sample_file2": SampleFileUploadStatus(
-                id=2,
-                legacy_sample_id="22222222222222222222222222222222",
-                generated_name="SampleFile2",
-                batch=123,
-                file_path="reads/tuberculosis_1_2.fastq.gz",
-                uploaded_file_name="tuberculosis_1_2.fastq.gz",
-                created_at=datetime(2024, 12, 10, 12, 0, 0),
-                upload_status="IN_PROGRESS",
-                upload_id="def456",
-                total_chunks=4,
-                metrics=UploadMetrics(
-                    chunks_received=1,
-                    chunks_total=4,
-                    upload_status="IN_PROGRESS",
-                    percentage_complete=25.0,
-                    upload_speed=10.0,
-                    time_remaining=20.0,
-                    estimated_completion_time=datetime(2024, 12, 10, 12, 20, 0),
-                ),
-            ),
-        }
         result = prepare_files(
             self.batch_pk,
             files,
             mock_api_client,
-            sample_file_uploads,
         )
 
-        assert len(result["files"]) == 1  # file1.txt is complete and so is skipped
-        assert result["files"][0]["upload_id"] == "def456"  # file2 (in progress)
+        assert len(result["files"]) == 3
+        assert result["files"][0]["upload_id"] == "abc123"  # file2 (in progress)
         assert (
             result["uploadSession"] == self.upload_session
         )  #  upload session is resumed
