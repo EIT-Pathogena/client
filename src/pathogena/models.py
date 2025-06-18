@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -52,7 +52,7 @@ class UploadBase(BaseModel):
     host_organism: str | None = Field(
         default=None, description="Host organism scientific name"
     )
-    amplicon_scheme: Optional[str] = Field(
+    amplicon_scheme: str | None = Field(
         default=None,
         description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
@@ -265,9 +265,9 @@ class UploadBatch(BaseModel):
         description="Skip checking FastQ files", default=False
     )
     ran_through_hostile: bool = False
-    instrument_platform: Optional[str] = None
-    amplicon_scheme: Optional[str] = None
-    specimen_organism: Optional[str] = None
+    instrument_platform: str | None = None
+    amplicon_scheme: str | None = None
+    specimen_organism: str | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

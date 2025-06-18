@@ -64,6 +64,7 @@ pip install --pre pathogena
 export PATHOGENA_HOST="localhost:8000"
 export PATHOGENA_PROTOCOL="http"
 export PATHOGENA_UPLOAD_HOST="localhost:8003"
+export PATHOGENA_APP_HOST="localhost:3000"
 ```
 
 To unset:
