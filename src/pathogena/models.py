@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -52,7 +52,7 @@ class UploadBase(BaseModel):
     host_organism: str | None = Field(
         default=None, description="Host organism scientific name"
     )
-    amplicon_scheme: str | None = Field(
+    amplicon_scheme: Optional[str] = Field(
         default=None,
         description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
     )
@@ -256,6 +256,18 @@ class UploadSample(UploadBase):
         """
         return self.instrument_platform == "illumina"
 
+    def read_file1_data(self):
+        """Read the contents of the first fastq file."""
+        if self.reads_1_resolved_path:
+            with open(self.reads_1_resolved_path, "rb") as file:
+                return file.read()
+
+    def read_file2_data(self):
+        """Read the contents of the second fastq file."""
+        if self.reads_2_resolved_path:
+            with open(self.reads_2_resolved_path, "rb") as file:
+                return file.read()
+
 
 class UploadBatch(BaseModel):
     """Model for a batch of upload samples."""
@@ -265,9 +277,9 @@ class UploadBatch(BaseModel):
         description="Skip checking FastQ files", default=False
     )
     ran_through_hostile: bool = False
-    instrument_platform: str | None = None
-    amplicon_scheme: str | None = None
-    specimen_organism: str | None = None
+    instrument_platform: Optional[str] = None
+    amplicon_scheme: Optional[str] = None
+    specimen_organism: Optional[str] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -139,4 +139,3 @@ dmypy.json
 /*.csv
 /*.fastq.gz
 *mapping.csv
-upload.csv

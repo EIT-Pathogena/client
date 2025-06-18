@@ -1,0 +1,2 @@
+batch_name,sample_name,reads_1,reads_2,control,collection_date,country,subdivision,district,specimen_organism,host_organism,instrument_platform
+mybatch123,sample,/Users/kgoktas/Downloads/samples/sample_1.fastq.gz,/Users/kgoktas/Downloads/samples/sample_2.fastq.gz,,2025-05-27,GBR,,,mycobacteria,homo sapiens,illumina
