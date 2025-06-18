@@ -7,6 +7,7 @@ from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 import httpx
@@ -70,6 +71,8 @@ class SampleFileMetadata(TypedDict):
     size: int
     content_type: str
     specimen_organism: str
+    resolved_path: Path | None
+    control: str
 
 
 class UploadMetrics(TypedDict):
@@ -276,33 +279,6 @@ def get_upload_host(cli_host: str | None = None) -> str:
     )
 
 
-def check_if_file_is_in_all_sample_files(
-    sample_files: dict[str, SampleFileUploadStatus] | None = None,
-    file_metadata: SampleFileMetadata | None = None,
-) -> tuple[bool, SampleFileUploadStatus | dict]:
-    """Checks if a given file is already present in the set of files ready for upload.
-
-    Args:
-        sample_files (dict[str, SampleFileUploadStatus]): The sample files ready for upload.
-        That is, a dictionary where keys are sample file IDs and values are dictionaries containing file data.
-        file_metadata (UploadSample | None): A dictionary representing the file, expected to have a 'name' key.
-
-    Returns:
-        tuple[bool, SampleFileUploadStatus | dict]: A bool if it was found and the result if
-            true.
-    """
-    # Extract samples from sample_uploads, defaulting to an empty dictionary if None
-    if not sample_files or not file_metadata:
-        return (False, {})
-
-    # Iterate through sample IDs and check if the uploaded file name matches the file's name
-    for sample_data in sample_files.values():
-        if sample_data.get("uploaded_file_name") == file_metadata["name"]:
-            return (True, sample_data)
-
-    return (False, {})
-
-
 def get_batch_upload_status(
     batch_pk: str,
 ) -> BatchUploadStatus:
@@ -333,11 +309,34 @@ def get_batch_upload_status(
         ) from e
 
 
+def get_file_data_from_resolved_path(reads_resolved_path: Path | None):
+    """Get the file name, content type, and Path object based on a resolved file path.
+
+    Args:
+        reads_resolved_path (Path | None): Path to the file to inspect.
+
+    Returns:
+        tuple[str, str, Path | None]:
+            name: The file's name, or an empty string if the path is None or doesn't exist.
+            content_type: "application/gzip" if the file suffix is 'gzip' or 'gz'; otherwise "text/plain".
+            resolved_path: The Path object if the file exists; otherwise None.
+    """
+    if reads_resolved_path is None or not reads_resolved_path.exists():
+        return "", "text/plain", None
+
+    return (
+        reads_resolved_path.name,
+        "application/gzip"
+        if reads_resolved_path.suffix in ("gzip", "gz")
+        else "text/plain",
+        reads_resolved_path,
+    )
+
+
 def prepare_files(
     batch_pk: str,
     samples: list[UploadSample],
     api_client: UploadAPIClient,
-    sample_files: dict[str, SampleFileUploadStatus] | None = None,
 ) -> PreparedFiles:
     """Prepares multiple files for upload.
 
@@ -348,7 +347,6 @@ def prepare_files(
     Args:
         batch_pk (str): The ID of the batch.
         samples (list[UploadSample]): List of samples to prepare the files for.
-        sample_files (dict[str, Any] | None): State of sample file uploads, if available.
         api_client (UploadAPIClient): Instance of the APIClient class.
 
     Returns:
@@ -360,41 +358,44 @@ def prepare_files(
     files: list[SampleFileMetadata] = []
     for sample in samples:
         if sample.is_illumina():
+            file1_name, file1_content_type, file1_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_1_resolved_path)
+            )
+            file2_name, file2_content_type, file2_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_2_resolved_path)
+            )
             files.append(
                 {
-                    "name": sample.reads_1_resolved_path.name,
+                    "name": file1_name,
                     "size": sample.file1_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file1_content_type,
                     "specimen_organism": sample.specimen_organism,
+                    "resolved_path": file1_resolved_path,
                 }
             )
             files.append(
                 {
-                    "name": sample.reads_2_resolved_path.name,
+                    "name": file2_name,
                     "size": sample.file2_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_2_resolved_path is not None
-                    and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file2_content_type,
                     "specimen_organism": sample.specimen_organism,
+                    "resolved_path": file2_resolved_path,
                 }
             )
         else:
+            file1_name, file1_content_type, file1_resolved_path = (
+                get_file_data_from_resolved_path(sample.reads_1_resolved_path)
+            )
             files.append(
                 {
-                    "name": sample.reads_1_resolved_path.name,
+                    "name": file1_name,
                     "size": sample.file1_size,
                     "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
+                    "content_type": file1_content_type,
                     "specimen_organism": sample.specimen_organism,
+                    "resolved_path": file1_resolved_path,
                 }
             )
 
@@ -446,65 +447,19 @@ def prepare_files(
         else sample_summaries
     )
 
-    if sample_files is None:
-        sample_files = {}
     for idx, file_metadata in enumerate(files):
-        was_found, sample_file_upload_status = check_if_file_is_in_all_sample_files(
-            sample_files, file_metadata
-        )
         sample_id = per_file_sample_summaries[idx].get("sample_id")
-        if (
-            was_found
-            and sample_file_upload_status
-            and sample_file_upload_status.get("upload_status") != "COMPLETE"
-            and sample_file_upload_status.get("total_chunks", 0) > 0
-        ):
-            # File not already uploaded, add to selected files
-            selected_files.append(
-                {
-                    "file": sample_file_upload_status.get("file"),
-                    "upload_id": sample_file_upload_status.get("upload_id"),
-                    "batch_id": batch_pk,
-                    "sample_file_id": sample_file_upload_status.get("id"),
-                    "total_chunks": sample_file_upload_status.get("metrics", {}).get(
-                        "chunks_total", sample_file_upload_status.get("total_chunks", 0)
-                    ),
-                    "estimated_completion_time": sample_file_upload_status.get(
-                        "metrics", {}
-                    ).get("estimated_completion_time"),
-                    "time_remaining": sample_file_upload_status.get("metrics", {}).get(
-                        "time_remaining"
-                    ),
-                    "uploadSession": upload_session,
-                }
-            )
-        elif (
-            was_found
-            and file_metadata
-            and sample_file_upload_status.get("upload_status") == "COMPLETE"
-        ):
-            # Log that the file has already been uploaded, don't add to selected files
-            logging.info(
-                f"File '{sample_file_upload_status['uploaded_file_name']}': {file_metadata['name']} has already been uploaded."
-            )
-        else:
-            file_ready = False
-            # Prepare new file and add to selected files
-            for file in samples:
-                if (
-                    file.reads_1.name == file_metadata["name"]
-                    or file.reads_2.name == file_metadata["name"]
-                ):
-                    file_ready = prepare_file(
-                        upload_data=file,
-                        file_metadata=file_metadata,
-                        batch_pk=batch_pk,
-                        upload_session=upload_session,
-                        sample_id=sample_id,
-                        api_client=api_client,
-                    )
-            if file_ready:
-                selected_files.append(file_ready)
+
+        file_ready = prepare_file(
+            resolved_path=file_metadata["resolved_path"],
+            file_metadata=file_metadata,
+            batch_pk=batch_pk,
+            upload_session=upload_session,
+            sample_id=sample_id,
+            api_client=api_client,
+        )
+        if file_ready:
+            selected_files.append(file_ready)
 
     return {
         "files": selected_files,
@@ -706,7 +661,7 @@ def upload_files(
 
 
 def prepare_file(
-    upload_data: UploadSample,
+    resolved_path: Path | None,
     file_metadata: SampleFileMetadata,
     batch_pk: str,
     upload_session: int,
@@ -717,7 +672,7 @@ def prepare_file(
     """Prepares a file for uploading by sending metadata to initialize the process.
 
     Args:
-        upload_data (UploadSample): Sample object to upload with associated files.
+        resolved_path (Path): Resolved path of the file.
         file_metadata (Any): A file object with attributes `name`, `size`, `content_type` and `specimen_oragnism`.
         batch_pk (str): The batch ID associated with the file.
         upload_session (int): The current upload session ID.
@@ -728,17 +683,15 @@ def prepare_file(
     Returns:
         dict[str, Any]: File metadata ready for upload or error details.
     """
-    if upload_data.read_file1_data() is not None:
-        file_data = upload_data.read_file1_data()
-
-    elif upload_data.read_file2_data() is not None:
-        file_data = upload_data.read_file2_data()
-    else:
+    if resolved_path is None:
         return {
             "error": "Could not find any read file data for sample",
             "status code": 500,
             "upload_session": upload_session,
         }
+
+    with resolved_path.open("rb") as file:
+        file_data = file.read()
 
     original_file_name = file_metadata["name"]
     total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
