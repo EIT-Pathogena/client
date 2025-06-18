@@ -106,7 +106,7 @@ class UploadAPIClient:
 
     def batches_samples_start_upload_session_create(
         self,
-        batch_pk: int,
+        batch_pk: str,
         data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Starts a sample upload session by making a POST request to the backend.
