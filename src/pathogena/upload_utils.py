@@ -635,11 +635,12 @@ def upload_files(
 
     # files have been sucessfully prepared, extract the prepared file list
     selected_files = file_preparation["files"]
-
+    
     # upload the file chunks
     with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
         futures = []
         for file in selected_files:
+            logging.info(f"Uploading {file['file']['name']}")
             future = executor.submit(upload_chunks, upload_data, file, file_status)
             futures.append(future)
 
