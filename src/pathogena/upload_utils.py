@@ -487,6 +487,7 @@ def upload_chunks(
         None: This function does not return anything, but updates the `file_status` dictionary
             and calls the provided `on_progress` and `on_complete` callback functions.
     """
+    logging.info(f"Uploading {file['file']['name']}")
     chunks_uploaded = 0
     chunk_queue = []
     stop_uploading = False

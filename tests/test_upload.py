@@ -349,7 +349,7 @@ class TestUploadChunks:
     @pytest.fixture(autouse=True)
     def mock_file(self):
         mock_file = SelectedFile(
-            file={"file1": "name"},
+            file={"name": "file1"},
             upload_id=123,
             batch_pk=456,
             sample_id=678,

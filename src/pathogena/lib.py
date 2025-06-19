@@ -27,8 +27,9 @@ from pathogena.constants import (
 )
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch
+from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
+    PreparedFiles,
     UploadData,
     get_upload_host,
     prepare_files,
@@ -167,7 +168,7 @@ def create_batch_on_server(
     host: str,
     amplicon_scheme: str | None,
     validate_only: bool = False,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     """Create batch on server, return batch id.
 
     A transaction will be created at this point for the expected
@@ -198,7 +199,7 @@ def create_batch_on_server(
         "specimen_organism": batch.samples[0].specimen_organism,
     }
 
-    batch_name = (
+    local_batch_name = (
         batch.samples[0].batch_name
         if batch.samples[0].batch_name not in ["", " ", None]
         else f"batch_{collection_date}"
@@ -207,7 +208,7 @@ def create_batch_on_server(
         "collection_date": str(collection_date),
         "instrument": instrument_platform,
         "country": country,
-        "name": batch_name,
+        "name": local_batch_name,
         "amplicon_scheme": amplicon_scheme,
         "telemetry_data": telemetry_data,
     }
@@ -222,7 +223,7 @@ def create_batch_on_server(
             timeout=60,
             follow_redirects=True,
         ) as client:
-            response = client.post(
+            batch_create_response = client.post(
                 f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
                 headers={
                     "Authorization": f"Bearer {util.get_access_token(host)}",
@@ -233,12 +234,12 @@ def create_batch_on_server(
             )
             if validate_only:
                 # Don't attempt to return data if just validating (as there's none there)
-                return None, None, None  # type: ignore
-        return (
-            response.json()["id"],
-            response.json()["name"],
-            response.json()["legacy_batch_id"],
-        )
+                return None, None, None, None  # type: ignore
+
+            created_batch = batch_create_response.json()
+            batch_id = created_batch["id"]
+            legacy_batch_id = created_batch["legacy_batch_id"]
+
     except JSONDecodeError:
         logging.error(
             f"Unable to communicate with the upload endpoint ({get_upload_host()}). Please check this has been set "
@@ -247,8 +248,40 @@ def create_batch_on_server(
         exit(1)
     except httpx.HTTPError as err:
         raise APIError(
-            f"Failed to fetch batch status: {response.text}",
-            response.status_code,
+            f"Failed to fetch batch status: {batch_create_response.text}",
+            batch_create_response.status_code,
+        ) from err
+
+    # now make the legacy portal request to get the legacy batch name
+    try:
+        with httpx.Client(
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=60,
+            follow_redirects=True,
+        ) as client:
+            legacy_batch_response = client.get(
+                f"{get_protocol()}://{get_host()}/api/v1/batches/{legacy_batch_id}",
+                headers={
+                    "Authorization": f"Bearer {util.get_access_token(host)}",
+                    "accept": "application/json",
+                },
+                follow_redirects=True,
+            )
+            legacy_batch = legacy_batch_response.json()
+
+            remote_batch_name = legacy_batch["name"]
+        return (batch_id, local_batch_name, remote_batch_name, legacy_batch_id)
+    except JSONDecodeError:
+        logging.error(
+            f"Unable to communicate with the legacy endpoint ({get_host()}). Please check this has been set "
+            f"correctly and try again."
+        )
+        exit(1)
+    except httpx.HTTPError as err:
+        raise APIError(
+            f"Failed to fetch batch status: {legacy_batch_response.text}",
+            legacy_batch_response.status_code,
         ) from err
 
 
@@ -313,6 +346,27 @@ def decontaminate_samples_with_hostile(
     return batch_metadata
 
 
+def get_remote_sample_name(
+    sample: UploadSample, prepared_files: PreparedFiles
+) -> (str, str):
+    """Get the remote names of the sample given the UploadSample object from the prepared files.
+
+    Args:
+        sample (UploadSample): The sample for which to find the ID.
+        prepared_files (PreparedFiles): The prepared files containing resolved paths.
+    """
+    for file in prepared_files["files"]:
+        resolved_path = file["file"]["resolved_path"]
+        if (
+            sample.reads_1_resolved_path == resolved_path
+            or sample.reads_2_resolved_path == resolved_path
+        ):
+            return file["sample_id"]
+    raise ValueError(
+        f"Unable to determine sample ID for sample name {sample.sample_name}."
+    )
+
+
 def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
@@ -327,14 +381,16 @@ def upload_batch(
         host (str): The host server.
         validate_only (bool): Whether we should actually upload or just validate batch.
     """
-    batch_id, batch_name, legacy_batch_id = create_batch_on_server(
-        batch=batch,
-        host=host,
-        amplicon_scheme=batch.samples[0].amplicon_scheme,
-        validate_only=validate_only,
+    batch_id, local_batch_name, remote_batch_name, legacy_batch_id = (
+        create_batch_on_server(
+            batch=batch,
+            host=host,
+            amplicon_scheme=batch.samples[0].amplicon_scheme,
+            validate_only=validate_only,
+        )
     )
     if validate_only:
-        logging.info(f"Batch creation for {batch_name} validated successfully")
+        logging.info(f"Batch creation for {local_batch_name} validated successfully")
         return
     mapping_csv_records = []
 
@@ -352,20 +408,21 @@ def upload_batch(
         upload_session=prepared_files["uploadSession"],
     )
 
-    upload_session_name = prepared_files["uploadSessionData"]["name"]
-
-    for file in prepared_files["files"]:
+    for sample in batch.samples:
+        remote_sample_name = get_remote_sample_name(
+            sample=sample, prepared_files=prepared_files
+        )
         mapping_csv_records.append(
             {
-                "batch_name": upload_session_name,
-                "sample_name": file["file"]["name"],
-                "remote_sample_name": file["sample_id"],
-                "remote_batch_name": batch_name,
+                "batch_name": local_batch_name,
+                "sample_name": sample.sample_name,
+                "remote_sample_name": remote_sample_name,
+                "remote_batch_name": remote_batch_name,
                 "remote_batch_id": batch_id,
             }
         )
-    util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
-    logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
+    util.write_csv(mapping_csv_records, f"{remote_batch_name}.mapping.csv")
+    logging.info(f"The mapping file {remote_batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
         f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
@@ -382,7 +439,9 @@ def upload_batch(
             remove_file(file_path=file.reads_1_upload_file)  # type: ignore
             if batch.is_illumina():
                 remove_file(file_path=file.reads_2_upload_file)  # type: ignore
-    logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
+    logging.info(
+        f"Upload complete. Created {remote_batch_name}.mapping.csv (keep this safe)"
+    )
 
 
 def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) -> None:
