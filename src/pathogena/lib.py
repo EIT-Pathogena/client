@@ -17,7 +17,8 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-from pathogena import batch_upload_apis, models, upload_utils, util
+from pathogena import batch_upload_apis, models, util
+from pathogena.api_client import UploadAPIClient
 from pathogena.constants import (
     CPU_COUNT,
     DEFAULT_APP_HOST,
@@ -27,8 +28,8 @@ from pathogena.constants import (
 )
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch
-from pathogena.upload_session import start_upload_session
+from pathogena.models import UploadBatch, UploadSample
+from pathogena.types import PreparedFile, Sample, UploadingFile, UploadSession
 from pathogena.upload_utils import (
     UploadData,
     get_upload_host,
@@ -379,7 +380,9 @@ def upload_batch(
     if not save:
         for sample in upload_session.samples:
             for file in sample.files:
-                remove_file(file_path=file.prepared_file.path)
+                if file.prepared_file.path:
+                    remove_file(file_path=file.prepared_file.path)
+
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
@@ -845,3 +848,94 @@ def remove_file(file_path: Path) -> None:
         )
     except Exception:
         pass  # A failure here doesn't matter since upload is complete
+
+
+def prepare_sample(sample: UploadSample) -> Sample[PreparedFile]:
+    """Prepares a samples' file for upload.
+
+    This function starts the upload session, checks the upload status of the current
+    sample and if it has not already been uploaded or partially uploaded prepares
+    the sample from scratch.
+
+    Args:
+        sample (UploadSample): The upload sample.
+
+    Returns:
+        SelectedSample: Prepared sample.
+    """
+    if sample.is_illumina():
+        sample_files = [
+            PreparedFile(upload_sample=sample, file_side=1),
+            PreparedFile(upload_sample=sample, file_side=2),
+        ]
+    else:
+        sample_files = [PreparedFile(upload_sample=sample, file_side=1)]
+
+    return Sample[PreparedFile](
+        instrument_platform=sample.instrument_platform, files=sample_files
+    )
+
+
+def start_upload_session(
+    batch_pk: str,
+    samples: list[UploadSample],
+    api_client: UploadAPIClient,
+) -> UploadSession:
+    """Prepares multiple files for upload.
+
+    This function starts the upload session,
+    then starts the upload files for each file
+    and returns the bundle.
+
+    Args:
+        batch_pk (str): The ID of the batch.
+        samples (list[UploadSample]): List of samples to prepare the files for.
+        api_client (UploadAPIClient): Instance of the APIClient class.
+
+    Returns:
+        UploadSession: Upload session id, name and samples.
+    """
+    batch_instrument_is_illumina = samples[0].is_illumina()
+
+    prepared_samples: list[Sample[PreparedFile]] = [
+        prepare_sample(sample) for sample in samples
+    ]
+
+    # Call start upload session endpoint
+    upload_session_id, upload_session_name, sample_summaries = (
+        api_client.start_upload_session(batch_pk, prepared_samples)
+    )
+
+    if batch_instrument_is_illumina:
+        # Duplicate the summaries for each half of the files
+        per_file_sample_summaries = [
+            item for item in sample_summaries for _ in range(2)
+        ]
+    else:
+        per_file_sample_summaries = sample_summaries
+
+    # Call start upload file endpoint for each file
+    index = 0
+    uploading_samples: list[Sample[UploadingFile]] = []
+    for unprepared_sample in prepared_samples:
+        for file in unprepared_sample.files:
+            uploading_sample_files: list[UploadingFile] = []
+            sample_id = per_file_sample_summaries[index].get("sample_id")
+            uploading_file = api_client.start_file_upload(
+                file, batch_pk, upload_session_id, sample_id
+            )
+            uploading_sample_files.append(uploading_file)
+            index += 1
+
+        uploading_samples.append(
+            Sample[UploadingFile](
+                unprepared_sample.instrument_platform, uploading_sample_files
+            )
+        )
+
+    # Return the bundle of start upload session and start file upload responses
+    return UploadSession(
+        session_id=upload_session_id,
+        name=upload_session_name,
+        samples=uploading_samples,
+    )

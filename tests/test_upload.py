@@ -8,21 +8,16 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from pathogena.batch_upload_apis import APIError, UploadAPIClient
+from pathogena.api_client import APIError, UploadAPIClient
 from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
-    PreparedFiles,
     SampleFileMetadata,
     SampleFileUploadStatus,
-    SelectedFile,
     UploadData,
     UploadMetrics,
     UploadSample,
-    prepare_file,
-    prepare_files,
     upload_chunks,
-    upload_files,
 )
 
 

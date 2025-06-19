@@ -12,7 +12,7 @@ import httpx
 from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from pathogena.batch_upload_apis import APIError, UploadAPIClient
+from pathogena.api_client import UploadAPIClient
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_HOST,
@@ -21,9 +21,10 @@ from pathogena.constants import (
     DEFAULT_RETRY_DELAY,
     DEFAULT_UPLOAD_HOST,
 )
+from pathogena.errors import APIError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadSample
-from pathogena.upload_session import UploadingFile
+from pathogena.types import UploadingFile
 from pathogena.util import get_access_token
 
 
@@ -263,6 +264,7 @@ def get_batch_upload_status(
             response.status_code,
         ) from e
 
+
 # upload_all chunks of a file
 def upload_chunks(
     upload_data: UploadData,
@@ -378,6 +380,7 @@ def upload_chunks(
                 True  # Stop uploading further chunks if some other error occurs
             )
             break
+
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_chunk(
