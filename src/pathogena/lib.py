@@ -312,6 +312,12 @@ def decontaminate_samples_with_hostile(
     )
     return batch_metadata
 
+def get_sample_name(file: dict) -> str:
+    file_basename = file["file"]["name"].split('.')[0]
+    if file_basename.endswith("_1") or file_basename.endswith("_2"):
+        # Remove the _1 or _2 suffix if present
+        return file_basename[:-2]
+    return file_basename
 
 def upload_batch(
     batch: models.UploadBatch,
@@ -354,16 +360,20 @@ def upload_batch(
 
     upload_session_name = prepared_files["uploadSessionData"]["name"]
 
+    used_prefixes = []
     for file in prepared_files["files"]:
-        mapping_csv_records.append(
-            {
-                "batch_name": upload_session_name,
-                "sample_name": file["file"]["name"],
-                "remote_sample_name": file["sample_id"],
-                "remote_batch_name": batch_name,
-                "remote_batch_id": batch_id,
-            }
-        )
+        sample_name = get_sample_name(file=file)
+        if sample_name not in used_prefixes:
+            used_prefixes.append(sample_name)
+            mapping_csv_records.append(
+                {
+                    "batch_name": upload_session_name,
+                    "sample_name": sample_name,
+                    "remote_sample_name": file["sample_id"],
+                    "remote_batch_name": batch_name,
+                    "remote_batch_id": batch_id,
+                }
+            )
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
