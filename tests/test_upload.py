@@ -380,7 +380,7 @@ class TestUploadChunks:
             samples=samples,
             max_concurrent_chunks=2,
             max_concurrent_files=2,
-            upload_session=456,
+            upload_session_id=456,
             abort_controller=None,
         )
 
@@ -584,7 +584,7 @@ class TestUploadFiles:
             on_progress=None,
             max_concurrent_chunks=2,
             max_concurrent_files=2,
-            upload_session=456,
+            upload_session_id=456,
             abort_controller=None,
         )
 

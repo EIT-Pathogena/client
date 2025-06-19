@@ -1,5 +1,6 @@
 import logging
 import sys
+from collections.abc import Callable, Mapping
 from types import TracebackType
 
 import httpx
@@ -28,7 +29,9 @@ def configure_debug_logging(debug: bool) -> None:
 
 
 def exception_handler(
-    exception_type: type[BaseException], exception: Exception, _traceback: TracebackType
+    exception_type: type[BaseException],
+    exception: BaseException,
+    _traceback: TracebackType | None,
 ) -> None:
     """Handle uncaught exceptions by logging them.
 
@@ -90,4 +93,7 @@ def raise_for_status(response: httpx.Response) -> None:
     response.raise_for_status()
 
 
-httpx_hooks = {"request": [log_request], "response": [log_response, raise_for_status]}
+httpx_hooks: Mapping[str, list[Callable]] = {
+    "request": [log_request],
+    "response": [log_response, raise_for_status],
+}

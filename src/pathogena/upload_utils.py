@@ -1,10 +1,8 @@
 import logging
-import math
 import os
-import sys
 import time
 from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, TypedDict
@@ -24,6 +22,7 @@ from pathogena.constants import (
 )
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadSample
+from pathogena.upload_session import UploadingFile
 from pathogena.util import get_access_token
 
 
@@ -138,50 +137,6 @@ class BatchUploadStatus(TypedDict):
     sample_files: dict[str, SampleFileUploadStatus]
 
 
-class SelectedFile(TypedDict):
-    """A TypedDict representing a file selected for upload with its metadata.
-
-    Args:
-        file: Dictionary containing file information with string keys and values
-        upload_id: Unique identifier for the upload
-        batch_pk: Primary key of the batch this file belongs to
-        sample_id: Identifier for the sample associated with this file
-        sample_file_id: Identifier for the sample_file associated with this file
-        total_chunks: Total number of chunks the file will be split into
-        estimated_completion_time: Estimated time in seconds until upload completes
-        time_remaining: Time remaining in seconds for the upload
-        uploadSession: Identifier for the current upload session
-        file_data: The actual file data to be uploaded
-        total_chunks: Total number of chunks for this file
-    """
-
-    file: dict[str, str]
-    upload_id: int
-    batch_pk: int
-    sample_id: str
-    sample_file_id: int
-    total_chunks: int
-    estimated_completion_time: int
-    time_remaining: int
-    uploadSession: int
-    file_data: Any
-    total_chunks: int
-
-
-class PreparedFiles(TypedDict):
-    """A TypedDict representing the prepared files and upload session data.
-
-    Args:
-        files: List of SelectedFile objects containing file metadata and upload details
-        uploadSession: Unique identifier for the current upload session
-        uploadSessionData: Dictionary containing additional metadata about the upload session
-    """
-
-    files: list[SelectedFile]
-    uploadSession: int
-    uploadSessionData: dict[str, Any]
-
-
 @dataclass
 class Metrics:
     """A placeholder class for the metrics associated with file uploads."""
@@ -233,7 +188,7 @@ class UploadData:
         on_progress: OnProgress | None = None,
         max_concurrent_chunks: int = 5,
         max_concurrent_files: int = 3,
-        upload_session=None,
+        upload_session_id=None,
         abort_controller=None,
     ):
         """Initializes the UploadFileType instance.
@@ -258,7 +213,7 @@ class UploadData:
         self.on_progress = on_progress
         self.max_concurrent_chunks = max_concurrent_chunks
         self.max_concurrent_files = max_concurrent_files
-        self.upload_session = upload_session
+        self.upload_session_id = upload_session_id
         self.abort_controller = abort_controller
 
 
@@ -335,194 +290,10 @@ def get_batch_upload_status(
         ) from e
 
 
-def prepare_files(
-    batch_pk: str,
-    samples: list[UploadSample],
-    api_client: UploadAPIClient,
-    sample_files: dict[str, SampleFileUploadStatus] | None = None,
-) -> PreparedFiles:
-    """Prepares multiple files for upload.
-
-    This function starts the upload session, checks the upload status of the current
-    sample and if it has not already been uploaded or partially uploaded prepares
-    the sample from scratch.
-
-    Args:
-        batch_pk (str): The ID of the batch.
-        samples (list[UploadSample]): List of samples to prepare the files for.
-        sample_files (dict[str, Any] | None): State of sample file uploads, if available.
-        api_client (UploadAPIClient): Instance of the APIClient class.
-
-    Returns:
-        PreparedFiles: Prepared file metadata, upload session information, and session data.
-    """
-    selected_files = []
-
-    # create sample metadata depending on if illumina or ont
-    files: list[SampleFileMetadata] = []
-    for sample in samples:
-        if sample.is_illumina():
-            files.append(
-                {
-                    "name": sample.reads_1_resolved_path.name,
-                    "size": sample.file1_size,
-                    "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
-                    "specimen_organism": sample.specimen_organism,
-                }
-            )
-            files.append(
-                {
-                    "name": sample.reads_2_resolved_path.name,
-                    "size": sample.file2_size,
-                    "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_2_resolved_path is not None
-                    and sample.reads_2_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
-                    "specimen_organism": sample.specimen_organism,
-                }
-            )
-        else:
-            files.append(
-                {
-                    "name": sample.reads_1_resolved_path.name,
-                    "size": sample.file1_size,
-                    "control": sample.control.upper(),
-                    "content_type": "application/gzip"
-                    if sample.reads_1_resolved_path is not None
-                    and sample.reads_1_resolved_path.suffix in ("gzip", "gz")
-                    else "text/plain",
-                    "specimen_organism": sample.specimen_organism,
-                }
-            )
-
-    # create payload for starting upload session from sample metadata
-    files_to_upload = []
-    for file in files:
-        file_payload = {}
-
-        file_payload["original_file_name"] = file.get("name")
-        file_payload["file_size_in_kb"] = file.get("size")
-
-        if len(file.get("control", "")) > 0:
-            file_payload["control"] = file.get("control")
-
-        if file.get("specimen_organism"):
-            file_payload["specimen_organism"] = file.get("specimen_organism")
-
-        files_to_upload.append(file_payload)
-
-    form_details = {
-        "files_to_upload": files_to_upload,
-        "specimen_organism": files[0].get("specimen_organism"),
-    }
-
-    try:
-        session_response = api_client.batches_samples_start_upload_session_create(
-            batch_pk=batch_pk, data=form_details
-        )
-    except APIError as e:
-        raise APIError(
-            f"Error starting session: {str(e)}",
-            e.status_code,
-        ) from e
-
-    if not session_response["upload_session"]:
-        # Log if the upload session could not be resumed
-        logging.exception(
-            "Upload session cannot be resumed. Please create a new batch."
-        )
-        raise APIError(
-            "No upload session returned by the API.", codes.INTERNAL_SERVER_ERROR
-        )
-
-    upload_session = session_response["upload_session"]
-    sample_summaries = session_response["sample_summaries"]
-
-    # assume order is consistent and map out the sample summaries to the files
-    # ie. illumina samples have two files and ont samples have one
-    per_file_sample_summaries = (
-        [item for item in sample_summaries for _ in range(2)]
-        if len(sample_summaries) * 2 == len(files_to_upload)
-        else sample_summaries
-    )
-
-    if sample_files is None:
-        sample_files = {}
-    for idx, file_metadata in enumerate(files):
-        was_found, sample_file_upload_status = check_if_file_is_in_all_sample_files(
-            sample_files, file_metadata
-        )
-        sample_id = per_file_sample_summaries[idx].get("sample_id")
-        if (
-            was_found
-            and sample_file_upload_status
-            and sample_file_upload_status.get("upload_status") != "COMPLETE"
-            and sample_file_upload_status.get("total_chunks", 0) > 0
-        ):
-            # File not already uploaded, add to selected files
-            selected_files.append(
-                {
-                    "file": sample_file_upload_status.get("file"),
-                    "upload_id": sample_file_upload_status.get("upload_id"),
-                    "batch_id": batch_pk,
-                    "sample_file_id": sample_file_upload_status.get("id"),
-                    "total_chunks": sample_file_upload_status.get("metrics", {}).get(
-                        "chunks_total", sample_file_upload_status.get("total_chunks", 0)
-                    ),
-                    "estimated_completion_time": sample_file_upload_status.get(
-                        "metrics", {}
-                    ).get("estimated_completion_time"),
-                    "time_remaining": sample_file_upload_status.get("metrics", {}).get(
-                        "time_remaining"
-                    ),
-                    "uploadSession": upload_session,
-                }
-            )
-        elif (
-            was_found
-            and file_metadata
-            and sample_file_upload_status.get("upload_status") == "COMPLETE"
-        ):
-            # Log that the file has already been uploaded, don't add to selected files
-            logging.info(
-                f"File '{sample_file_upload_status['uploaded_file_name']}': {file_metadata['name']} has already been uploaded."
-            )
-        else:
-            file_ready = False
-            # Prepare new file and add to selected files
-            for file in samples:
-                if (
-                    file.reads_1.name == file_metadata["name"]
-                    or file.reads_2.name == file_metadata["name"]
-                ):
-                    file_ready = prepare_file(
-                        upload_data=file,
-                        file=file_metadata,
-                        batch_pk=batch_pk,
-                        upload_session=upload_session,
-                        sample_id=sample_id,
-                        api_client=api_client,
-                    )
-            if file_ready:
-                selected_files.append(file_ready)
-
-    return {
-        "files": selected_files,
-        "uploadSession": upload_session,
-        "uploadSessionData": session_response,
-    }
-
-
 # upload_all chunks of a file
 def upload_chunks(
     upload_data: UploadData,
-    file: SelectedFile,
-    file_status: dict,
+    file: UploadingFile,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> None:
     """Uploads chunks of a single file.
@@ -530,20 +301,19 @@ def upload_chunks(
     Args:
         upload_data (UploadData): The upload data including batch_id, session info, etc.
         file (SelectedFile): The file to upload (with file data, total chunks, etc.)
-        file_status (dict): The dictionary to track the file upload progress.
         chunk_size (int): Default size of file chunk to upload (5mb)
 
     Returns:
-        None: This function does not return anything, but updates the `file_status` dictionary
-            and calls the provided `on_progress` and `on_complete` callback functions.
+        None: This function does not return anything, but calls the provided
+            `on_progress` and `on_complete` callback functions.
     """
     chunks_uploaded = 0
-    chunk_queue = []
+    chunk_queue: list[Response] = []
     stop_uploading = False
 
     max_retries = DEFAULT_MAX_UPLOAD_RETRIES
     retry_delay = DEFAULT_RETRY_DELAY
-    for i in range(file["total_chunks"]):  # total chunks = file.size/chunk_size
+    for i in range(file.total_chunks):  # total chunks = file.size/chunk_size
         if stop_uploading:
             break
 
@@ -552,7 +322,7 @@ def upload_chunks(
         # chunk the files
         start = i * chunk_size  # 5 MB chunk size default
         end = start + chunk_size
-        file_chunk = file["file_data"][start:end]
+        file_chunk = file.prepared_file.data[start:end]
 
         success = False
         attempt = 0
@@ -564,7 +334,7 @@ def upload_chunks(
                 protocol=get_protocol(),
                 chunk=file_chunk,
                 chunk_index=i,
-                upload_id=file["upload_id"],
+                upload_id=file.upload_id,
             )
             chunk_queue.append(chunk_upload)
             try:
@@ -590,16 +360,11 @@ def upload_chunks(
                 metrics = chunk_upload_result.get("metrics", {})
                 if metrics:
                     chunks_uploaded += 1
-                    file_status[file["upload_id"]] = {
-                        "chunks_uploaded": chunks_uploaded,
-                        "total_chunks": file["total_chunks"],
-                        "metrics": chunk_upload_result["metrics"],
-                    }
-                    progress = (chunks_uploaded / file["total_chunks"]) * 100
+                    progress = (chunks_uploaded / file.total_chunks) * 100
 
                     # Create an OnProgress instance
                     progress_event = OnProgress(
-                        upload_id=file["upload_id"],
+                        upload_id=file.upload_id,
                         batch_pk=upload_data.batch_pk,
                         progress=progress,
                         metrics=chunk_upload_result["metrics"],
@@ -607,19 +372,19 @@ def upload_chunks(
                     upload_data.on_progress = progress_event
 
                     # If all chunks have been uploaded, complete the file upload
-                    if chunks_uploaded == file["total_chunks"]:
+                    if chunks_uploaded == file.total_chunks:
                         complete_event = OnComplete(
-                            file["upload_id"], upload_data.batch_pk
+                            file.upload_id, upload_data.batch_pk
                         )
                         upload_data.on_complete = complete_event
                         client = UploadAPIClient()
                         end_status = client.batches_uploads_end_file_upload(
                             upload_data.batch_pk,
-                            data={"upload_id": file["upload_id"]},
+                            data={"upload_id": file.upload_id},
                         )
                         if end_status.status_code == 400:
                             logging.error(
-                                f"Failed to end upload for file: {file['upload_id']} (Batch ID: {upload_data.batch_pk})"
+                                f"Failed to end upload for file: {file.upload_id} (Batch ID: {upload_data.batch_pk})"
                             )
                 success = True
 
@@ -640,149 +405,6 @@ def upload_chunks(
                 True  # Stop uploading further chunks if some other error occurs
             )
             break
-
-
-def upload_files(
-    upload_data: UploadData,
-    prepared_files: PreparedFiles,
-    api_client: UploadAPIClient,
-) -> None:
-    """Uploads files in chunks and manages the upload process.
-
-    This function first prepares the files for upload, then uploads them in chunks
-    using a thread pool executor for concurrent uploads. It finishes by ending the
-    upload session.
-
-    Args:
-        upload_data (UploadData): An object containing the upload configuration,
-            including the batch ID, access token, environment, and file details.
-        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
-        api_client (UploadAPIClient): Instance of the APIClient class.
-
-    Returns:
-        None
-    """
-    file_status = {}
-
-    # load in prepared files
-    file_preparation = prepared_files
-
-    # If prepare_files returned None, log and return
-    if file_preparation is None:
-        logging.error("Failed to prepare files: no data returned.")
-        return
-
-    # handle any errors during preparation
-    error_keys = [k for k in file_preparation if "API error occurred" in k]
-    if error_keys:
-        error_msg_key = error_keys[0]
-        logging.error(f"Error preparing files: {file_preparation[error_msg_key]}")
-        return
-
-    if "files" not in file_preparation:
-        logging.error("Unexpected response from prepare_files: 'files' key missing.")
-        return
-
-    # files have been sucessfully prepared, extract the prepared file list
-    selected_files = file_preparation["files"]
-
-    # upload the file chunks
-    with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
-        futures = []
-        for file in selected_files:
-            future = executor.submit(upload_chunks, upload_data, file, file_status)
-            futures.append(future)
-
-        for future in as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                logging.error(f"Error uploading file: {e}")
-
-    # end the upload session
-    end_session = api_client.batches_samples_end_upload_session_create(
-        upload_data.batch_pk, upload_data.upload_session
-    )
-
-    if end_session.status_code != 200:
-        logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
-    else:
-        logging.info(f"All uploads complete.")
-
-
-def prepare_file(
-    upload_data: UploadSample,
-    file: SampleFileMetadata,
-    batch_pk: str,
-    upload_session: int,
-    sample_id: str,
-    api_client: UploadAPIClient,
-    chunk_size: int = DEFAULT_CHUNK_SIZE,
-) -> dict[str, Any]:
-    """Prepares a file for uploading by sending metadata to initialize the process.
-
-    Args:
-        upload_data (UploadSample): Sample object to upload with associated files.
-        file (Any): A file object with attributes `name`, `size`, and `type`.
-        batch_pk (str): The batch ID associated with the file.
-        upload_session (int): The current upload session ID.
-        sample_id (str): The ID of the sample that the file will be associated with.
-        chunk_size (int): Size of each file chunk in bytes.
-        api_client (UploadAPIClient): Instance of the APIClient class.
-
-    Returns:
-        dict[str, Any]: File metadata ready for upload or error details.
-    """
-    if upload_data.read_file1_data() is not None:
-        file_data = upload_data.read_file1_data()
-
-    elif upload_data.read_file2_data() is not None:
-        file_data = upload_data.read_file2_data()
-    else:
-        return {
-            "error": "Could not find any read file data for sample",
-            "status code": 500,
-            "upload_session": upload_session,
-        }
-
-    original_file_name = file["name"]
-    total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
-    content_type = file["content_type"]
-
-    form_data = {
-        "original_file_name": original_file_name,
-        "total_chunks": total_chunks,
-        "content_type": content_type,
-        "sample_id": sample_id,
-    }
-
-    try:
-        start_file_upload_response = api_client.batches_uploads_start_file_upload(
-            batch_pk=batch_pk, data=form_data
-        )
-        start_file_upload_json = start_file_upload_response.json()
-        if start_file_upload_response.status_code == 200:
-            file_ready = {
-                "file": file,
-                "upload_id": start_file_upload_json.get("upload_id"),
-                "batch_id": batch_pk,
-                "sample_id": start_file_upload_json.get("sample_id"),
-                "sample_file_id": start_file_upload_json.get("sample_file_id"),
-                "total_chunks": total_chunks,
-                "upload_session": upload_session,
-                "file_data": file_data,
-            }
-            return file_ready
-        else:
-            # Include the upload session in the error response
-            start_file_upload_json["upload_session"] = upload_session
-            return start_file_upload_json
-    except APIError as e:
-        return {
-            "error": str(e),
-            "status code": e.status_code,
-            "upload_session": upload_session,
-        }
 
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
@@ -855,18 +477,3 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
             completed.append(future)
         for future in completed:  # remove completed futures from queue
             chunk_queue.remove(future)
-
-
-def upload_fastq(
-    upload_data: UploadData,
-    prepared_files: PreparedFiles,
-    api_client: UploadAPIClient,
-) -> None:
-    """Upload a FASTQ file to the server.
-
-    Args:
-        upload_data (UploadData): The upload data including batch_id, session info, etc.
-        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
-        api_client (UploadAPIClient): Client for connecting to the Upload API.
-    """
-    upload_files(upload_data, prepared_files, api_client)

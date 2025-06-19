@@ -27,10 +27,10 @@ from pathogena.constants import (
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch
+from pathogena.upload_session import start_upload_session
 from pathogena.upload_utils import (
     UploadData,
     get_upload_host,
-    prepare_files,
 )
 from pathogena.util import get_access_token, get_token_path
 
@@ -326,6 +326,8 @@ def upload_batch(
         host (str): The host server.
         validate_only (bool): Whether we should actually upload or just validate batch.
     """
+    client = batch_upload_apis.UploadAPIClient()
+
     batch_id, batch_name, legacy_batch_id = create_batch_on_server(
         batch=batch,
         host=host,
@@ -335,12 +337,9 @@ def upload_batch(
     if validate_only:
         logging.info(f"Batch creation for {batch_name} validated successfully")
         return
-    mapping_csv_records = []
 
-    prepared_files = prepare_files(
-        batch_pk=batch_id,
-        samples=batch.samples,
-        api_client=batch_upload_apis.UploadAPIClient(),
+    upload_session = start_upload_session(
+        batch_pk=batch_id, samples=batch.samples, api_client=client
     )
 
     upload_file_type = UploadData(
@@ -348,21 +347,23 @@ def upload_batch(
         batch_pk=batch_id,
         env=get_upload_host(),
         samples=batch.samples,
-        upload_session=prepared_files["uploadSession"],
+        upload_session_id=upload_session.session_id,
     )
 
-    upload_session_name = prepared_files["uploadSessionData"]["name"]
+    mapping_csv_records = []
 
-    for file in prepared_files["files"]:
-        mapping_csv_records.append(
-            {
-                "batch_name": upload_session_name,
-                "sample_name": file["file"]["name"],
-                "remote_sample_name": file["sample_id"],
-                "remote_batch_name": batch_name,
-                "remote_batch_id": batch_id,
-            }
-        )
+    for sample in upload_session.samples:
+        for file in sample.files:
+            mapping_csv_records.append(
+                {
+                    "batch_name": upload_session.name,
+                    "sample_name": file.generated_name,
+                    "remote_sample_name": file.sample_id,
+                    "remote_batch_name": batch_name,
+                    "remote_batch_id": batch_id,
+                }
+            )
+
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
@@ -370,17 +371,14 @@ def upload_batch(
         f"{get_protocol()}://{host}/batches/{legacy_batch_id}"
     )
 
-    upload_utils.upload_fastq(
-        upload_data=upload_file_type,
-        prepared_files=prepared_files,
-        api_client=batch_upload_apis.UploadAPIClient(),
+    client.upload_fastq_files(
+        upload_data=upload_file_type, upload_session=upload_session
     )
 
     if not save:
-        for file in batch.samples:
-            remove_file(file_path=file.reads_1_upload_file)  # type: ignore
-            if batch.is_illumina():
-                remove_file(file_path=file.reads_2_upload_file)  # type: ignore
+        for sample in upload_session.samples:
+            for file in sample.files:
+                remove_file(file_path=file.prepared_file.path)
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
