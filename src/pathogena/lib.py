@@ -441,7 +441,7 @@ def upload_batch(
             if batch.is_illumina():
                 remove_file(file_path=file.reads_2_upload_file)  # type: ignore
     logging.info(
-        f"Upload complete. Created {local_batch_name}.mapping.csv (keep this safe)"
+        f"Upload complete. Created {remote_batch_name}.mapping.csv (keep this safe)"
     )
 
 
