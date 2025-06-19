@@ -19,11 +19,7 @@ from pathogena.log_utils import configure_debug_logging
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
 def main(*, debug: bool = False) -> None:
-    """EIT Pathogena command line interface.
-
-    Args:
-        debug (bool): Whether to enable verbose debug messages.
-    """
+    """EIT Pathogena command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
     configure_debug_logging(debug)
@@ -43,12 +39,7 @@ def main(*, debug: bool = False) -> None:
     help="Check for a current token and print the expiry if exists",
 )
 def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
-    """Authenticate with EIT Pathogena.
-
-    Args:
-        host (str | None): The host server.
-        check_expiry (bool): Whether to check for a current token and print the expiry if it exists.
-    """
+    """Authenticate with EIT Pathogena."""
     host = lib.get_host(host)
     if check_expiry:
         expiry = util.get_token_expiry(host)
@@ -71,11 +62,7 @@ def balance(
     *,
     host: str | None = None,
 ) -> None:
-    """Check your EIT Pathogena account balance.
-
-    Args:
-        host (str | None): The host server.
-    """
+    """Check your EIT Pathogena account balance."""
     host = lib.get_host(host)
     lib.get_credit_balance(host=host)
 
@@ -121,16 +108,7 @@ def decontaminate(
     threads: int = 1,
     skip_fastq_check: bool = False,
 ) -> None:
-    """Decontaminate reads from provided csv samples.
-
-    Args:
-        samples (str): The samples to decontaminate.
-        host (str | None): The host server.
-        save (bool): Whether to retain decontaminated reads after upload completion.
-        skip_fastq_check (bool): Whether to skip checking FASTQ files for validity.
-        skip_decontamination (bool): Whether to skip the decontamination process.
-        output_dir (str): The output directory for the cleaned FastQ files.
-    """
+    """Decontaminate reads from provided csv samples."""
     batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
     batch.validate_all_sample_fastqs()
     cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
@@ -190,14 +168,6 @@ def upload(
 
     Creates a mapping CSV file which can be used to download output
     files with original sample names.
-
-    Args:
-        samples (str): The samples to upload.
-        host (str | None): The host server.
-        save (bool): Whether to retain decontaminated reads after upload completion.
-        skip_fastq_check (bool): Whether to skip checking FASTQ files for validity.
-        skip_decontamination (bool): Whether to skip the decontamination process.
-        output_dir (str): The output directory for the cleaned FastQ files.
     """
     host = lib.get_host(host)
     lib.check_version_compatibility(host=host)
@@ -263,14 +233,6 @@ def download(
     """Download input and output files associated with sample IDs or a mapping CSV file.
 
     That are created during upload.
-
-    Args:
-        samples (str): The samples to download.
-        filenames (str): Comma-separated list of output filenames to download.
-        inputs (bool): Whether to also download decontaminated input FASTQ files.
-        output_dir (str): The output directory for the downloaded files.
-        rename (bool): Whether to rename downloaded files using sample names when given a mapping CSV.
-        host (str | None): The host server.
     """
     host = lib.get_host(host)
     if util.is_auth_token_live(host):
@@ -305,11 +267,7 @@ def download(
 def query_raw(samples: str, *, host: str | None = None) -> None:
     """Fetch metadata for one or more SAMPLES in JSON format.
 
-    The provided SAMPLES should be a comma-separated list of GUIDs, or path to a mapping CSV.
-
-    Args:
-        samples (str): Comma-separated list of GUIDs, or a path to a mapping CSV.
-        host (str | None): The host server.
+    SAMPLES should be command separated list of GUIDs or path to mapping CSV.
     """
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
@@ -331,11 +289,6 @@ def query_status(samples: str, *, json: bool = False, host: str | None = None) -
     """Fetch processing status for one or more SAMPLES.
 
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
-
-    Args:
-        samples (str): Command separated list of GUIDs or path to mapping CSV.
-        json (bool): Whether to output status in JSON format.
-        host (str | None): The host server.
     """
     host = lib.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
@@ -365,12 +318,7 @@ def download_index() -> None:
 )
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def validate(upload_csv: Path, *, host: str | None = None) -> None:
-    """Validate a given upload CSV.
-
-    Args:
-        upload_csv (Path): The path to the upload CSV file.
-        host (str | None): The host server.
-    """
+    """Validate a given upload CSV."""
     host = lib.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
     lib.upload_batch(batch=batch, host=host, save=False, validate_only=True)
@@ -481,25 +429,11 @@ def build_csv(
     illumina_read2_suffix: str = constants.DEFAULT_METADATA["illumina_read2_suffix"],
     max_batch_size: int = constants.DEFAULT_METADATA["max_batch_size"],
 ) -> None:
-    r"""Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.\n
-    Use max_batch_size to split into multiple separate upload csvs.\n
-    Adjust the read_suffix parameters to match the file endings for your read files.
+    r"""Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.
 
-    Args:
-        samples_folder (str): The folder containing the FASTQ files.
-        output_csv (str): The path to the output CSV file.
-        batch_name (str): The name of the batch.
-        collection_date (str): The collection date in YYYY-MM-DD format.
-        country (str): The 3-letter country code.
-        instrument_platform (str): The sequencing technology.
-        subdivision (str): The subdivision.
-        district (str): The district.
-        pipeline (str): The specimen organism.
-        amplicon_scheme (str): The amplicon scheme, used only when SARS-CoV-2 is the specimen organism.
-        ont_read_suffix (str): The read file ending for ONT fastq files.
-        illumina_read1_suffix (str): The read file ending for Illumina read 1 files.
-        illumina_read2_suffix (str): The read file ending for Illumina read 2 files.
-        max_batch_size (int): The maximum number of samples per batch.
+    Use max_batch_size to split into multiple separate upload csvs.
+
+    Adjust the read_suffix parameters to match the file endings for your read files.
     """  # noqa: D205
     if len(country) != 3:
         raise ValueError(f"Country ({country}) should be 3 letter code")
@@ -532,11 +466,7 @@ def build_csv(
 @main.command()
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def get_amplicon_schemes(*, host: str | None = None) -> None:
-    """Get valid amplicon schemes from the server.
-
-    Args:
-        host (str | None): The host server (for development).
-    """
+    """Get valid amplicon schemes from the server."""
     schemes = lib.get_amplicon_schemes(host=host)
     logging.info("Valid amplicon schemes:")
     for scheme in schemes:

@@ -1,16 +1,4 @@
-## `pathogena auth`
-
-```text
-Usage: pathogena auth [OPTIONS]
-
-  Authenticate with EIT Pathogena.
-
-Options:
-  --host                          API hostname (for development)
-  --check-expiry                   Check for a current token and print the
-                                  expiry if exists
-  -h, --help                      Show this message and exit.
-```
+__help__
 
 Most actions with the EIT Pathogena CLI require that the user have first authenticated with the EIT Pathogena server
 with their login credentials. Upon successfully authentication, a bearer token is stored in the user's home directory

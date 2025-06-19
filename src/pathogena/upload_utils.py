@@ -5,6 +5,7 @@ from collections.abc import Generator
 from concurrent.futures import as_completed
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal, TypedDict
 
 import httpx
@@ -61,16 +62,16 @@ class SampleFileMetadata(TypedDict):
     Args:
         name: The name of the sample file
         size: The size of the sample file in bytes
-        control: Whether this is a control sample
         content_type: The content type
         specimen_organism: The organism from which the sample was taken
     """
 
     name: str
     size: int
-    control: str
     content_type: str
     specimen_organism: str
+    resolved_path: Path | None
+    control: str
 
 
 class UploadMetrics(TypedDict):
@@ -233,33 +234,6 @@ def get_upload_host(cli_host: str | None = None) -> str:
     )
 
 
-def check_if_file_is_in_all_sample_files(
-    sample_files: dict[str, SampleFileUploadStatus] | None = None,
-    file: SampleFileMetadata | None = None,
-) -> tuple[bool, SampleFileUploadStatus | dict]:
-    """Checks if a given file is already present in the set of files ready for upload.
-
-    Args:
-        sample_files (dict[str, SampleFileUploadStatus]): The sample files ready for upload.
-        That is, a dictionary where keys are sample file IDs and values are dictionaries containing file data.
-        file (UploadSample | None): A dictionary representing the file, expected to have a 'name' key.
-
-    Returns:
-        tuple[bool, SampleFileUploadStatus | dict]: A bool if it was found and the result if
-            true.
-    """
-    # Extract samples from sample_uploads, defaulting to an empty dictionary if None
-    if not sample_files or not file:
-        return (False, {})
-
-    # Iterate through sample IDs and check if the uploaded file name matches the file's name
-    for sample_data in sample_files.values():
-        if sample_data.get("uploaded_file_name") == file["name"]:
-            return (True, sample_data)
-
-    return (False, {})
-
-
 def get_batch_upload_status(
     batch_pk: str,
 ) -> BatchUploadStatus:
@@ -288,7 +262,6 @@ def get_batch_upload_status(
             f"Failed to fetch batch status: {response.text}",
             response.status_code,
         ) from e
-
 
 # upload_all chunks of a file
 def upload_chunks(
@@ -405,7 +378,6 @@ def upload_chunks(
                 True  # Stop uploading further chunks if some other error occurs
             )
             break
-
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_chunk(

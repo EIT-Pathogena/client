@@ -1,11 +1,11 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from pathogena import util
+from pathogena import __version__, util
 from pathogena.util import find_duplicate_entries
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
@@ -253,18 +253,6 @@ class UploadSample(UploadBase):
         """
         return self.instrument_platform == "illumina"
 
-    def read_file1_data(self):
-        """Read the contents of the first fastq file."""
-        if self.reads_1_resolved_path:
-            with open(self.reads_1_resolved_path, "rb") as file:
-                return file.read()
-
-    def read_file2_data(self):
-        """Read the contents of the second fastq file."""
-        if self.reads_2_resolved_path:
-            with open(self.reads_2_resolved_path, "rb") as file:
-                return file.read()
-
 
 class UploadBatch(BaseModel):
     """Model for a batch of upload samples."""
@@ -274,8 +262,9 @@ class UploadBatch(BaseModel):
         description="Skip checking FastQ files", default=False
     )
     ran_through_hostile: bool = False
-    instrument_platform: str
-    amplicon_scheme: Optional[str] = None
+    instrument_platform: str | None = None
+    amplicon_scheme: str | None = None
+    specimen_organism: str | None = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -473,7 +462,11 @@ def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> Upload
         UploadBatch: The created UploadBatch instance.
     """
     records = util.parse_csv(upload_csv)
+    samples = [UploadSample(**r, **{"upload_csv": upload_csv}) for r in records]
+    specimen_organism = samples[0].specimen_organism if len(samples) > 0 else None
+
     return UploadBatch(  # Include upload_csv to enable relative fastq path validation
-        samples=[UploadSample(**r, **{"upload_csv": upload_csv}) for r in records],
+        samples=samples,
         skip_reading_fastqs=skip_checks,
+        specimen_organism=specimen_organism,
     )
