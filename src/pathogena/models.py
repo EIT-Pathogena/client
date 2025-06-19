@@ -13,9 +13,6 @@ ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 def is_valid_file_extension(
     filename: str,
-    allowed_extensions: tuple[
-        Literal[".fastq"], Literal[".fq"], Literal[".fastq.gz"], Literal[".fq.gz"]
-    ] = ALLOWED_EXTENSIONS,
 ) -> bool:
     """Check if the file has a valid extension.
 
@@ -26,7 +23,7 @@ def is_valid_file_extension(
     Returns:
         bool: True if the file has a valid extension, False otherwise.
     """
-    return filename.endswith(allowed_extensions)
+    return filename.endswith(ALLOWED_EXTENSIONS)
 
 
 class UploadBase(BaseModel):

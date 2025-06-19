@@ -8,21 +8,16 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from pathogena.batch_upload_apis import APIError, UploadAPIClient
+from pathogena.api_client import APIError, UploadAPIClient
 from pathogena.upload_utils import (
     OnComplete,
     OnProgress,
-    PreparedFiles,
     SampleFileMetadata,
     SampleFileUploadStatus,
-    SelectedFile,
     UploadData,
     UploadMetrics,
     UploadSample,
-    prepare_file,
-    prepare_files,
     upload_chunks,
-    upload_files,
 )
 
 
@@ -341,7 +336,7 @@ class TestUploadChunks:
             samples=samples,
             max_concurrent_chunks=2,
             max_concurrent_files=2,
-            upload_session=456,
+            upload_session_id=456,
             abort_controller=None,
         )
 
@@ -545,7 +540,7 @@ class TestUploadFiles:
             on_progress=None,
             max_concurrent_chunks=2,
             max_concurrent_files=2,
-            upload_session=456,
+            upload_session_id=456,
             abort_controller=None,
         )
 

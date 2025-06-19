@@ -17,7 +17,8 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
 import pathogena
-from pathogena import batch_upload_apis, models, upload_utils, util
+from pathogena import batch_upload_apis, models, util
+from pathogena.api_client import UploadAPIClient
 from pathogena.constants import (
     CPU_COUNT,
     DEFAULT_APP_HOST,
@@ -27,11 +28,11 @@ from pathogena.constants import (
 )
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch
+from pathogena.models import UploadBatch, UploadSample
+from pathogena.types import PreparedFile, Sample, UploadingFile, UploadSession
 from pathogena.upload_utils import (
     UploadData,
     get_upload_host,
-    prepare_files,
 )
 from pathogena.util import get_access_token, get_token_path
 
@@ -327,6 +328,8 @@ def upload_batch(
         host (str): The host server.
         validate_only (bool): Whether we should actually upload or just validate batch.
     """
+    client = batch_upload_apis.UploadAPIClient()
+
     batch_id, batch_name, legacy_batch_id = create_batch_on_server(
         batch=batch,
         host=host,
@@ -336,12 +339,9 @@ def upload_batch(
     if validate_only:
         logging.info(f"Batch creation for {batch_name} validated successfully")
         return
-    mapping_csv_records = []
 
-    prepared_files = prepare_files(
-        batch_pk=batch_id,
-        samples=batch.samples,
-        api_client=batch_upload_apis.UploadAPIClient(),
+    upload_session = start_upload_session(
+        batch_pk=batch_id, samples=batch.samples, api_client=client
     )
 
     upload_file_type = UploadData(
@@ -349,21 +349,23 @@ def upload_batch(
         batch_pk=batch_id,
         env=get_upload_host(),
         samples=batch.samples,
-        upload_session=prepared_files["uploadSession"],
+        upload_session_id=upload_session.session_id,
     )
 
-    upload_session_name = prepared_files["uploadSessionData"]["name"]
+    mapping_csv_records = []
 
-    for file in prepared_files["files"]:
-        mapping_csv_records.append(
-            {
-                "batch_name": upload_session_name,
-                "sample_name": file["file"]["name"],
-                "remote_sample_name": file["sample_id"],
-                "remote_batch_name": batch_name,
-                "remote_batch_id": batch_id,
-            }
-        )
+    for sample in upload_session.samples:
+        for file in sample.files:
+            mapping_csv_records.append(
+                {
+                    "batch_name": upload_session.name,
+                    "sample_name": file.generated_name,
+                    "remote_sample_name": file.sample_id,
+                    "remote_batch_name": batch_name,
+                    "remote_batch_id": batch_id,
+                }
+            )
+
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
@@ -371,17 +373,16 @@ def upload_batch(
         f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
 
-    upload_utils.upload_fastq(
-        upload_data=upload_file_type,
-        prepared_files=prepared_files,
-        api_client=batch_upload_apis.UploadAPIClient(),
+    client.upload_fastq_files(
+        upload_data=upload_file_type, upload_session=upload_session
     )
 
     if not save:
-        for file in batch.samples:
-            remove_file(file_path=file.reads_1_upload_file)  # type: ignore
-            if batch.is_illumina():
-                remove_file(file_path=file.reads_2_upload_file)  # type: ignore
+        for sample in upload_session.samples:
+            for file in sample.files:
+                if file.prepared_file.path:
+                    remove_file(file_path=file.prepared_file.path)
+
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
@@ -847,3 +848,94 @@ def remove_file(file_path: Path) -> None:
         )
     except Exception:
         pass  # A failure here doesn't matter since upload is complete
+
+
+def prepare_sample(sample: UploadSample) -> Sample[PreparedFile]:
+    """Prepares a samples' file for upload.
+
+    This function starts the upload session, checks the upload status of the current
+    sample and if it has not already been uploaded or partially uploaded prepares
+    the sample from scratch.
+
+    Args:
+        sample (UploadSample): The upload sample.
+
+    Returns:
+        SelectedSample: Prepared sample.
+    """
+    if sample.is_illumina():
+        sample_files = [
+            PreparedFile(upload_sample=sample, file_side=1),
+            PreparedFile(upload_sample=sample, file_side=2),
+        ]
+    else:
+        sample_files = [PreparedFile(upload_sample=sample, file_side=1)]
+
+    return Sample[PreparedFile](
+        instrument_platform=sample.instrument_platform, files=sample_files
+    )
+
+
+def start_upload_session(
+    batch_pk: str,
+    samples: list[UploadSample],
+    api_client: UploadAPIClient,
+) -> UploadSession:
+    """Prepares multiple files for upload.
+
+    This function starts the upload session,
+    then starts the upload files for each file
+    and returns the bundle.
+
+    Args:
+        batch_pk (str): The ID of the batch.
+        samples (list[UploadSample]): List of samples to prepare the files for.
+        api_client (UploadAPIClient): Instance of the APIClient class.
+
+    Returns:
+        UploadSession: Upload session id, name and samples.
+    """
+    batch_instrument_is_illumina = samples[0].is_illumina()
+
+    prepared_samples: list[Sample[PreparedFile]] = [
+        prepare_sample(sample) for sample in samples
+    ]
+
+    # Call start upload session endpoint
+    upload_session_id, upload_session_name, sample_summaries = (
+        api_client.start_upload_session(batch_pk, prepared_samples)
+    )
+
+    if batch_instrument_is_illumina:
+        # Duplicate the summaries for each half of the files
+        per_file_sample_summaries = [
+            item for item in sample_summaries for _ in range(2)
+        ]
+    else:
+        per_file_sample_summaries = sample_summaries
+
+    # Call start upload file endpoint for each file
+    index = 0
+    uploading_samples: list[Sample[UploadingFile]] = []
+    for unprepared_sample in prepared_samples:
+        for file in unprepared_sample.files:
+            uploading_sample_files: list[UploadingFile] = []
+            sample_id = per_file_sample_summaries[index].get("sample_id")
+            uploading_file = api_client.start_file_upload(
+                file, batch_pk, upload_session_id, sample_id
+            )
+            uploading_sample_files.append(uploading_file)
+            index += 1
+
+        uploading_samples.append(
+            Sample[UploadingFile](
+                unprepared_sample.instrument_platform, uploading_sample_files
+            )
+        )
+
+    # Return the bundle of start upload session and start file upload responses
+    return UploadSession(
+        session_id=upload_session_id,
+        name=upload_session_name,
+        samples=uploading_samples,
+    )
