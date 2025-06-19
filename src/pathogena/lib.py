@@ -29,10 +29,10 @@ from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
+    PreparedFiles,
     UploadData,
     get_upload_host,
     prepare_files,
-    PreparedFiles,
 )
 from pathogena.util import get_access_token, get_token_path
 
@@ -349,8 +349,7 @@ def decontaminate_samples_with_hostile(
 def get_remote_sample_name(
     sample: UploadSample, prepared_files: PreparedFiles
 ) -> (str, str):
-    """
-    Get the remote names of the sample given the UploadSample object from the prepared files.
+    """Get the remote names of the sample given the UploadSample object from the prepared files.
 
     Args:
         sample (UploadSample): The sample for which to find the ID.
