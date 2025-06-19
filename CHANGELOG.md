@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 2.2.0-RC3 (2025-06-18)
+
 ### Fixed
 
 - [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): fix mapping csv to use correct batch and sample names with rows per sample
