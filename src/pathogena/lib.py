@@ -255,10 +255,10 @@ def create_batch_on_server(
     # now make the legacy portal request to get the legacy batch name
     try:
         with httpx.Client(
-                event_hooks=httpx_hooks,
-                transport=httpx.HTTPTransport(retries=5),
-                timeout=60,
-                follow_redirects=True,
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=60,
+            follow_redirects=True,
         ) as client:
             legacy_batch_response = client.get(
                 f"{get_protocol()}://{get_host()}/api/v1/batches/{legacy_batch_id}",
@@ -270,13 +270,8 @@ def create_batch_on_server(
             )
             legacy_batch = legacy_batch_response.json()
 
-            remote_batch_name = legacy_batch['name']
-        return (
-            batch_id,
-            local_batch_name,
-            remote_batch_name,
-            legacy_batch_id
-        )
+            remote_batch_name = legacy_batch["name"]
+        return (batch_id, local_batch_name, remote_batch_name, legacy_batch_id)
     except JSONDecodeError:
         logging.error(
             f"Unable to communicate with the legacy endpoint ({get_host()}). Please check this has been set "
@@ -351,11 +346,11 @@ def decontaminate_samples_with_hostile(
     return batch_metadata
 
 
-def get_remote_sample_batch_ids(
+def get_remote_sample_name(
     sample: UploadSample, prepared_files: PreparedFiles
 ) -> (str, str):
     """
-    Get the remote names of the sample and batch given the UploadSample object from the prepared files.
+    Get the remote names of the sample given the UploadSample object from the prepared files.
 
     Args:
         sample (UploadSample): The sample for which to find the ID.
@@ -369,7 +364,7 @@ def get_remote_sample_batch_ids(
         ):
             return file["sample_id"]
     raise ValueError(
-        f"Unable to determine sample or batch IDs for sample name {sample.sample_name}."
+        f"Unable to determine sample ID for sample name {sample.sample_name}."
     )
 
 
@@ -387,11 +382,13 @@ def upload_batch(
         host (str): The host server.
         validate_only (bool): Whether we should actually upload or just validate batch.
     """
-    batch_id, local_batch_name, remote_batch_name, legacy_batch_id = create_batch_on_server(
-        batch=batch,
-        host=host,
-        amplicon_scheme=batch.samples[0].amplicon_scheme,
-        validate_only=validate_only,
+    batch_id, local_batch_name, remote_batch_name, legacy_batch_id = (
+        create_batch_on_server(
+            batch=batch,
+            host=host,
+            amplicon_scheme=batch.samples[0].amplicon_scheme,
+            validate_only=validate_only,
+        )
     )
     if validate_only:
         logging.info(f"Batch creation for {local_batch_name} validated successfully")
@@ -413,7 +410,7 @@ def upload_batch(
     )
 
     for sample in batch.samples:
-        remote_sample_name = get_remote_sample_batch_ids(
+        remote_sample_name = get_remote_sample_name(
             sample=sample, prepared_files=prepared_files
         )
         mapping_csv_records.append(
@@ -444,7 +441,9 @@ def upload_batch(
             remove_file(file_path=file.reads_1_upload_file)  # type: ignore
             if batch.is_illumina():
                 remove_file(file_path=file.reads_2_upload_file)  # type: ignore
-    logging.info(f"Upload complete. Created {local_batch_name}.mapping.csv (keep this safe)")
+    logging.info(
+        f"Upload complete. Created {local_batch_name}.mapping.csv (keep this safe)"
+    )
 
 
 def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) -> None:
