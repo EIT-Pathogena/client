@@ -422,7 +422,6 @@ def upload_batch(
                 "remote_batch_id": batch_id,
             }
         )
-        breakpoint()
     util.write_csv(mapping_csv_records, f"{remote_batch_name}.mapping.csv")
     logging.info(f"The mapping file {remote_batch_name}.mapping.csv has been created.")
     logging.info(
