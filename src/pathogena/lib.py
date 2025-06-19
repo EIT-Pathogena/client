@@ -27,11 +27,12 @@ from pathogena.constants import (
 )
 from pathogena.errors import APIError, MissingError, UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch
+from pathogena.models import UploadBatch, UploadSample
 from pathogena.upload_utils import (
     UploadData,
     get_upload_host,
     prepare_files,
+    PreparedFiles,
 )
 from pathogena.util import get_access_token, get_token_path
 
@@ -312,12 +313,19 @@ def decontaminate_samples_with_hostile(
     )
     return batch_metadata
 
-def get_sample_name(file: dict) -> str:
-    file_basename = file["file"]["name"].split('.')[0]
-    if file_basename.endswith("_1") or file_basename.endswith("_2"):
-        # Remove the _1 or _2 suffix if present
-        return file_basename[:-2]
-    return file_basename
+def get_sample_id_for_upload_sample(sample: UploadSample, prepared_files: PreparedFiles) -> str:
+    """
+    Get the sample ID for a given UploadSample based on its resolved paths.
+
+    Args:
+        sample (UploadSample): The sample for which to find the ID.
+        prepared_files (PreparedFiles): The prepared files containing resolved paths.
+    """
+    for file in prepared_files['files']:
+        resolved_path = file['file']['resolved_path']
+        if sample.reads_1_resolved_path == resolved_path or sample.reads_2_resolved_path == resolved_path:
+            return file['sample_id']
+    raise ValueError(f"Unable to determine sample ID for sample name {sample.sample_name}.")
 
 def upload_batch(
     batch: models.UploadBatch,
@@ -360,20 +368,20 @@ def upload_batch(
 
     upload_session_name = prepared_files["uploadSessionData"]["name"]
 
-    used_prefixes = []
-    for file in prepared_files["files"]:
-        sample_name = get_sample_name(file=file)
-        if sample_name not in used_prefixes:
-            used_prefixes.append(sample_name)
-            mapping_csv_records.append(
-                {
-                    "batch_name": upload_session_name,
-                    "sample_name": sample_name,
-                    "remote_sample_name": file["sample_id"],
-                    "remote_batch_name": batch_name,
-                    "remote_batch_id": batch_id,
-                }
-            )
+    for sample in batch.samples:
+        remote_sample_name = get_sample_id_for_upload_sample(
+            sample=sample,
+            prepared_files=prepared_files
+        )
+        mapping_csv_records.append(
+            {
+                "batch_name": upload_session_name,
+                "sample_name": sample.sample_name,
+                "remote_sample_name": remote_sample_name,
+                "remote_batch_name": batch_name,
+                "remote_batch_id": batch_id,
+            }
+        )
     util.write_csv(mapping_csv_records, f"{batch_name}.mapping.csv")
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
