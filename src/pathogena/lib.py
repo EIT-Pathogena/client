@@ -383,7 +383,7 @@ def upload_batch(
         )
         mapping_csv_records.append(
             {
-                "batch_name": upload_session_name,
+                "batch_name": sample.batch_name,
                 "sample_name": sample.sample_name,
                 "remote_sample_name": remote_sample_name,
                 "remote_batch_name": batch_name,
