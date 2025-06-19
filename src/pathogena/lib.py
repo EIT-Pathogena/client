@@ -313,7 +313,10 @@ def decontaminate_samples_with_hostile(
     )
     return batch_metadata
 
-def get_sample_id_for_upload_sample(sample: UploadSample, prepared_files: PreparedFiles) -> str:
+
+def get_sample_id_for_upload_sample(
+    sample: UploadSample, prepared_files: PreparedFiles
+) -> str:
     """
     Get the sample ID for a given UploadSample based on its resolved paths.
 
@@ -321,11 +324,17 @@ def get_sample_id_for_upload_sample(sample: UploadSample, prepared_files: Prepar
         sample (UploadSample): The sample for which to find the ID.
         prepared_files (PreparedFiles): The prepared files containing resolved paths.
     """
-    for file in prepared_files['files']:
-        resolved_path = file['file']['resolved_path']
-        if sample.reads_1_resolved_path == resolved_path or sample.reads_2_resolved_path == resolved_path:
-            return file['sample_id']
-    raise ValueError(f"Unable to determine sample ID for sample name {sample.sample_name}.")
+    for file in prepared_files["files"]:
+        resolved_path = file["file"]["resolved_path"]
+        if (
+            sample.reads_1_resolved_path == resolved_path
+            or sample.reads_2_resolved_path == resolved_path
+        ):
+            return file["sample_id"]
+    raise ValueError(
+        f"Unable to determine sample ID for sample name {sample.sample_name}."
+    )
+
 
 def upload_batch(
     batch: models.UploadBatch,
@@ -370,8 +379,7 @@ def upload_batch(
 
     for sample in batch.samples:
         remote_sample_name = get_sample_id_for_upload_sample(
-            sample=sample,
-            prepared_files=prepared_files
+            sample=sample, prepared_files=prepared_files
         )
         mapping_csv_records.append(
             {
