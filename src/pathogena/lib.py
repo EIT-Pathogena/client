@@ -314,9 +314,9 @@ def decontaminate_samples_with_hostile(
     return batch_metadata
 
 
-def get_sample_id_for_upload_sample(
+def get_remote_sample_batch_ids(
     sample: UploadSample, prepared_files: PreparedFiles
-) -> str:
+) -> (str, str):
     """
     Get the sample ID for a given UploadSample based on its resolved paths.
 
@@ -330,9 +330,9 @@ def get_sample_id_for_upload_sample(
             sample.reads_1_resolved_path == resolved_path
             or sample.reads_2_resolved_path == resolved_path
         ):
-            return file["sample_id"]
+            return (file["batch_id"], file["sample_id"])
     raise ValueError(
-        f"Unable to determine sample ID for sample name {sample.sample_name}."
+        f"Unable to determine sample or batch IDs for sample name {sample.sample_name}."
     )
 
 
@@ -375,15 +375,13 @@ def upload_batch(
         upload_session=prepared_files["uploadSession"],
     )
 
-    upload_session_name = prepared_files["uploadSessionData"]["name"]
-
     for sample in batch.samples:
-        remote_sample_name = get_sample_id_for_upload_sample(
+        remote_batch_name, remote_sample_name = get_remote_sample_batch_ids(
             sample=sample, prepared_files=prepared_files
         )
         mapping_csv_records.append(
             {
-                "batch_name": sample.batch_name,
+                "batch_name": remote_batch_name,
                 "sample_name": sample.sample_name,
                 "remote_sample_name": remote_sample_name,
                 "remote_batch_name": batch_name,
