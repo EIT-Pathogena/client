@@ -318,7 +318,7 @@ def get_remote_sample_batch_ids(
     sample: UploadSample, prepared_files: PreparedFiles
 ) -> (str, str):
     """
-    Get the sample ID for a given UploadSample based on its resolved paths.
+    Get the remote names of the sample and batch given the UploadSample object from the prepared files.
 
     Args:
         sample (UploadSample): The sample for which to find the ID.
