@@ -42,7 +42,7 @@ class UploadBase(BaseModel):
     subdivision: str | None = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
-    district: str = Field(default=None, description="Granular location")
+    district: str = Field(default="", description="Granular location")
     specimen_organism: Literal["mycobacteria", "sars-cov-2", ""] = Field(
         default="mycobacteria", description="Target specimen organism scientific name"
     )

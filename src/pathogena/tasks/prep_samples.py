@@ -13,7 +13,7 @@ from pathogena.constants import (
     HOSTILE_INDEX_NAME,
 )
 from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBase, UploadBatch, UploadData
+from pathogena.models import UploadBatch, UploadData
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
