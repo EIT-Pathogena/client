@@ -224,7 +224,7 @@ class UploadSample(UploadBase):
         for read in reads:
             logging.info(f"Calculating read count in: {read}")
             if read.suffix == ".gz":
-                line_count = util.reads_lines_from_gzip(file_path=read)
+                line_count = util.count_lines_in_gzip(file_path=read)
             else:
                 line_count = util.reads_lines_from_fastq(file_path=read)
             if line_count % valid_lines_per_read != 0:

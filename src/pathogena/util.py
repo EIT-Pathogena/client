@@ -192,7 +192,7 @@ def gzip_file(input_file: Path, output_file: str) -> Path:
     return Path(output_file)
 
 
-def reads_lines_from_gzip(file_path: Path) -> int:
+def count_lines_in_gzip(file_path: Path) -> int:
     """Count the number of lines in a gzipped file.
 
     Args:

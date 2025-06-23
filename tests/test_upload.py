@@ -3,31 +3,33 @@ from concurrent.futures import Future
 from datetime import date
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from pathogena.client.upload_client import APIError, UploadAPIClient, upload_chunks
-from pathogena.lib import start_upload_session
-from pathogena.types import PreparedFile, UploadingFile, UploadSession
-from pathogena.upload_utils import (
-    OnComplete,
+from pathogena.client.upload_client import APIError, UploadAPIClient
+from pathogena.models import UploadData, UploadSample
+from pathogena.tasks.upload import start_upload_session, upload_chunks
+from pathogena.types import (
     OnProgress,
+    PreparedFile,
+    Sample,
     SampleFileMetadata,
-    UploadData,
-    UploadSample,
+    UploadingFile,
+    UploadSession,
 )
 
 
 @pytest.fixture
-def mock_api_client(mocker: Callable[..., Generator[MockerFixture, None, None]]):
-    return mocker.MagicMock(spec=UploadAPIClient)
+def mock_api_client():
+    return MagicMock(spec=UploadAPIClient)
 
 
 class TestPrepareFile:
     @pytest.fixture(autouse=True)
-    def setup(self, mocker: Callable[..., Generator[MockerFixture, None, None]]):
+    def setup(self):
         self.file = SampleFileMetadata(
             name="file1.txt",
             size=1024,  # 1 KB
@@ -175,11 +177,9 @@ class TestPrepareFiles:
         ]
 
     @pytest.fixture
-    def mock_api_client(
-        self, mocker: Callable[..., Generator[MockerFixture, None, None]]
-    ):
+    def mock_api_client(self):
         """Fixture for mocking the APIClient."""
-        return mocker.MagicMock(spec=UploadAPIClient)
+        return MagicMock(spec=UploadAPIClient)
 
     def test_prepare_files_success(
         self,
@@ -247,32 +247,30 @@ class TestPrepareFiles:
 
 class TestUploadChunks:
     @pytest.fixture(autouse=True)
-    def setup(self, mocker: Callable[..., Generator[MockerFixture, None, None]]):
+    def setup(self):
         # Set values for the batch, instrument, and upload session
         self.batch_pk = 123
         self.instrument_code = "INST001"
         self.upload_session = 123
 
         # mock as_completed to simulate completed futures
-        self.mock_future = mocker.MagicMock(spec=Future)
-        self.mock_future.result.return_value = mocker.MagicMock(
+        self.mock_future = MagicMock(spec=Future)
+        self.mock_future.result.return_value = MagicMock(
             status_code=200, text="OK", data={"metrics": "some_metrics"}
         )
-        mocker.patch(
+        patch(
             "concurrent.futures.as_completed", return_value=[self.mock_future] * 4
         )  # 4 completed chunks to match mock file
 
         # Mock process_queue to prevent it from blocking the test
-        mocker.patch("pathogena.upload_utils.process_queue", return_value=None)
+        patch("pathogena.upload_utils.process_queue", return_value=None)
 
         # Mock access_token
         dummy_token = "dummy-token"
-        mocker.patch(
-            "pathogena.upload_utils.get_access_token", return_value=dummy_token
-        )
+        patch("pathogena.upload_utils.get_access_token", return_value=dummy_token)
 
         # mock as_completed to simulate completed futures
-        self.mock_end_upload = mocker.patch.object(
+        self.mock_end_upload = patch.object(
             UploadAPIClient,
             "batches_uploads_end_file_upload",
             return_value=httpx.Response(
@@ -282,9 +280,7 @@ class TestUploadChunks:
 
     # fixture for mock_upload_data
     @pytest.fixture(autouse=True)
-    def mock_upload_data(
-        self, mocker: Callable[..., Generator[MockerFixture, None, None]]
-    ):
+    def mock_upload_data(self):
         """Fixture for mocked upload data."""
         # mocking UploadFileType with required attributes
         samples = [
@@ -338,19 +334,18 @@ class TestUploadChunks:
         mock_upload_data: UploadData,
         mock_file: UploadingFile,
         mock_file_status: dict,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
     ):
         mock_upload_success = httpx.Response(200, json={"metrics": "some_metrics"})
 
-        mocker.patch(
+        patch(
             "pathogena.upload_utils.upload_chunk",
             return_value=mock_upload_success,
             # side_effect=mock_upload_success,
         )
-        mock_client = mocker.patch(
+        mock_client = patch(
             "pathogena.upload_utils.UploadAPIClient",
         )
-        mock_batches_uploads_end_file_upload = mocker.MagicMock()
+        mock_batches_uploads_end_file_upload = MagicMock()
         mock_batches_uploads_end_file_upload.side_effect = httpx.Response(
             200, json={"metrics": "some_metrics"}
         )
@@ -376,33 +371,32 @@ class TestUploadChunks:
         self,
         mock_upload_data: UploadData,
         mock_file: UploadingFile,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
         caplog: pytest.LogCaptureFixture,
     ):
         # mock the first chunk to succeed and the following to fail with a 400
         # need response json too as check it in code
-        mock_upload_success = mocker.Mock()
+        mock_upload_success = Mock()
         mock_upload_success.status_code = 200
         mock_upload_success.text = "OK"
         mock_upload_success.json = lambda: {"metrics": "some_metrics"}
 
-        mock_upload_fail = mocker.MagicMock()
+        mock_upload_fail = MagicMock()
         mock_upload_fail.status_code = 400
         mock_upload_fail.text = "Bad Request"
         mock_upload_fail.json = lambda: {"status_code": 400}
 
-        mock_upload_fail_2 = mocker.MagicMock()
+        mock_upload_fail_2 = MagicMock()
         mock_upload_fail_2.status_code = 400
         mock_upload_fail_2.text = "Bad Request Retry"
         mock_upload_fail_2.json = lambda: {"status_code": 400}
 
-        mock_upload_fail_3 = mocker.MagicMock()
+        mock_upload_fail_3 = MagicMock()
         mock_upload_fail_3.status_code = 400
         mock_upload_fail_3.text = "Bad Request Third"
         mock_upload_fail_3.json = lambda: {"status_code": 400}
 
         # mock upload_chunk to return the above mocks
-        mock_upload_chunk = mocker.patch(
+        mock_upload_chunk = patch(
             "pathogena.upload_utils.upload_chunk",
             side_effect=[
                 mock_upload_success,
@@ -437,21 +431,20 @@ class TestUploadChunks:
         self,
         mock_upload_data: UploadData,
         mock_file: UploadingFile,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
         caplog: pytest.LogCaptureFixture,
     ):
         # mock the first chunk to raise an exception
-        mock_upload_1 = mocker.MagicMock()
+        mock_upload_1 = MagicMock()
         mock_upload_1.json.side_effect = Exception("Some error")
 
-        mock_upload_2 = mocker.MagicMock()
+        mock_upload_2 = MagicMock()
         mock_upload_2.json.side_effect = Exception("Some error")
 
-        mock_upload_3 = mocker.MagicMock()
+        mock_upload_3 = MagicMock()
         mock_upload_3.json.side_effect = Exception("Some error")
 
         # mock upload_chunk to return the above mock
-        mocker.patch(
+        patch(
             "pathogena.upload_utils.upload_chunk",
             side_effect=[mock_upload_1, mock_upload_2, mock_upload_3],
         )
@@ -521,46 +514,52 @@ class TestUploadFiles:
         return None
 
     @pytest.fixture
-    def mock_api_client(
-        self, mocker: Callable[..., Generator[MockerFixture, None, None]]
-    ):
+    def mock_api_client(self):
         """Fixture for mocking the APIClient."""
-        return mocker.MagicMock(spec=UploadAPIClient)
+        return MagicMock(spec=UploadAPIClient)
 
     @pytest.fixture
     def mock_upload_session(self) -> UploadSession:
         """Fixture for successful PreparedFiles."""
-        return {
-            "files": [
-                UploadingFile(
-                    prepared_file={"file1": "name"},
-                    upload_id=456,
-                    batch_id=123,
-                    sample_id=678,
-                    total_chunks=5,
-                    estimated_completion_time=5,
-                    time_remaining=3,
-                    uploadSession=123,
-                    file_data="file data",
-                ),
-                UploadingFile(
-                    prepared_file={"file2": "name"},
-                    upload_id=789,
-                    batch_id=456,
-                    sample_id=890,
-                    total_chunks=5,
-                    estimated_completion_time=5,
-                    time_remaining=3,
-                    uploadSession=123,
-                    file_data="file2 data",
-                ),
+        return UploadSession(
+            session_id=123,
+            name="session",
+            samples=[
+                Sample(
+                    instrument_platform="illumina",
+                    files=[
+                        UploadingFile(
+                            prepared_file={"file1": "name"},
+                            upload_session_id=123,
+                            upload_id=456,
+                            batch_id=123,
+                            sample_id=678,
+                            total_chunks=5,
+                            # estimated_completion_time=5,
+                            # time_remaining=3,
+                            # uploadSession=123,
+                            # file_data="file data",
+                        ),
+                        UploadingFile(
+                            prepared_file={"file2": "name"},
+                            upload_session_id=123,
+                            upload_id=789,
+                            batch_id=456,
+                            sample_id=890,
+                            total_chunks=5,
+                            # estimated_completion_time=5,
+                            # time_remaining=3,
+                            # uploadSession=123,
+                            # file_data="file2 data",
+                        ),
+                    ],
+                )
             ],
-            "uploadSession": 123,
-            "uploadSessionData": {"data": "some_data"},
-        }
+        )
+        # "uploadSessionData": {"data": "some_data"},
 
     @pytest.fixture
-    def mock_unsuccessful_prepare_files(self) -> dict[str, str]:
+    def mock_fail_to_start_upload_session(self) -> dict[str, str]:
         """Fixture for unsuccessful PreparedFiles."""
         return {"API error occurred": "Test error"}
 
@@ -569,19 +568,15 @@ class TestUploadFiles:
         mock_upload_data: UploadData,
         mock_sample_uploads: None,
         mock_api_client: Any,
-        mock_successful_prepare_files: PreparedFiles,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
+        mock_upload_session: UploadSession,
     ):
-        # mock successful prepare files
-        prepared_files = mock_successful_prepare_files
-
         # mock successful upload_chunks
-        mock_upload_chunks = mocker.patch(
+        mock_upload_chunks = patch(
             "pathogena.upload_utils.upload_chunks", return_value=None
         )
 
         # mock successful API client response
-        mocker.patch.object(
+        patch.object(
             UploadAPIClient,
             "batches_samples_end_upload_session_create",
             return_value=httpx.Response(
@@ -592,7 +587,7 @@ class TestUploadFiles:
         # call
         upload_files(
             mock_upload_data,
-            prepared_files,
+            mock_upload_session,
             mock_api_client,
         )
 
@@ -603,10 +598,9 @@ class TestUploadFiles:
     def test_upload_files_prepare_api_error(
         self,
         mock_upload_data: UploadData,
-        mock_unsuccessful_prepare_files,
+        mock_upload_session: UploadSession,
         mock_sample_uploads: None,
         mock_api_client: Any,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
         caplog: pytest.LogCaptureFixture,
     ):
         # call
@@ -622,23 +616,19 @@ class TestUploadFiles:
     def test_upload_files_chunk_upload_error(
         self,
         mock_upload_data: UploadData,
-        mock_successful_prepare_files: PreparedFiles,
+        mock_upload_session: UploadSession,
         mock_sample_uploads: None,
         mock_api_client: Any,
-        mocker: Callable[..., Generator[MockerFixture, None, None]],
         caplog: pytest.LogCaptureFixture,
     ):
-        # mock successful prepare files
-        prepared_files = mock_successful_prepare_files
-
         # mock upload_chunks with exception
-        mock_upload_chunks = mocker.patch(
+        mock_upload_chunks = patch(
             "pathogena.upload_utils.upload_chunks",
             side_effect=Exception("Chunk upload error"),
         )
 
         # mock successful API client response
-        mocker.patch.object(
+        patch.object(
             UploadAPIClient,
             "batches_samples_end_upload_session_create",
             return_value=httpx.Response(
@@ -647,7 +637,7 @@ class TestUploadFiles:
         )
 
         # call
-        upload_files(mock_upload_data, prepared_files, mock_api_client)
+        upload_files(mock_upload_data, mock_upload_session, mock_api_client)
 
         assert mock_upload_chunks.call_count == 2  # upload chunks called twice
         assert (

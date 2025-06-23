@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from pathogena.create_upload_csv import UploadData, build_upload_csv
+from pathogena.models import UploadData
+from pathogena.tasks import build_upload_csv
 
 
 def test_build_csv_illumina(
@@ -185,7 +186,7 @@ def test_build_csv_invalid_tech(tmp_path: Path, upload_data: UploadData) -> None
         tmp_path (Path): Temporary path for output files.
         upload_data (UploadData): Data required for building the upload CSV.
     """
-    upload_data.instrument_platform = "invalid"
+    upload_data.instrument_platform = "invalid"  # type: ignore
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/unmatched_files",
@@ -209,7 +210,7 @@ def test_build_csv_invalid_specimen_organism(
         tmp_path (Path): Temporary path for output files.
         upload_data (UploadData): Data required for building the upload CSV.
     """
-    upload_data.specimen_organism = "invalid"
+    upload_data.specimen_organism = "invalid"  # type: ignore
     with pytest.raises(ValueError) as e_info:
         build_upload_csv(
             "tests/data/empty_files",

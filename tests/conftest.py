@@ -4,8 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from pathogena.create_upload_csv import UploadData
-from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
+from pathogena.models import (
+    UploadBatch,
+    UploadData,
+    UploadSample,
+    create_batch_from_csv,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -219,7 +223,7 @@ def illumina_multiple_sample_batch(illumina_multiple_sample_csv: Path) -> Upload
 
 
 @pytest.fixture
-def invalid_fastq_paths_batch(invalid_fastq_paths_csv: Path) -> Path:
+def invalid_fastq_paths_batch(invalid_fastq_paths_csv: Path) -> UploadBatch:
     return create_batch_from_csv(invalid_fastq_paths_csv)
 
 
