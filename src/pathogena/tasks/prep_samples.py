@@ -2,26 +2,114 @@ import csv
 import logging
 from pathlib import Path
 
+import httpx
+from hostile.lib import clean_fastqs, clean_paired_fastqs
+from hostile.util import choose_default_thread_count
 from pydantic import Field
 
-from pathogena.models import UploadBase
+from pathogena import models, util
+from pathogena.constants import (
+    CPU_COUNT,
+    HOSTILE_INDEX_NAME,
+)
+from pathogena.log_utils import httpx_hooks
+from pathogena.models import UploadBase, UploadBatch, UploadData
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-class UploadData(UploadBase):
-    """Model for upload data with additional fields for read suffixes and batch size."""
+def decontaminate_samples_with_hostile(
+    batch: models.UploadBatch,
+    threads: int,
+    output_dir: Path = Path("."),
+) -> dict:
+    """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch.
 
-    ont_read_suffix: str = Field(
-        default=".fastq.gz", description="Suffix for ONT reads"
+    Args:
+        batch (models.UploadBatch): The batch of samples to decontaminate.
+        threads (int): The number of threads to use.
+        output_dir (Path): The output directory for the cleaned FastQ files.
+
+    Returns:
+        dict: Metadata related to the batch.
+    """
+    logging.debug(f"decontaminate_samples_with_hostile() {threads=} {output_dir=}")
+    logging.info(
+        f"Removing human reads from {str(batch.instrument_platform).upper()} FastQ files and storing in {output_dir.absolute()}"
     )
-    illumina_read1_suffix: str = Field(
-        default="_1.fastq.gz", description="Suffix for Illumina reads (first of pair)"
+    decontamination_metadata = {}
+    if batch.is_ont():
+        decontamination_metadata = clean_fastqs(
+            fastqs=[sample.reads_1_resolved_path for sample in batch.samples],
+            index=HOSTILE_INDEX_NAME,
+            rename=True,
+            reorder=True,
+            threads=threads if threads else choose_default_thread_count(CPU_COUNT),
+            out_dir=output_dir,
+            force=True,
+        )
+    elif batch.is_illumina():
+        decontamination_metadata = clean_paired_fastqs(
+            fastqs=[
+                (sample.reads_1_resolved_path, sample.reads_2_resolved_path)
+                for sample in batch.samples
+            ],
+            index=HOSTILE_INDEX_NAME,
+            rename=True,
+            reorder=True,
+            threads=threads if threads else choose_default_thread_count(CPU_COUNT),
+            out_dir=output_dir,
+            force=True,
+            aligner_args=" --local",
+        )
+    batch_metadata = dict(
+        zip(
+            [s.sample_name for s in batch.samples],
+            decontamination_metadata,
+            strict=False,
+        )
     )
-    illumina_read2_suffix: str = Field(
-        default="_2.fastq.gz", description="Suffix for Illumina reads (second of pair)"
+    batch.ran_through_hostile = True
+    logging.info(
+        f"Human reads removed from input samples and can be found here: {output_dir.absolute()}"
     )
-    max_batch_size: int = Field(
-        default=50, description="Maximum number of samples per batch"
-    )
+    return batch_metadata
+
+
+def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) -> None:
+    """Perform pre-submission validation of a batch of sample model subsets.
+
+    Args:
+        batch (UploadBatch): The batch to validate.
+        protocol (str): The protocol to use.
+        host (str): The host server.
+    """
+    data = []
+    for sample in batch.samples:
+        data.append(
+            {
+                "collection_date": str(sample.collection_date),
+                "country": sample.country,
+                "subdivision": sample.subdivision,
+                "district": sample.district,
+                "instrument_platform": sample.instrument_platform,
+                "specimen_organism": sample.specimen_organism,
+            }
+        )
+    logging.debug(f"Validating {data=}")
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    with httpx.Client(
+        event_hooks=httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+        timeout=60,
+    ) as client:
+        response = client.post(
+            f"{protocol}://{host}/api/v1/batches/validate",
+            headers=headers,
+            json=data,
+            follow_redirects=True,
+        )
+    logging.debug(f"{response.json()=}")
 
 
 def build_upload_csv(

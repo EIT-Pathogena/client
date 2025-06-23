@@ -28,6 +28,7 @@ dependencies = [
   "tenacity==8.2.3",
   "click>=8.1.7",
   "python-dotenv>=1.0",
+  "pytest-mock>=3.14.0",
 ]
 
 [project.scripts]
@@ -87,6 +88,9 @@ dev-dependencies = [
     "pytest-mock>=3.14.0",
 ]
 
+[[tool.mypy.overrides]]
+module = ["hostile.*", "httpx.*", "tenacity.*", "click.*", "tqdm.*", "dotenv.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 markers = [

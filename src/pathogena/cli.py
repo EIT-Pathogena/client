@@ -1,4 +1,4 @@
-import json as json_
+import json
 import logging
 import sys
 from datetime import date, datetime
@@ -7,8 +7,8 @@ from pathlib import Path
 
 import click
 
-from pathogena import constants, lib, models, util
-from pathogena.create_upload_csv import UploadData, build_upload_csv
+from pathogena import constants, models, tasks, util
+from pathogena.client import env
 from pathogena.errors import AuthorizationError
 from pathogena.log_utils import configure_debug_logging
 
@@ -20,7 +20,7 @@ from pathogena.log_utils import configure_debug_logging
 )
 def main(*, debug: bool = False) -> None:
     """EIT Pathogena command line interface."""
-    lib.check_for_newer_version()
+    tasks.check_for_newer_version()
     util.display_cli_version()
     configure_debug_logging(debug)
 
@@ -40,7 +40,7 @@ def main(*, debug: bool = False) -> None:
 )
 def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
     """Authenticate with EIT Pathogena."""
-    host = lib.get_host(host)
+    host = env.get_host(host)
     if check_expiry:
         expiry = util.get_token_expiry(host)
         if expiry and util.is_auth_token_live(host):
@@ -48,7 +48,7 @@ def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
             return
         else:
             logging.info(f"You do not have a valid token for {host}")
-    lib.authenticate(host=host)
+    tasks.authenticate(host=host)
 
 
 @main.command()
@@ -63,8 +63,8 @@ def balance(
     host: str | None = None,
 ) -> None:
     """Check your EIT Pathogena account balance."""
-    host = lib.get_host(host)
-    lib.get_credit_balance(host=host)
+    host = env.get_host(host)
+    tasks.get_credit_balance(host=host)
 
 
 @main.command()
@@ -111,7 +111,7 @@ def decontaminate(
     """Decontaminate reads from provided csv samples."""
     batch = models.create_batch_from_csv(input_csv, skip_fastq_check)
     batch.validate_all_sample_fastqs()
-    cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
+    cleaned_batch_metadata = tasks.decontaminate_samples_with_hostile(
         batch, threads, output_dir
     )
     batch.update_sample_metadata(metadata=cleaned_batch_metadata)
@@ -169,8 +169,8 @@ def upload(
     Creates a mapping CSV file which can be used to download output
     files with original sample names.
     """
-    host = lib.get_host(host)
-    lib.check_version_compatibility(host=host)
+    host = env.get_host(host)
+    tasks.check_version_compatibility(host=host)
     if skip_fastq_check and skip_decontamination:
         logging.warning(
             "Cannot skip FastQ checks and decontamination due to metadata requirements for upload, continuing with"
@@ -180,18 +180,18 @@ def upload(
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
 
     if util.is_auth_token_live(host):
-        lib.get_credit_balance(host=host)
-        lib.validate_upload_permissions(batch, protocol=lib.get_protocol(), host=host)
+        tasks.get_credit_balance(host=host)
+        tasks.validate_upload_permissions(batch, protocol=env.get_protocol(), host=host)
         if skip_decontamination:
             batch.validate_all_sample_fastqs()
             batch.update_sample_metadata()
         else:
-            cleaned_batch_metadata = lib.decontaminate_samples_with_hostile(
+            cleaned_batch_metadata = tasks.decontaminate_samples_with_hostile(
                 batch, threads, output_dir=output_dir
             )
             batch.update_sample_metadata(metadata=cleaned_batch_metadata)
-        lib.upload_batch(batch=batch, host=host, save=save)
-        lib.get_credit_balance(host=host)
+        tasks.upload_batch(batch=batch, host=host, save=save)
+        tasks.get_credit_balance(host=host)
     else:
         raise AuthorizationError()
 
@@ -234,10 +234,10 @@ def download(
 
     That are created during upload.
     """
-    host = lib.get_host(host)
+    host = env.get_host(host)
     if util.is_auth_token_live(host):
         if util.validate_guids(util.parse_comma_separated_string(samples)):
-            lib.download(
+            tasks.download(
                 samples=samples,
                 filenames=filenames,
                 inputs=inputs,
@@ -245,7 +245,7 @@ def download(
                 host=host,
             )
         elif Path(samples).is_file():
-            lib.download(
+            tasks.download(
                 mapping_csv=Path(samples),
                 filenames=filenames,
                 inputs=inputs,
@@ -269,38 +269,40 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
 
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
     """
-    host = lib.get_host(host)
+    host = env.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
-        result = lib.query(samples=samples, host=host)
+        result = tasks.query(samples=samples, host=host)
     elif (sample_path := Path(samples)).is_file():
-        result = lib.query(mapping_csv=sample_path, host=host)
+        result = tasks.query(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
         )
-    print(json_.dumps(result, indent=4))  # noqa: T201
+    print(json.dumps(result, indent=4))  # noqa: T201
 
 
 @main.command()
 @click.argument("samples", type=str)
 @click.option("--json", is_flag=True, help="Output status in JSON format")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
-def query_status(samples: str, *, json: bool = False, host: str | None = None) -> None:
+def query_status(
+    samples: str, *, print_json: bool = False, host: str | None = None
+) -> None:
     """Fetch processing status for one or more SAMPLES.
 
     SAMPLES should be command separated list of GUIDs or path to mapping CSV.
     """
-    host = lib.get_host(host)
+    host = env.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
-        result = lib.status(samples=samples, host=host)
+        result = tasks.status(samples=samples, host=host)
     elif (sample_path := Path(samples)).is_file():
-        result = lib.status(mapping_csv=sample_path, host=host)
+        result = tasks.status(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
         )
-    if json:
-        print(json_.dumps(result, indent=4))  # noqa: T201
+    if print_json:
+        print(json.dumps(result, indent=4))  # noqa: T201
     else:
         for name, status in result.items():
             print(f"{name} \t{status}")  # noqa: T201
@@ -309,7 +311,7 @@ def query_status(samples: str, *, json: bool = False, host: str | None = None) -
 @main.command()
 def download_index() -> None:
     """Download and cache host decontamination index."""
-    lib.download_index()
+    tasks.download_index()
 
 
 @main.command()
@@ -319,10 +321,12 @@ def download_index() -> None:
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """Validate a given upload CSV."""
-    host = lib.get_host(host)
+    host = env.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
-    lib.upload_batch(batch=batch, host=host, save=False, validate_only=True)
-    lib.validate_upload_permissions(batch=batch, protocol=lib.get_protocol(), host=host)
+    tasks.upload_batch(batch=batch, host=host, save=False, validate_only=True)
+    tasks.validate_upload_permissions(
+        batch=batch, protocol=env.get_protocol(), host=host
+    )
     batch.validate_all_sample_fastqs()
     logging.info(f"Successfully validated {upload_csv}")
 
@@ -352,27 +356,27 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     type=str,
     help="3-letter Country Code",
     required=True,
-    default=constants.DEFAULT_METADATA["country"],
+    default=constants.DEFAULT_COUNTRY,
     show_default=True,
 )
 @click.option(
     "--instrument-platform",
     type=click.Choice(["illumina", "ont"]),
-    default=constants.DEFAULT_METADATA["instrument_platform"],
+    default=constants.DEFAULT_INSTRUMENTPLATFORM,
     help="Sequencing technology",
 )
 @click.option(
     "--subdivision",
     type=str,
     help="Subdivision",
-    default=constants.DEFAULT_METADATA["subdivision"],
+    default=constants.DEFAULT_SUBDIVISION,
     show_default=True,
 )
 @click.option(
     "--district",
     type=str,
     help="District",
-    default=constants.DEFAULT_METADATA["district"],
+    default=constants.DEFAULT_DISTRICT,
     show_default=True,
 )
 @click.option(
@@ -380,12 +384,12 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     "pipeline",
     type=click.Choice(["mycobacteria", "sars-cov-2"]),
     help="Specimen organism",
-    default=constants.DEFAULT_METADATA["pipeline"],
+    default=constants.DEFAULT_PIPELINE,
     show_default=True,
 )
 @click.option(
     "--amplicon-scheme",
-    type=click.Choice(lib.get_amplicon_schemes()),
+    type=click.Choice(tasks.get_amplicon_schemes()),
     help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
     default=None,
     show_default=True,
@@ -393,21 +397,21 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 @click.option(
     "--ont_read_suffix",
     type=str,
-    default=constants.DEFAULT_METADATA["ont_read_suffix"],
+    default=constants.DEFAULT_ONT_READ_SUFFIX,
     help="Read file ending for ONT fastq files",
     show_default=True,
 )
 @click.option(
     "--illumina_read1_suffix",
     type=str,
-    default=constants.DEFAULT_METADATA["illumina_read1_suffix"],
+    default=constants.DEFAULT_ILLUMINA_READ1_SUFFIX,
     help="Read file ending for Illumina read 1 files",
     show_default=True,
 )
 @click.option(
     "--illumina_read2_suffix",
     type=str,
-    default=constants.DEFAULT_METADATA["illumina_read2_suffix"],
+    default=constants.DEFAULT_ILLUMINA_READ2_SUFFIX,
     help="Read file ending for Illumina read 2 files",
     show_default=True,
 )
@@ -419,15 +423,15 @@ def build_csv(
     batch_name: str,
     collection_date: datetime,
     country: str,
-    subdivision: str = constants.DEFAULT_METADATA["subdivision"],
-    district: str = constants.DEFAULT_METADATA["district"],
-    pipeline: str = constants.DEFAULT_METADATA["pipeline"],
+    subdivision: str = constants.DEFAULT_SUBDIVISION,
+    district: str = constants.DEFAULT_DISTRICT,
+    pipeline: str = constants.DEFAULT_PIPELINE,
     amplicon_scheme: str | None = None,
     host_organism: str = "homo sapiens",
-    ont_read_suffix: str = constants.DEFAULT_METADATA["ont_read_suffix"],
-    illumina_read1_suffix: str = constants.DEFAULT_METADATA["illumina_read1_suffix"],
-    illumina_read2_suffix: str = constants.DEFAULT_METADATA["illumina_read2_suffix"],
-    max_batch_size: int = constants.DEFAULT_METADATA["max_batch_size"],
+    ont_read_suffix: str = constants.DEFAULT_ONT_READ_SUFFIX,
+    illumina_read1_suffix: str = constants.DEFAULT_ILLUMINA_READ1_SUFFIX,
+    illumina_read2_suffix: str = constants.DEFAULT_ILLUMINA_READ2_SUFFIX,
+    max_batch_size: int = constants.DEFAULT_MAX_BATCH_SIZE,
 ) -> None:
     r"""Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.
 
@@ -440,7 +444,7 @@ def build_csv(
     output_csv = Path(output_csv)
     samples_folder = Path(samples_folder)
 
-    upload_data = UploadData(
+    upload_data = models.UploadData(
         batch_name=batch_name,
         instrument_platform=instrument_platform,  # type: ignore
         collection_date=collection_date,
@@ -456,7 +460,7 @@ def build_csv(
         max_batch_size=max_batch_size,
     )
 
-    build_upload_csv(
+    tasks.build_upload_csv(
         samples_folder,
         output_csv,
         upload_data,
@@ -467,7 +471,7 @@ def build_csv(
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def get_amplicon_schemes(*, host: str | None = None) -> None:
     """Get valid amplicon schemes from the server."""
-    schemes = lib.get_amplicon_schemes(host=host)
+    schemes = tasks.get_amplicon_schemes(host=host)
     logging.info("Valid amplicon schemes:")
     for scheme in schemes:
         logging.info(scheme)

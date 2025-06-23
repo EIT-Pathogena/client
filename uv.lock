@@ -1,5 +1,5 @@
 version = 1
-revision = 1
+revision = 2
 requires-python = ">=3.10"
 
 [[package]]
@@ -278,6 +278,7 @@ dependencies = [
     { name = "packaging" },
     { name = "platformdirs" },
     { name = "pydantic" },
+    { name = "pytest-mock" },
     { name = "python-dotenv" },
     { name = "tenacity" },
     { name = "tqdm" },
@@ -311,6 +312,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0.1" },
     { name = "pydantic", specifier = ">=2.6.2,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.3" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7.1" },

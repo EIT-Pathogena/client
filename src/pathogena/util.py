@@ -257,7 +257,7 @@ def find_duplicate_entries(inputs: list[str]) -> list[str]:
         list[str]: A list of duplicate items.
     """
     seen = set()
-    return [f for f in inputs if f in seen or seen.add(f)]
+    return [f for f in inputs if f in seen or seen.add(f)]  # type: ignore
 
 
 def get_token_path(host: str) -> Path:

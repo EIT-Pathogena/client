@@ -1,17 +1,26 @@
+# upload_all chunks of a file
 import logging
 import math
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from itertools import chain
 from typing import Any
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from pathogena.batch_upload_apis import get_host, get_protocol, get_upload_host
-from pathogena.constants import DEFAULT_CHUNK_SIZE
+from pathogena.client.env import get_host, get_protocol, get_upload_host
+from pathogena.constants import (
+    DEFAULT_CHUNK_SIZE,
+)
 from pathogena.errors import APIError
-from pathogena.types import PreparedFile, Sample, UploadingFile, UploadSession
-from pathogena.upload_utils import UploadData, upload_chunks
+from pathogena.types import (
+    BatchUploadStatus,
+    PreparedFile,
+    Sample,
+    UploadingFile,
+    UploadSession,
+)
 from pathogena.util import get_access_token
 
 
@@ -101,33 +110,62 @@ class UploadAPIClient:
                 response.status_code,
             ) from e
 
-    def batches_uploads_start_file_upload(
+    def start_file_upload(
         self,
+        file: PreparedFile,
         batch_pk: str,
-        data: dict[str, Any] | None = None,
-    ) -> httpx.Response:
-        """Starts an upload by making a POST request.
+        sample_id: str,
+        upload_session_id: int,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> UploadingFile:
+        """Wraps batches_uploads_start_file_upload which calls `start-file-upload`.
+
+        Handles:
+        - creating the form to post data
+        - checking the response code
+        - logging and raising any API errors
 
         Args:
-            batch_pk (str): The primary key of the batch.
-            data (dict[str, Any] | None): Data to include in the POST request body.
-
-        Returns:
-            dict[str, Any]: The response JSON from the API.
+            file (PreparedFile): The file being uploaded.
+            sample_id (str): The sample id for the file being uploaded.
+            batch_pk (str): The batch id for the file being uploaded.
+            upload_session_id (int): The upload session id.
+            chunk_size (int, optional): The size of the chunks for the file. Defaults to DEFAULT_CHUNK_SIZE.
 
         Raises:
-            APIError: If the API returns a non-2xx status code.
+            APIError: If the response code is not 200.
+
+        Returns:
+            UploadingFile: The PreparedFile plus data returned from `start-file-upload`.
         """
+        total_chunks = math.ceil(sys.getsizeof(file.data) / chunk_size)
+
+        form_data = {
+            "original_file_name": file.name,
+            "total_chunks": total_chunks,
+            "content_type": file.content_type,
+            "sample_id": sample_id,
+        }
+
         url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
         try:
             response = self.client.post(
                 url,
-                json=data,
+                json=form_data,
                 headers={"Authorization": f"Bearer {self.token}"},
                 follow_redirects=True,
             )
             response.raise_for_status()
-            return response
+            start_file_upload_json = response.json()
+            return UploadingFile(
+                file_id=start_file_upload_json.get("sample_file_id"),
+                upload_id=start_file_upload_json.get("upload_id"),
+                batch_id=batch_pk,
+                sample_id=start_file_upload_json.get("sample_id"),
+                total_chunks=total_chunks,
+                upload_session_id=upload_session_id,
+                prepared_file=file,
+            )
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to start batch upload: {response.text}",
@@ -167,7 +205,7 @@ class UploadAPIClient:
                 response.status_code,
             ) from e
 
-    def batches_uploads_end_file_upload(
+    def end_file_upload(
         self,
         batch_pk: int,
         data: dict[str, Any] | None = None,
@@ -201,7 +239,7 @@ class UploadAPIClient:
                 f"Failed to end batch upload: {response.text}", response.status_code
             ) from e
 
-    def batches_samples_end_upload_session_create(
+    def end_upload_session(
         self,
         batch_pk: str,
         upload_session_id: int | None = None,
@@ -294,112 +332,81 @@ class UploadAPIClient:
 
         return (upload_session_id, upload_session_name, sample_summaries)
 
-    def start_file_upload(
+    def get_batch_upload_status(
         self,
-        file: PreparedFile,
-        sample_id: str,
         batch_pk: str,
-        upload_session_id: int,
-        chunk_size: int = DEFAULT_CHUNK_SIZE,
-    ) -> UploadingFile:
-        """Wraps batches_uploads_start_file_upload which calls `start-file-upload`.
-
-        Handles:
-        - creating the form to post data
-        - checking the response code
-        - logging and raising any API errors
+    ) -> BatchUploadStatus:
+        """Starts an upload by making a POST request.
 
         Args:
-            file (PreparedFile): The file being uploaded.
-            sample_id (str): The sample id for the file being uploaded.
-            batch_pk (str): The batch id for the file being uploaded.
-            upload_session_id (int): The upload session id.
-            chunk_size (int, optional): The size of the chunks for the file. Defaults to DEFAULT_CHUNK_SIZE.
+            batch_pk (int): The primary key of the batch.
+            data (dict[str, Any] | None): Data to include in the POST request body.
+
+        Returns:
+            dict[str, Any]: The response JSON from the API.
 
         Raises:
-            APIError: If the response code is not 200.
-
-        Returns:
-            UploadingFile: The PreparedFile plus data returned from `start-file-upload`.
+            APIError: If the API returns a non-2xx status code.
         """
-        total_chunks = math.ceil(sys.getsizeof(file.data) / chunk_size)
-
-        form_data = {
-            "original_file_name": file.name,
-            "total_chunks": total_chunks,
-            "content_type": file.content_type,
-            "sample_id": sample_id,
-        }
-
-        start_file_upload_response = self.batches_uploads_start_file_upload(
-            batch_pk=batch_pk, data=form_data
-        )
-        start_file_upload_json = start_file_upload_response.json()
-
-        if start_file_upload_response.status_code == 200:
-            return UploadingFile(
-                file_id=start_file_upload_json.get("sample_file_id"),
-                upload_id=start_file_upload_json.get("upload_id"),
-                batch_id=batch_pk,
-                sample_id=start_file_upload_json.get("sample_id"),
-                total_chunks=total_chunks,
-                upload_session_id=upload_session_id,
-                prepared_file=file,
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/state"
+        try:
+            response = self.client.get(
+                url,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
             )
-        else:
-            logging.exception(
-                f"File upload failed to start. file={file.name}, sample_id={sample_id}, batch={batch_pk}, upload_session={upload_session_id}, chunk_size={chunk_size}, code={start_file_upload_response.status_code}"
-            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
             raise APIError(
-                "Failed to start file upload.", httpx.codes.INTERNAL_SERVER_ERROR
-            )
+                f"Failed to fetch batch status: {response.text}",
+                response.status_code,
+            ) from e
 
-    def upload_fastq_files(
+    @retry(
+        wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10)
+    )
+    def upload_chunk(
         self,
-        upload_data: UploadData,
-        upload_session: UploadSession,
-    ) -> None:
-        """Uploads files in chunks and manages the upload process.
-
-        This function first prepares the files for upload, then uploads them in chunks
-        using a thread pool executor for concurrent uploads. It finishes by ending the
-        upload session.
+        batch_pk: int,
+        protocol: str,
+        chunk: bytes,
+        chunk_index: int,
+        upload_id: int,
+    ) -> httpx.Response:
+        """Upload a single file chunk.
 
         Args:
-            upload_data (UploadData): An object containing the upload configuration,
-                including the batch ID, access token, environment, and file details.
-            prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
-            api_client (UploadAPIClient): Instance of the APIClient class.
+            batch_pk (int): ID of sample to upload
+            host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
+            protocol (str): protocol, default https
+            chunk (bytes): File chunk to be uploaded
+            chunk_index (int): Index representing what chunk of the whole
+            sample file this chunk is from 0...total_chunks
+            upload_id: the id of the upload session
 
         Returns:
-            None
+            Response: The response object from the HTTP POST request conatining
+            the status code and content from the server.
         """
-        # upload the file chunks
-        with ThreadPoolExecutor(
-            max_workers=upload_data.max_concurrent_chunks
-        ) as executor:
-            futures = []
-            for sample in upload_session.samples:
-                for file in sample.files:
-                    future = executor.submit(upload_chunks, upload_data, file)
-                    futures.append(future)
-
-            # Need to tie halves of the samples together here
-            # And call end sample when a sample is finished uploading
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    logging.error(f"Error uploading file: {e}")
-
-        # end the upload session
-        end_session = self.batches_samples_end_upload_session_create(
-            upload_data.batch_pk, upload_session_id=upload_session.session_id
-        )
-
-        if end_session.status_code != 200:
-            logging.error(
-                f"Failed to end upload session for batch {upload_data.batch_pk}."
+        try:
+            response = self.client.post(
+                f"{protocol}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/",
+                headers={"Authorization": f"Bearer {self.token}"},
+                files={"chunk": chunk},  # Send the binary chunk
+                data={
+                    "chunk_index": chunk_index,
+                    "upload_id": upload_id,
+                },
+                follow_redirects=True,
             )
-        else:
-            logging.info(f"All uploads complete.")
+            response.raise_for_status()
+            return response
+        except Exception as e:
+            logging.error(
+                f"Exception while uploading chunk {chunk_index} of batch {batch_pk}: {str(e), chunk[:10]} RESPONSE {response.status_code, response.headers, response.content}"
+            )
+            raise APIError(
+                f"Failed to upload chunk {chunk_index} of batch {batch_pk}: {str(e), chunk[:10]} RESPONSE {response.status_code, response.headers, response.content}",
+                response.status_code,
+            ) from e

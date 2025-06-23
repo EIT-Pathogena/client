@@ -14,8 +14,7 @@ def get_protocol() -> str:
         str: The protocol (e.g., 'http', 'https').
     """
     if "PATHOGENA_PROTOCOL" in os.environ:
-        protocol = os.environ["PATHOGENA_PROTOCOL"]
-        return protocol
+        return os.environ["PATHOGENA_PROTOCOL"]
     else:
         return DEFAULT_PROTOCOL
 

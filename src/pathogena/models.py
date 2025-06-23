@@ -55,6 +55,23 @@ class UploadBase(BaseModel):
     )
 
 
+class UploadData(UploadBase):
+    """Model for upload data with additional fields for read suffixes and batch size."""
+
+    ont_read_suffix: str = Field(
+        default=".fastq.gz", description="Suffix for ONT reads"
+    )
+    illumina_read1_suffix: str = Field(
+        default="_1.fastq.gz", description="Suffix for Illumina reads (first of pair)"
+    )
+    illumina_read2_suffix: str = Field(
+        default="_2.fastq.gz", description="Suffix for Illumina reads (second of pair)"
+    )
+    max_batch_size: int = Field(
+        default=50, description="Maximum number of samples per batch"
+    )
+
+
 class UploadSample(UploadBase):
     """Model for an uploaded sample's data."""
 
@@ -227,13 +244,13 @@ class UploadSample(UploadBase):
             case None, None:
                 return []
             case x, None:
-                return [x]
+                return [x]  # type: ignore
             case None, x:
-                return [x]
+                return [x]  # type: ignore
             case x, y if self.is_illumina():
-                return [x, y]
+                return [x, y]  # type: ignore
             case x, y if self.is_ont():  # ont only one file
-                return [x]
+                return [x]  # type: ignore
             case _:
                 return []
 
@@ -252,6 +269,18 @@ class UploadSample(UploadBase):
             bool: True if the instrument platform is Illumina, False otherwise.
         """
         return self.instrument_platform == "illumina"
+
+    def read_file1_data(self):
+        """Read the contents of the first fastq file."""
+        if self.reads_1_resolved_path:
+            with open(self.reads_1_resolved_path, "rb") as file:
+                return file.read()
+
+    def read_file2_data(self):
+        """Read the contents of the second fastq file."""
+        if self.reads_2_resolved_path:
+            with open(self.reads_2_resolved_path, "rb") as file:
+                return file.read()
 
 
 class UploadBatch(BaseModel):
@@ -369,7 +398,7 @@ class UploadBatch(BaseModel):
             )
         return self
 
-    def update_sample_metadata(self, metadata: dict[str, Any] = None) -> None:
+    def update_sample_metadata(self, metadata: dict[str, Any] | None = None) -> None:
         """Updates the sample metadata.
 
         Update sample metadata with output from decontamination process, or defaults if
