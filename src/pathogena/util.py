@@ -288,8 +288,8 @@ def get_token_expiry(host: str) -> datetime | None:
     token_path = get_token_path(host)
     if token_path.exists():
         try:
-            with open(token_path) as token:
-                token = json.load(token)
+            with open(token_path) as token_string:
+                token: dict = json.load(token_string)
                 expiry = token.get("expiry", False)
                 if expiry:
                     return datetime.fromisoformat(expiry)
