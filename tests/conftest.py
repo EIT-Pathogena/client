@@ -14,7 +14,7 @@ from pathogena.models import (
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_amplicon_scheme():
-    with patch("pathogena.lib.get_amplicon_schemes") as get_amplicon_schemes_mock:
+    with patch("pathogena.tasks.get_amplicon_schemes") as get_amplicon_schemes_mock:
         get_amplicon_schemes_mock.return_value = []
         yield
 
