@@ -6,7 +6,6 @@ from pathogena.tasks.download import (
     download_index,
     download_single,
     fetch_latest_input_files,
-    fetch_sample,
 )
 from pathogena.tasks.prep_samples import (
     build_upload_csv,
@@ -17,6 +16,7 @@ from pathogena.tasks.query import (
     check_for_newer_version,
     check_version_compatibility,
     fetch_output_files,
+    fetch_sample,
     get_amplicon_schemes,
     get_credit_balance,
     parse_csv,

@@ -12,7 +12,6 @@ from pathogena.client.env import get_host, get_protocol
 from pathogena.constants import DEFAULT_HOST
 from pathogena.errors import UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
-from pathogena.tasks.download import fetch_sample
 
 
 def query(
@@ -234,3 +233,26 @@ def get_credit_balance(host: str) -> None:
             logging.error(
                 "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
             )
+
+
+def fetch_sample(sample_id: str, host: str) -> dict:
+    """Fetch sample data from the server.
+
+    Args:
+        sample_id (str): The sample ID.
+        host (str): The host server.
+
+    Returns:
+        dict: The sample data.
+    """
+    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    with httpx.Client(
+        event_hooks=httpx_hooks,
+        transport=httpx.HTTPTransport(retries=5),
+    ) as client:
+        response = client.get(
+            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
+            headers=headers,
+            follow_redirects=True,
+        )
+    return response.json()
