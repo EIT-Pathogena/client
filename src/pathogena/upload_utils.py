@@ -540,6 +540,7 @@ def prepare_file(
             "upload_session": upload_session,
         }
 
+
 def upload_fastq(
     upload_data: UploadData,
     prepared_files: PreparedFiles,
@@ -746,6 +747,7 @@ def upload_chunks(
             )
             break
 
+
 def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[Any]:
     """Processes a queue of chunks concurrently to ensure tno more than 'max_concurrent_chunks' are processed at the same time.
 
@@ -761,6 +763,7 @@ def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[An
             completed.append(future)
         for future in completed:  # remove completed futures from queue
             chunk_queue.remove(future)
+
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
 def upload_chunk(

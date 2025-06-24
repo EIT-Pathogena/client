@@ -1,8 +1,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-from pathogena.upload_utils import prepare_file, SampleFileMetadata
 from pathogena import util
+from pathogena.upload_utils import SampleFileMetadata, prepare_file
 
 
 def test_reads_lines_from_gzip() -> None:
@@ -41,8 +41,8 @@ def test_find_no_duplicate_entries() -> None:
     duplicates = util.find_duplicate_entries(data)
     assert duplicates == expected
 
+
 def test_prepare_file_success():
-    # Mock inputs
     resolved_path = Path("/mock/path/to/file.fastq.gz")
     file_metadata = {
         "name": "file.fastq.gz",
@@ -57,7 +57,6 @@ def test_prepare_file_success():
     sample_id = "sample123"
     api_client = MagicMock()
 
-    # Mock API response
     api_client.batches_uploads_start_file_upload.return_value.json.return_value = {
         "upload_id": 789,
         "sample_id": sample_id,
@@ -65,10 +64,8 @@ def test_prepare_file_success():
     }
     api_client.batches_uploads_start_file_upload.return_value.status_code = 200
 
-    # Mock file existence using mock_open
     mock_file_data = b"mock_file_data"
     with patch("pathlib.Path.open", mock_open(read_data=mock_file_data)):
-        # Call the function
         result = prepare_file(
             resolved_path=resolved_path,
             file_metadata=file_metadata,
@@ -78,7 +75,6 @@ def test_prepare_file_success():
             api_client=api_client,
         )
 
-    # Assertions
     assert result["file"] == file_metadata
     assert result["upload_id"] == 789
     assert result["batch_id"] == batch_pk
@@ -88,8 +84,8 @@ def test_prepare_file_success():
     assert result["upload_session"] == upload_session
     assert result["file_data"] == mock_file_data
 
+
 def test_prepare_file_missing_path():
-    # Mock inputs
     resolved_path = None
     file_metadata = {
         "name": "file.fastq.gz",
@@ -104,7 +100,6 @@ def test_prepare_file_missing_path():
     sample_id = "sample123"
     api_client = MagicMock()
 
-    # Call the function
     result = prepare_file(
         resolved_path=resolved_path,
         file_metadata=file_metadata,
@@ -114,7 +109,6 @@ def test_prepare_file_missing_path():
         api_client=api_client,
     )
 
-    # Assertions
     assert result["error"] == "Could not find any read file data for sample"
     assert result["status code"] == 500
     assert result["upload_session"] == upload_session

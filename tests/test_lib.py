@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from pathogena.lib import upload_batch
-from pathogena.models import UploadBatch, UploadSample
 from pathogena import lib
 from pathogena.errors import UnsupportedClientError
+from pathogena.lib import upload_batch
+from pathogena.models import UploadBatch, UploadSample
 
 
 @patch("httpx.Client.get")
@@ -121,7 +121,8 @@ def test_get_balance_failure(
         in caplog.text
     )
 
-@patch("pathogena.lib.get_access_token", return_value='mock_valid_token')
+
+@patch("pathogena.lib.get_access_token", return_value="mock_valid_token")
 @patch("pathogena.lib.get_token_path", return_value=Path("/mock/path/to/token.json"))
 @patch("pathlib.Path.read_text", return_value='{"access_token": "mock_valid_token"}')
 @patch("pathogena.lib.create_batch_on_server")
@@ -129,21 +130,33 @@ def test_get_balance_failure(
 @patch("pathogena.lib.upload_utils.upload_fastq")
 @patch("pathogena.lib.util.write_csv")
 def test_upload_batch_success(
-    mock_write_csv, mock_upload_fastq, mock_prepare_files, mock_create_batch_on_server, mock_read_text, mock_token_path, mock_valid_token
+    mock_write_csv,
+    mock_upload_fastq,
+    mock_prepare_files,
+    mock_create_batch_on_server,
+    mock_read_text,
+    mock_token_path,
+    mock_valid_token,
 ):
     """Test the successful upload of a batch of samples."""
-    batch = UploadBatch(samples=[
-        UploadSample(
-            sample_name="sample1",
-            instrument_platform="illumina",
-            collection_date="2023-10-01",
-            country="GBR",
-            upload_csv="batch1.csv",
-            reads_1="data/reads/tuberculosis_1_1.fastq.gz",
-            control="positive"
-        )
-    ])
-    mock_create_batch_on_server.return_value = ("batch_id", "batch_name", "legacy_batch_id")
+    batch = UploadBatch(
+        samples=[
+            UploadSample(
+                sample_name="sample1",
+                instrument_platform="illumina",
+                collection_date="2023-10-01",
+                country="GBR",
+                upload_csv="batch1.csv",
+                reads_1="data/reads/tuberculosis_1_1.fastq.gz",
+                control="positive",
+            )
+        ]
+    )
+    mock_create_batch_on_server.return_value = (
+        "batch_id",
+        "batch_name",
+        "legacy_batch_id",
+    )
     mock_prepare_files.return_value = {
         "uploadSession": "session_id",
         "uploadSessionData": {"name": "session_name"},
@@ -157,14 +170,21 @@ def test_upload_batch_success(
     )
     mock_prepare_files.assert_called_once()
     mock_write_csv.assert_called_once_with(
-        [{"batch_name": "session_name", "sample_name": "file1", "remote_sample_name": "sample1", "remote_batch_name": "batch_name", "remote_batch_id": "batch_id"}],
+        [
+            {
+                "batch_name": "session_name",
+                "sample_name": "file1",
+                "remote_sample_name": "sample1",
+                "remote_batch_name": "batch_name",
+                "remote_batch_id": "batch_id",
+            }
+        ],
         "batch_name.mapping.csv",
     )
     mock_upload_fastq.assert_called_once()
 
 
-
-@patch("pathogena.lib.get_access_token", return_value='mock_valid_token')
+@patch("pathogena.lib.get_access_token", return_value="mock_valid_token")
 @patch("pathogena.lib.get_token_path", return_value=Path("/mock/path/to/token.json"))
 @patch("pathlib.Path.read_text", return_value='{"access_token": "mock_valid_token"}')
 @patch("pathogena.lib.create_batch_on_server")
@@ -172,21 +192,33 @@ def test_upload_batch_success(
 @patch("pathogena.lib.upload_utils.upload_fastq")
 @patch("pathogena.lib.util.write_csv")
 def test_upload_batch_success_validate_only(
-    mock_write_csv, mock_upload_fastq, mock_prepare_files, mock_create_batch_on_server, mock_read_text, mock_token_path, mock_valid_token
+    mock_write_csv,
+    mock_upload_fastq,
+    mock_prepare_files,
+    mock_create_batch_on_server,
+    mock_read_text,
+    mock_token_path,
+    mock_valid_token,
 ):
     """Test the uploading samples with the validate_only flag just validates the batch and doesn't actually upload."""
-    batch = UploadBatch(samples=[
-        UploadSample(
-            sample_name="sample1",
-            instrument_platform="illumina",
-            collection_date="2023-10-01",
-            country="GBR",
-            upload_csv="batch1.csv",
-            reads_1="data/reads/tuberculosis_1_1.fastq.gz",
-            control="positive"
-        )
-    ])
-    mock_create_batch_on_server.return_value = ("batch_id", "batch_name", "legacy_batch_id")
+    batch = UploadBatch(
+        samples=[
+            UploadSample(
+                sample_name="sample1",
+                instrument_platform="illumina",
+                collection_date="2023-10-01",
+                country="GBR",
+                upload_csv="batch1.csv",
+                reads_1="data/reads/tuberculosis_1_1.fastq.gz",
+                control="positive",
+            )
+        ]
+    )
+    mock_create_batch_on_server.return_value = (
+        "batch_id",
+        "batch_name",
+        "legacy_batch_id",
+    )
     mock_prepare_files.return_value = {
         "uploadSession": "session_id",
         "uploadSessionData": {"name": "session_name"},
@@ -220,18 +252,24 @@ def test_upload_batch_mapping_file(
     mock_valid_token: MagicMock,
 ) -> None:
     """Test the mapping file output constructed in the upload_batch function."""
-    batch = UploadBatch(samples=[
-        UploadSample(
-            sample_name="sample1",
-            instrument_platform="illumina",
-            collection_date="2023-10-01",
-            country="GBR",
-            upload_csv="batch1.csv",
-            reads_1="data/reads/tuberculosis_1_1.fastq.gz",
-            control="positive"
-        )
-    ])
-    mock_create_batch_on_server.return_value = ("batch_id", "remote_batch_name", "legacy_batch_id")
+    batch = UploadBatch(
+        samples=[
+            UploadSample(
+                sample_name="sample1",
+                instrument_platform="illumina",
+                collection_date="2023-10-01",
+                country="GBR",
+                upload_csv="batch1.csv",
+                reads_1="data/reads/tuberculosis_1_1.fastq.gz",
+                control="positive",
+            )
+        ]
+    )
+    mock_create_batch_on_server.return_value = (
+        "batch_id",
+        "remote_batch_name",
+        "legacy_batch_id",
+    )
     mock_prepare_files.return_value = {
         "uploadSession": "session_id",
         "uploadSessionData": {"name": "session_name"},
@@ -240,7 +278,6 @@ def test_upload_batch_mapping_file(
 
     upload_batch(batch=batch, save=True, host="mock_host", validate_only=False)
 
-    # Verify the mapping file records
     expected_mapping_records = [
         {
             "batch_name": "session_name",
@@ -250,4 +287,6 @@ def test_upload_batch_mapping_file(
             "remote_batch_id": "batch_id",
         }
     ]
-    mock_write_csv.assert_called_once_with(expected_mapping_records, "remote_batch_name.mapping.csv")
+    mock_write_csv.assert_called_once_with(
+        expected_mapping_records, "remote_batch_name.mapping.csv"
+    )
