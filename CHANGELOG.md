@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 2.2.1-RC1 (2025-06-27)
+
 ### Fixed
 
 - [EV-2152](https://eit-oxford.atlassian.net/browse/EV-2152): do not allow empty specimen organism
