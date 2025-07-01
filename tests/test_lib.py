@@ -1,11 +1,14 @@
 import logging
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import httpx
 import pytest
 
 from pathogena import lib
+from pathogena.constants import DEFAULT_HOST
 from pathogena.errors import UnsupportedClientError
+from pathogena.log_utils import httpx_hooks
 
 
 @patch("httpx.Client.get")
@@ -116,4 +119,153 @@ def test_get_balance_failure(
     assert (
         "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
         in caplog.text
+    )
+
+
+@patch("pathogena.lib.httpx.Client")
+def test_log_download_mapping_file_success(mock_client: MagicMock, caplog):
+    """Test download csv logging called as expected"""
+
+    batch_id = "batch123"
+    file_name = "mapping"
+    token = "tok-xyz"
+    host = DEFAULT_HOST
+
+    fake_client = MagicMock()
+
+    # mock the context‐manager
+    mock_client.return_value.__enter__.return_value = fake_client
+    mock_client.return_value.__exit__.return_value = None
+
+    # call
+    lib.log_download_mapping_file_to_portal(
+        batch_id=batch_id, file_name=file_name, token=token, host=host
+    )
+
+    # check called once
+    assert mock_client.call_count == 1
+
+    # check kwargs as expected
+    _, kwargs = mock_client.call_args
+    assert kwargs["event_hooks"] is httpx_hooks
+    assert isinstance(kwargs["transport"], httpx.HTTPTransport)
+    assert kwargs["timeout"] == 60
+
+
+def make_dummy_batch():
+    """
+    Create a minimal UploadBatch-like object with one sample,
+    so upload_batch doesn't blow up before our helper call.
+    """
+    sample = MagicMock(sample_name="test", amplicon_scheme="test_amplicon")
+    batch = MagicMock(
+        samples=[sample],
+    )
+    return batch
+
+
+@patch("pathogena.lib.upload_utils.upload_fastq")
+@patch("pathogena.lib.get_remote_sample_name", return_value="dummy_remote_sample")
+@patch("pathogena.lib.log_download_mapping_file_to_portal")
+@patch("pathogena.lib.util.write_csv")
+@patch("pathogena.lib.prepare_files")
+@patch("pathogena.lib.create_batch_on_server")
+@patch("pathogena.lib.util.get_access_token", return_value="tok-123")
+def test_upload_batch_calls_portal_logging_on_success(
+    mock_token,
+    mock_create,
+    mock_prepare,
+    mock_write_csv,
+    mock_logger,
+    mock_get_remote,
+    mock_upload_fastq,
+    caplog,
+):
+    # mock create_batch_on_server to return dummy IDs
+    dummy_batch_id = uuid4()
+    dummy_local_name = "local"
+    dummy_remote_name = "remote"
+    dummy_legacy_id = uuid4()
+    mock_create.return_value = (
+        dummy_batch_id,
+        dummy_local_name,
+        dummy_remote_name,
+        dummy_legacy_id,
+    )
+
+    # mock prepare _files to give upload session
+    mock_prepare.return_value = {"uploadSession": {}, "files": [], "other": {}}
+
+    batch = make_dummy_batch()
+
+    # call upload batch
+    lib.upload_batch(batch=batch, host="https://test.com")
+
+    # assert called as expected
+    mock_logger.assert_called_once_with(
+        str(dummy_batch_id),
+        dummy_remote_name,
+        "tok-123",
+        "https://test.com",
+    )
+    # no log levels of warning or higher
+    assert not [rec for rec in caplog.records if rec.levelno >= logging.WARNING]
+
+
+@patch("pathogena.lib.upload_utils.upload_fastq")
+@patch("pathogena.lib.get_remote_sample_name", return_value="dummy_remote")
+@patch(
+    "pathogena.lib.log_download_mapping_file_to_portal",
+    side_effect=Exception("noooooo!"),
+)
+@patch("pathogena.lib.util.write_csv")
+@patch("pathogena.lib.prepare_files")
+@patch("pathogena.lib.create_batch_on_server")
+@patch("pathogena.lib.util.get_access_token", return_value="tok-123")
+def test_upload_batch_portal_logging_failure(
+    mock_token,
+    mock_create,
+    mock_prepare,
+    mock_write_csv,
+    mock_logger,
+    mock_get_remote,
+    mock_upload_fastq,
+    caplog,
+):
+    # mock create_batch_on_server to return dummy IDs
+    dummy_batch_id = uuid4()
+    dummy_local_name = "local"
+    dummy_remote_name = "remote"
+    dummy_legacy_id = uuid4()
+
+    mock_create.return_value = (
+        dummy_batch_id,
+        dummy_local_name,
+        dummy_remote_name,
+        dummy_legacy_id,
+    )
+    # mock prepare _files to give upload session
+    mock_prepare.return_value = {
+        "uploadSession": {},
+        "files": [],
+        "other": {},
+    }
+
+    batch = make_dummy_batch()
+
+    # call upload batch
+    lib.upload_batch(batch=batch, host="https://test.com")
+
+    # assert called the logger
+    mock_logger.assert_called_once_with(
+        str(dummy_batch_id),
+        dummy_remote_name,
+        "tok-123",
+        "https://test.com",
+    )
+
+    # assert logged that failed to log in portal
+    warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any(
+        "Could not log mapping-file download to portal" in r.message for r in warnings
     )

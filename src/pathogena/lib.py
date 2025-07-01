@@ -367,6 +367,43 @@ def get_remote_sample_name(
     )
 
 
+def log_download_mapping_file_to_portal(
+    batch_id: str,
+    file_name: str,
+    token: str,
+    host: str = DEFAULT_HOST,
+):
+    """Log a mapping file was downloaded in portal.
+
+    Args:
+        batch_id (str): batch_id for which we are logging mapping file download
+        file_name (str): file name we are logging download of
+        token (str): The access token
+        host (str): The host server
+    """
+    try:
+        with httpx.Client(
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=60,
+        ) as client:
+            response = client.post(
+                f"{host}/kpi_events/download-mapping-file",
+                json={
+                    "batch_id": batch_id,
+                    "file_name": f"{file_name}.mapping.csv",
+                },
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                timeout=5,
+            )
+        response.raise_for_status()
+    except Exception as e:
+        logging.warning("Could not log mapping-file download to portal: %s", e)
+
+
 def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
@@ -427,6 +464,16 @@ def upload_batch(
         "You can monitor the progress of your batch in EIT Pathogena here: "
         f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
+    token = util.get_access_token(host)
+    try:
+        log_download_mapping_file_to_portal(
+            str(batch_id),
+            remote_batch_name,
+            token,
+            host,
+        )
+    except Exception as e:
+        logging.warning("Could not log mapping-file download to portal: %s", e)
 
     upload_utils.upload_fastq(
         upload_data=upload_file_type,
