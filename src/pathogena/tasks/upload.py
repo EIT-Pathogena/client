@@ -17,7 +17,6 @@ from pathogena.client.upload_client import UploadAPIClient
 from pathogena.constants import (
     DEFAULT_APP_HOST,
     DEFAULT_CHUNK_SIZE,
-    DEFAULT_HOST,
     DEFAULT_MAX_UPLOAD_RETRIES,
     DEFAULT_RETRY_DELAY,
 )
@@ -140,7 +139,6 @@ def create_batch_on_server(
 def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
-    host: str = DEFAULT_HOST,
     validate_only: bool = False,
 ) -> None:
     """Upload a batch of samples.
@@ -181,7 +179,7 @@ def upload_batch(
             mapping_csv_records.append(
                 {
                     "batch_name": upload_session.name,
-                    "sample_name": file.generated_name,
+                    "sample_name": file.prepared_file.name,
                     "remote_sample_name": file.sample_id,
                     "remote_batch_name": batch_name,
                     "remote_batch_id": batch_id,

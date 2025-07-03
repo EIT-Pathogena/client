@@ -190,7 +190,7 @@ def upload(
                 batch, threads, output_dir=output_dir
             )
             batch.update_sample_metadata(metadata=cleaned_batch_metadata)
-        tasks.upload_batch(batch=batch, host=host, save=save)
+        tasks.upload_batch(batch=batch, save=save)
         tasks.get_credit_balance(host=host)
     else:
         raise AuthorizationError()
@@ -323,7 +323,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
     """Validate a given upload CSV."""
     host = env.get_host(host)
     batch = models.create_batch_from_csv(upload_csv)
-    tasks.upload_batch(batch=batch, host=host, save=False, validate_only=True)
+    tasks.upload_batch(batch=batch, save=False, validate_only=True)
     tasks.validate_upload_permissions(
         batch=batch, protocol=env.get_protocol(), host=host
     )

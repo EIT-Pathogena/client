@@ -45,26 +45,21 @@ class PreparedFile:
 class UploadingFile:
     """A file which is being uploaded (post `start-file-upload` call)."""
 
-    file_id: int
-    upload_id: int
+    id: int
+    upload_id: str
     sample_id: str
     batch_id: str
     upload_session_id: int
 
     prepared_file: PreparedFile
-    uploaded_file_name: str
-    generated_name: str
 
-    created_at: datetime
-    estimated_completion_time: datetime | None
-    time_remaining: float | None
     status: Literal["IN_PROGRESS", "COMPLETE", "FAILED"]
     total_chunks: int
 
     def __init__(
         self,
         file_id: int,
-        upload_id: int,
+        upload_id: str,
         sample_id: str,
         batch_id: str,
         upload_session_id: int,
@@ -168,7 +163,7 @@ class SampleFileUploadStatus(TypedDict):
         created_at: Timestamp when the upload was created
         upload_status: Current status of the upload (IN_PROGRESS/COMPLETE/FAILED)
         total_chunks: Total number of chunks for this file
-        upload_id: Unique identifier for this upload session
+        upload_id: Unique identifier for this upload session -- check this comment
         legacy_sample_id: Original sample ID from legacy system
         metrics: Upload metrics including progress and performance data
     """
@@ -210,13 +205,13 @@ class OnProgress:
     """Initializes the OnProgress instance.
 
     Args:
-        upload_id (int): The ID the upload.
+        upload_id (str): The ID of the uploading file.
         batch_pk (int): The batch ID associated with the file upload.
         progress (float): The percentage of upload completion.
         metrics (UploadMetrics): The metrics associated with the upload.
     """
 
-    upload_id: int
+    upload_id: str
     batch_pk: int
     progress: float
     metrics: UploadMetrics
@@ -227,11 +222,11 @@ class OnComplete:
     """Initializes the OnComplete instance.
 
     Args:
-        upload_id (int): The ID the upload.
+        upload_id (str): The ID of the uploading file.
         batch_pk (int): The batch ID associated with the file upload.
     """
 
-    upload_id: int
+    upload_id: str
     batch_pk: int
 
 

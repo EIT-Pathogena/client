@@ -5,7 +5,6 @@ from pathlib import Path
 import httpx
 from hostile.lib import clean_fastqs, clean_paired_fastqs
 from hostile.util import choose_default_thread_count
-from pydantic import Field
 
 from pathogena import models, util
 from pathogena.constants import (

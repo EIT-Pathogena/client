@@ -113,7 +113,7 @@ class UploadAPIClient:
     def start_file_upload(
         self,
         file: PreparedFile,
-        batch_pk: str,
+        batch_id: str,
         sample_id: str,
         upload_session_id: int,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
@@ -147,7 +147,7 @@ class UploadAPIClient:
             "sample_id": sample_id,
         }
 
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/start/"
+        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_id}/uploads/start/"
         try:
             response = self.client.post(
                 url,
@@ -155,12 +155,16 @@ class UploadAPIClient:
                 headers={"Authorization": f"Bearer {self.token}"},
                 follow_redirects=True,
             )
-            response.raise_for_status()
+            if response.status_code != 200:
+                raise APIError(
+                    f"Failed to start batch upload: {response.text}",
+                    response.status_code,
+                )
             start_file_upload_json = response.json()
             return UploadingFile(
                 file_id=start_file_upload_json.get("sample_file_id"),
                 upload_id=start_file_upload_json.get("upload_id"),
-                batch_id=batch_pk,
+                batch_id=batch_id,
                 sample_id=start_file_upload_json.get("sample_id"),
                 total_chunks=total_chunks,
                 upload_session_id=upload_session_id,
@@ -372,7 +376,7 @@ class UploadAPIClient:
         protocol: str,
         chunk: bytes,
         chunk_index: int,
-        upload_id: int,
+        upload_id: str,
     ) -> httpx.Response:
         """Upload a single file chunk.
 
