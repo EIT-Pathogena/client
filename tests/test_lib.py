@@ -167,10 +167,10 @@ def make_dummy_batch():
 @patch("pathogena.lib.upload_utils.upload_fastq")
 @patch("pathogena.lib.get_remote_sample_name", return_value="dummy_remote_sample")
 @patch("pathogena.lib.log_download_mapping_file_to_portal")
-@patch("pathogena.lib.util.write_csv")
+@patch("pathogena.util.write_csv")
 @patch("pathogena.lib.prepare_files")
 @patch("pathogena.lib.create_batch_on_server")
-@patch("pathogena.lib.util.get_access_token", return_value="tok-123")
+@patch("pathogena.util.get_access_token", return_value="tok-123")
 def test_upload_batch_calls_portal_logging_on_success(
     mock_token,
     mock_create,
@@ -218,10 +218,10 @@ def test_upload_batch_calls_portal_logging_on_success(
     "pathogena.lib.log_download_mapping_file_to_portal",
     side_effect=Exception("noooooo!"),
 )
-@patch("pathogena.lib.util.write_csv")
+@patch("pathogena.util.write_csv")
 @patch("pathogena.lib.prepare_files")
 @patch("pathogena.lib.create_batch_on_server")
-@patch("pathogena.lib.util.get_access_token", return_value="tok-123")
+@patch("pathogena.util.get_access_token", return_value="tok-123")
 def test_upload_batch_portal_logging_failure(
     mock_token,
     mock_create,
