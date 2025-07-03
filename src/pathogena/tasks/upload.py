@@ -429,8 +429,8 @@ def start_upload_session(
     index = 0
     uploading_samples: list[Sample[UploadingFile]] = []
     for unprepared_sample in prepared_samples:
+        uploading_sample_files: list[UploadingFile] = []
         for file in unprepared_sample.files:
-            uploading_sample_files: list[UploadingFile] = []
             sample_id = per_file_sample_summaries[index].get("sample_id")
             uploading_file = api_client.start_file_upload(
                 file, batch_pk, sample_id, upload_session_id

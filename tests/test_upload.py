@@ -1,4 +1,3 @@
-from collections.abc import Callable, Generator
 from concurrent.futures import Future
 from datetime import date
 from pathlib import Path
@@ -7,7 +6,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import httpx
 import pytest
-from pytest_mock import MockerFixture
 
 from pathogena.client.upload_client import APIError, UploadAPIClient
 from pathogena.models import UploadSample
@@ -272,31 +270,30 @@ class TestPrepareFiles:
         # Set values for the batch and instrument
         self.batch_pk = 1
         self.instrument_code = "INST001"
-        self.upload_session = 123
+        self.upload_session_id = 123
         self.sample_summaries = [
             {"sample_id": "11111111-1111-1111-1111-111111111111"},
-            {"sample_id": "11111111-1111-1111-1111-111111111111"},
-            {"sample_id": "22222222-2222-2222-2222-222222222222"},
-            {"sample_id": "22222222-2222-2222-2222-222222222222"},
         ]
 
     def test_prepare_files_success(
         self,
-        upload_api_client: Any,
     ):
         # list of files to pass to prepare_files
         upload_samples = [self.upload_sample1]
 
-        # mock a successful start upload session  response
-        upload_api_client.start_upload_session.return_value = {
-            "upload_session": self.upload_session,
-            "sample_summaries": self.sample_summaries,
-        }
+        mock_api_client = MagicMock(spec=UploadAPIClient)
 
-        upload_api_client.start_file_upload.return_value = [
+        # mock a successful start upload session  response
+        mock_api_client.start_upload_session.return_value = [
+            self.upload_session_id,
+            "test_name",
+            self.sample_summaries,
+        ]
+
+        mock_api_client.start_file_upload.side_effect = [
             UploadingFile(
                 file_id=1,
-                upload_id=1,
+                upload_id="test_upload_id_1",
                 sample_id="test_sample_id",
                 batch_id="test_batch_id",
                 upload_session_id=0,
@@ -305,7 +302,7 @@ class TestPrepareFiles:
             ),
             UploadingFile(
                 file_id=2,
-                upload_id=2,
+                upload_id="test_upload_id_2",
                 sample_id="test_sample_id",
                 batch_id="test_batch_id",
                 upload_session_id=0,
@@ -314,16 +311,20 @@ class TestPrepareFiles:
             ),
         ]
 
-        result = start_upload_session(
+        upload_session = start_upload_session(
             self.batch_pk,
             upload_samples,
-            upload_api_client,
+            mock_api_client,
         )
 
-        assert len(result.samples) == 1
-        assert len(result.samples[0].files) == 2
-        assert result.samples[0].files[0].upload_id == 1  # file2 (in progress)
-        assert result.samples[0].files[2].upload_id == 2  # file2 (in progress)
+        assert len(upload_session.samples) == 1
+        assert len(upload_session.samples[0].files) == 2
+        assert (
+            upload_session.samples[0].files[0].upload_id == "test_upload_id_1"
+        )  # file2 (in progress)
+        assert (
+            upload_session.samples[0].files[1].upload_id == "test_upload_id_2"
+        )  # file2 (in progress)
 
     def test_prepare_files_apierror(self, upload_api_client: Any):
         # mock api error
