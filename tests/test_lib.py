@@ -171,8 +171,10 @@ def make_dummy_batch():
 @patch("pathogena.lib.prepare_files")
 @patch("pathogena.lib.create_batch_on_server")
 @patch("pathogena.util.get_access_token", return_value="tok-123")
+@patch("pathogena.batch_upload_apis.get_access_token", return_value="tok-123")
 def test_upload_batch_calls_portal_logging_on_success(
-    mock_token,
+    mock_batch_token,
+    mock_util_token,
     mock_create,
     mock_prepare,
     mock_write_csv,
@@ -222,8 +224,10 @@ def test_upload_batch_calls_portal_logging_on_success(
 @patch("pathogena.lib.prepare_files")
 @patch("pathogena.lib.create_batch_on_server")
 @patch("pathogena.util.get_access_token", return_value="tok-123")
+@patch("pathogena.batch_upload_apis.get_access_token", return_value="tok-123")
 def test_upload_batch_portal_logging_failure(
-    mock_token,
+    mock_batch_token,
+    mock_util_token,
     mock_create,
     mock_prepare,
     mock_write_csv,
