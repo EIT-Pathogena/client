@@ -21,5 +21,3 @@ HOSTILE_INDEX_NAME = "human-t2t-hla-argos985-mycob140"
 DEFAULT_CHUNK_SIZE = int(
     os.getenv("NEXT_PUBLIC_CHUNK_SIZE", 10 * 1000 * 1000)
 )  # 10000000 = 10 mb
-DEFAULT_MAX_UPLOAD_RETRIES = int(os.getenv("MAX_UPLOAD_RETRIES", 3))
-DEFAULT_RETRY_DELAY = int(os.getenv("RETRY_DELAY", 2))

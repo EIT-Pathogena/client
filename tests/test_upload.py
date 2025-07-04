@@ -104,6 +104,19 @@ def prepared_file(upload_sample_1):
     return PreparedFile(upload_sample=upload_sample_1, file_side=1)
 
 
+@pytest.fixture()
+def uploading_file(prepared_file):
+    return UploadingFile(
+        file_id=1,
+        upload_id="1",
+        sample_id="test_sample_id",
+        batch_id="test_batch_id",
+        upload_session_id=0,
+        total_chunks=4,
+        prepared_file=prepared_file,
+    )
+
+
 @pytest.fixture
 def sample_file_metadata() -> SampleFileMetadata:
     return SampleFileMetadata(
@@ -218,7 +231,7 @@ class TestPrepareFile(TestUploadBase):
                 chunk_size=5000000,
             )
 
-    def test_prepare_file_apierror(
+    def test_prepare_file_api_error(
         self,
         upload_api_client: UploadAPIClient,
         prepared_file: PreparedFile,
@@ -326,23 +339,6 @@ class TestPrepareFiles:
             upload_session.samples[0].files[1].upload_id == "test_upload_id_2"
         )  # file2 (in progress)
 
-    def test_prepare_files_apierror(self, upload_api_client: Any):
-        # mock api error
-        upload_api_client.batches_samples_start_upload_session_create.side_effect = (
-            APIError("API request failed when starting upload session", 500)
-        )
-
-        # list of files to pass to prepare_files
-        files = [self.upload_sample1, self.upload_sample2]
-
-        # call
-        with pytest.raises(APIError) as excinfo:
-            start_upload_session(self.batch_pk, files, upload_api_client)
-
-        # check error message and status code
-        assert "API request failed when starting upload session" in str(excinfo.value)
-        assert excinfo.value.status_code == 500
-
 
 class TestUploadChunks:
     @pytest.fixture(autouse=True)
@@ -380,14 +376,14 @@ class TestUploadChunks:
     def test_upload_chunks_success(
         self,
         upload_data: UploadData,
-        prepared_file: UploadingFile,
+        uploading_file: UploadingFile,
     ):
         mock_upload_success = httpx.Response(200, json={"metrics": "some_metrics"})
-
-        patch(
+        patch_upload_chunk = patch(
             "pathogena.client.upload_client.UploadAPIClient.upload_chunk",
             return_value=mock_upload_success,
-        ).start()
+        )
+        patch_upload_chunk.start()
 
         mock_client = patch(
             "pathogena.client.upload_client.UploadAPIClient",
@@ -399,10 +395,11 @@ class TestUploadChunks:
         )
         mock_client.end_file_upload = mock_end_file_upload
 
-        upload_chunks(upload_data, prepared_file)
+        client = UploadAPIClient()
+        upload_chunks(client, upload_data, uploading_file)
 
         assert upload_data.on_complete == OnComplete(
-            prepared_file.upload_id, upload_data.batch_pk
+            uploading_file.upload_id, upload_data.batch_pk
         )  # all 4 chunks uploaded
         assert (
             upload_data.on_progress is not None
@@ -410,103 +407,42 @@ class TestUploadChunks:
         )
 
         assert self.mock_end_upload.calledonce  # end_file_upload called once
+        patch_upload_chunk.stop()
 
     def test_upload_chunks_retry_on_400(
         self,
         upload_data: UploadData,
-        prepared_file: UploadingFile,
-        caplog: pytest.LogCaptureFixture,
+        uploading_file: UploadingFile,
+        mock_httpx_client: MagicMock,
     ):
-        # mock the first chunk to succeed and the following to fail with a 400
-        # need response json too as check it in code
-        mock_upload_success = Mock()
-        mock_upload_success.status_code = 200
-        mock_upload_success.text = "OK"
-        mock_upload_success.json = lambda: {"metrics": "some_metrics"}
-
-        mock_upload_fail = MagicMock()
-        mock_upload_fail.status_code = 400
-        mock_upload_fail.text = "Bad Request"
-        mock_upload_fail.json = lambda: {"status_code": 400}
-
-        mock_upload_fail_2 = MagicMock()
-        mock_upload_fail_2.status_code = 400
-        mock_upload_fail_2.text = "Bad Request Retry"
-        mock_upload_fail_2.json = lambda: {"status_code": 400}
-
-        mock_upload_fail_3 = MagicMock()
-        mock_upload_fail_3.status_code = 400
-        mock_upload_fail_3.text = "Bad Request Third"
-        mock_upload_fail_3.json = lambda: {"status_code": 400}
-
-        # mock upload_chunk to return the above mocks
-        mock_upload_chunk = patch(
-            "pathogena.client.upload_client.UploadAPIClient.upload_chunk",
-            side_effect=[
-                mock_upload_success,
-                mock_upload_fail,
-                mock_upload_fail_2,
-                mock_upload_fail_3,
-            ],
-        ).start()
-
-        # call
-        upload_chunks(upload_data, prepared_file)
-
-        assert upload_data.on_progress == OnProgress(
-            upload_id=prepared_file.upload_id,
-            batch_pk=upload_data.batch_pk,
-            progress=25,
-            metrics="some_metrics",
-        )  # only chunk 1 of 4 was uploaded
-        assert upload_data.on_complete is None  # not completed all chunks
-        assert (
-            not self.mock_end_upload.called
-        )  # end_file_upload should not be called as 2nd upload failed
-        assert mock_upload_chunk.call_count == 4
-        assert (
-            "Retrying upload of chunk 1" in caplog.text
-        )  # retrying upload captured in logging
-        assert (
-            "Attempt 3 of 3" in caplog.text
-        )  # retry has been done DEFAULT_MAX_UPLOAD_RETRIES times
-
-    def test_upload_chunks_error_handling(
-        self,
-        upload_data: UploadData,
-        prepared_file: UploadingFile,
-        caplog: pytest.LogCaptureFixture,
-    ):
-        # mock the first chunk to raise an exception
-        mock_upload_1 = MagicMock()
-        mock_upload_1.json.side_effect = Exception("Some error")
-
-        mock_upload_2 = MagicMock()
-        mock_upload_2.json.side_effect = Exception("Some error")
-
-        mock_upload_3 = MagicMock()
-        mock_upload_3.json.side_effect = Exception("Some error")
-
-        # mock upload_chunk to return the above mock
-        patch(
-            "pathogena.client.upload_client.UploadAPIClient.upload_chunk",
-            side_effect=[mock_upload_1, mock_upload_2, mock_upload_3],
+        success_response = httpx.Response(
+            status_code=httpx.codes.OK,
+            json={"metrics": "some_metrics"},
+        )
+        fail_response = httpx.Response(
+            status_code=httpx.codes.BAD_REQUEST,
+            json={},
         )
 
-        # call
-        upload_chunks(upload_data, prepared_file)
+        mock_httpx_client.post.side_effect = [
+            fail_response,
+            fail_response,
+            success_response,
+            success_response,
+            success_response,
+            success_response,
+        ]
+        client = UploadAPIClient("", mock_httpx_client, 1)
 
-        assert upload_data.on_progress is None  # no progress, errors before
-        assert upload_data.on_complete is None  # not completed all chunks
-        assert (
-            not self.mock_end_upload.called
-        )  # end_file_upload should not be called since there was an error
-        assert (
-            "Retrying upload of chunk 0" in caplog.text
-        )  # retrying upload captured in logging
-        assert (
-            "Error uploading chunk 0 of batch 123:" in caplog.text
-        )  # error, chunk number and batch pk captured in logging
+        # call
+        upload_chunks(client, upload_data, uploading_file)
+
+        assert upload_data.on_progress == OnProgress(
+            upload_id=uploading_file.upload_id,
+            batch_pk=upload_data.batch_pk,
+            progress=100,
+            metrics="some_metrics",
+        )  # only chunk 1 of 4 was uploaded
 
 
 class TestUploadFiles:

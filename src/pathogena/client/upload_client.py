@@ -2,12 +2,11 @@
 import logging
 import math
 import sys
-import time
 from itertools import chain
 from typing import Any
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from pathogena.client.env import get_host, get_protocol, get_upload_host
 from pathogena.constants import (
@@ -19,7 +18,6 @@ from pathogena.types import (
     PreparedFile,
     Sample,
     UploadingFile,
-    UploadSession,
 )
 from pathogena.util import get_access_token
 
@@ -27,11 +25,16 @@ from pathogena.util import get_access_token
 class UploadAPIClient:
     """A class to handle API requests for batch uploads and related operations."""
 
+    base_url: str
+    client: httpx.Client
+    token: str
+    upload_session_id: int | None
+
     def __init__(
         self,
         base_url: str = get_upload_host(),
         client: httpx.Client | None = None,
-        upload_session: int | None = None,
+        upload_session_id: int | None = None,
     ):
         """Initialize the APIClient with a base URL and an optional HTTP client.
 
@@ -42,7 +45,7 @@ class UploadAPIClient:
         self.base_url = base_url
         self.client = client or httpx.Client()
         self.token = get_access_token(get_host())
-        self.upload_session = upload_session
+        self.upload_session_id = upload_session_id
 
     def batches_create(
         self,
@@ -310,25 +313,18 @@ class UploadAPIClient:
             "specimen_organism": files_to_upload[0].get("specimen_organism"),
         }
 
-        try:
-            session_response = self.batches_samples_start_upload_session_create(
-                batch_pk=batch_pk, data=form_details
+        session_response = self.batches_samples_start_upload_session_create(
+            batch_pk=batch_pk, data=form_details
+        )
+        if not session_response["upload_session"]:
+            # Log if the upload session could not be resumed
+            logging.exception(
+                "Upload session cannot be resumed. Please create a new batch."
             )
-            if not session_response["upload_session"]:
-                # Log if the upload session could not be resumed
-                logging.exception(
-                    "Upload session cannot be resumed. Please create a new batch."
-                )
-                raise APIError(
-                    "No upload session returned by the API.",
-                    httpx.codes.INTERNAL_SERVER_ERROR,
-                )
-
-        except APIError as e:
             raise APIError(
-                f"Error starting session: {str(e)}",
-                e.status_code,
-            ) from e
+                "No upload session returned by the API.",
+                httpx.codes.INTERNAL_SERVER_ERROR,
+            )
 
         upload_session_id = session_response["upload_session"]
         upload_session_name = session_response["name"]
@@ -367,9 +363,7 @@ class UploadAPIClient:
                 response.status_code,
             ) from e
 
-    @retry(
-        wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10)
-    )
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(10))
     def upload_chunk(
         self,
         batch_pk: int,
@@ -404,7 +398,9 @@ class UploadAPIClient:
                 },
                 follow_redirects=True,
             )
-            response.raise_for_status()
+            if response.status_code != 200:
+                raise Exception("Failed to upload chunk")
+
             return response
         except Exception as e:
             logging.error(

@@ -17,8 +17,6 @@ from pathogena.client.upload_client import UploadAPIClient
 from pathogena.constants import (
     DEFAULT_APP_HOST,
     DEFAULT_CHUNK_SIZE,
-    DEFAULT_MAX_UPLOAD_RETRIES,
-    DEFAULT_RETRY_DELAY,
 )
 from pathogena.types import (
     OnComplete,
@@ -226,12 +224,13 @@ def upload_fastq_files(
     Returns:
         None
     """
+    client = UploadAPIClient()
     # upload the file chunks
     with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
         futures = []
         for sample in upload_session.samples:
             for file in sample.files:
-                future = executor.submit(upload_chunks, upload_data, file)
+                future = executor.submit(upload_chunks, client, upload_data, file)
                 futures.append(future)
 
         # Need to tie halves of the samples together here
@@ -254,6 +253,7 @@ def upload_fastq_files(
 
 
 def upload_chunks(
+    client: UploadAPIClient,
     upload_data: UploadData,
     file: UploadingFile,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
@@ -261,6 +261,7 @@ def upload_chunks(
     """Uploads chunks of a single file.
 
     Args:
+        client (UploadAPIClient): The upload API client to use.
         upload_data (UploadData): The upload data including batch_id, session info, etc.
         file (SelectedFile): The file to upload (with file data, total chunks, etc.)
         chunk_size (int): Default size of file chunk to upload (5mb)
@@ -269,18 +270,10 @@ def upload_chunks(
         None: This function does not return anything, but calls the provided
             `on_progress` and `on_complete` callback functions.
     """
-    client = UploadAPIClient()
-
     chunks_uploaded = 0
     chunk_queue: list[Response] = []
-    stop_uploading = False
 
-    max_retries = DEFAULT_MAX_UPLOAD_RETRIES
-    retry_delay = DEFAULT_RETRY_DELAY
     for i in range(file.total_chunks):  # total chunks = file.size/chunk_size
-        if stop_uploading:
-            break
-
         process_queue(chunk_queue, upload_data.max_concurrent_chunks)
 
         # chunk the files
@@ -288,86 +281,50 @@ def upload_chunks(
         end = start + chunk_size
         file_chunk = file.prepared_file.data[start:end]
 
-        success = False
-        attempt = 0
+        chunk_upload = client.upload_chunk(
+            batch_pk=upload_data.batch_pk,
+            protocol=get_protocol(),
+            chunk=file_chunk,
+            chunk_index=i,
+            upload_id=file.upload_id,
+        )
+        chunk_queue.append(chunk_upload)
+        try:
+            chunk_upload_result = chunk_upload.json()
 
-        while attempt < max_retries and not success:
-            chunk_upload = client.upload_chunk(
-                batch_pk=upload_data.batch_pk,
-                protocol=get_protocol(),
-                chunk=file_chunk,
-                chunk_index=i,
-                upload_id=file.upload_id,
-            )
-            chunk_queue.append(chunk_upload)
-            try:
-                chunk_upload_result = chunk_upload.json()
+            # process result of chunk upload for upload chunks that don't return 400 status
+            metrics = chunk_upload_result.get("metrics", {})
+            if metrics:
+                chunks_uploaded += 1
+                progress = (chunks_uploaded / file.total_chunks) * 100
 
-                if chunk_upload.status_code >= 400:
-                    logging.error(
-                        f"Attempt {attempt + 1} of {max_retries}: Chunk upload failed for chunk {i} of batch {upload_data.batch_pk}. Response: {chunk_upload_result.text}"
-                    )
-                    attempt += 1
-
-                    if attempt < max_retries:
-                        logging.info(f"Retrying upload of chunk {i}")
-                        time.sleep(retry_delay)
-                        continue
-                    else:
-                        stop_uploading = (
-                            True  # stop retrying if have reached max retry attempts
-                        )
-                        break
-
-                # process result of chunk upload for upload chunks that don't return 400 status
-                metrics = chunk_upload_result.get("metrics", {})
-                if metrics:
-                    chunks_uploaded += 1
-                    progress = (chunks_uploaded / file.total_chunks) * 100
-
-                    # Create an OnProgress instance
-                    progress_event = OnProgress(
-                        upload_id=file.upload_id,
-                        batch_pk=upload_data.batch_pk,
-                        progress=progress,
-                        metrics=chunk_upload_result["metrics"],
-                    )
-                    upload_data.on_progress = progress_event
-
-                    # If all chunks have been uploaded, complete the file upload
-                    if chunks_uploaded == file.total_chunks:
-                        complete_event = OnComplete(
-                            file.upload_id, upload_data.batch_pk
-                        )
-                        upload_data.on_complete = complete_event
-                        client = UploadAPIClient()
-                        end_status = client.end_file_upload(
-                            upload_data.batch_pk,
-                            data={"upload_id": file.upload_id},
-                        )
-                        if end_status.status_code == 400:
-                            logging.error(
-                                f"Failed to end upload for file: {file.upload_id} (Batch ID: {upload_data.batch_pk})"
-                            )
-                success = True
-
-            except Exception as e:
-                logging.error(
-                    f"Attempt {attempt + 1} of {max_retries}: Error uploading chunk {i} of batch {upload_data.batch_pk}: {str(e)}"
+                # Create an OnProgress instance
+                progress_event = OnProgress(
+                    upload_id=file.upload_id,
+                    batch_pk=upload_data.batch_pk,
+                    progress=progress,
+                    metrics=chunk_upload_result["metrics"],
                 )
-                attempt += 1
-                if attempt < max_retries:
-                    logging.info(f"Retrying upload of chunk {i}")
-                    time.sleep(retry_delay)
-                else:
-                    stop_uploading = True
-                    break
+                upload_data.on_progress = progress_event
 
-        if not success:
-            stop_uploading = (
-                True  # Stop uploading further chunks if some other error occurs
+            # If all chunks have been uploaded, complete the file upload
+            if chunks_uploaded == file.total_chunks:
+                complete_event = OnComplete(file.upload_id, upload_data.batch_pk)
+                upload_data.on_complete = complete_event
+                client = UploadAPIClient()
+                end_status = client.end_file_upload(
+                    upload_data.batch_pk,
+                    data={"upload_id": file.upload_id},
+                )
+                if end_status.status_code == 400:
+                    logging.error(
+                        f"Failed to end upload for file: {file.upload_id} (Batch ID: {upload_data.batch_pk})"
+                    )
+
+        except Exception as e:
+            logging.error(
+                f"Error uploading chunk {i} of batch {upload_data.batch_pk}: {str(e)}"
             )
-            break
 
 
 def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[Any]:
