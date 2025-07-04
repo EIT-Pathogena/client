@@ -23,6 +23,10 @@
 - [EV-2132](https://eit-oxford.atlassian.net/browse/EV-2132): update app link in upload completion message
 - [EV-2131](https://eit-oxford.atlassian.net/browse/EV-2131): cli uploading same file for both Illumina read files in a pair
 
+### Changed
+
+- [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): added tests for mappings file and batch uploads
+
 ## 2.2.0-RC1 (2025-06-10)
 
 ### Fixed
