@@ -2,7 +2,7 @@ from concurrent.futures import Future
 from datetime import date
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -405,9 +405,7 @@ class TestUploadChunks:
         mock_client = patch_client.start()
 
         mock_end_file_upload = MagicMock()
-        mock_end_file_upload.side_effect = httpx.Response(
-            200, json={"metrics": "some_metrics"}
-        )
+        mock_end_file_upload.side_effect = mock_upload_success
         mock_client.end_file_upload = mock_end_file_upload
 
         client = UploadAPIClient()
