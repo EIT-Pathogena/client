@@ -2,7 +2,7 @@ from concurrent.futures import Future
 from datetime import date
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import httpx
 import pytest
@@ -532,7 +532,7 @@ class TestUploadFiles:
                 status_code=httpx.codes.BAD_REQUEST,
             ),
         )
-        mock_upload_chunks = patch_upload_chunks.start()
+        patch_upload_chunks.start()
 
         patch_end_upload_session = patch.object(
             UploadAPIClient,
@@ -541,49 +541,22 @@ class TestUploadFiles:
                 status_code=httpx.codes.BAD_REQUEST,
             ),
         )
-        mock_end_upload_session = patch_end_upload_session.start()
+        patch_end_upload_session.start()
 
-        with pytest.raises(APIError):
-            upload_fastq_files(upload_api_client, upload_data, upload_session)
+        patch_logging = patch("logging.error")
+        mock_logging = patch_logging.start()
 
-        mock_end_upload_session.assert_called_once()
+        upload_fastq_files(upload_api_client, upload_data, upload_session)
+
+        for sample in upload_session.samples:
+            for file in sample.files:
+                for chunk_index in range(0, 1):
+                    e = "Expecting value: line 1 column 1 (char 0)"
+                    mock_logging.assert_any_call(
+                        f"Error uploading chunk {chunk_index} for file: {file.upload_id} of batch {upload_data.batch_pk}: {str(e)}"
+                    )
+
+        mock_logging.assert_any_call("Failed to end upload session for batch 123.")
 
         patch_upload_chunks.stop()
         patch_end_upload_session.stop()
-
-    # def test_upload_files_chunk_upload_error(
-    #     self,
-    #     upload_data: UploadData,
-    #     upload_session: UploadSession,
-    #     upload_api_client: Any,
-    #     caplog: pytest.LogCaptureFixture,
-    # ):
-    #     # mock upload_chunks with exception
-    #     # upload_api_client.upload_chunk = patch(
-    #     #     "pathogena.client.upload_client.UploadAPIClient.upload_chunk",
-    #     #     side_effect=Exception("Chunk upload error"),
-    #     # ).start()
-    #     mock_upload_chunk = patch.object(
-    #         UploadAPIClient,
-    #         "upload_chunk",
-    #         # return_value=httpx.Response(
-    #         #     status_code=httpx.codes.OK,
-    #         # ),
-    #         side_effect=Exception("Chunk upload error"),
-    #     ).start()
-
-    #     # mock successful API client response
-    #     patch.object(
-    #         UploadAPIClient,
-    #         "end_upload_session",
-    #         return_value=httpx.Response(
-    #             status_code=httpx.codes.OK,
-    #         ),
-    #     ).start()
-
-    #     upload_fastq_files(upload_api_client, upload_data, upload_session)
-
-    #     assert mock_upload_chunk.call_count == 2  # upload chunks called twice
-    #     assert (
-    #         "Error uploading file: Chunk upload error" in caplog.text
-    #     )  # correct error is logged
