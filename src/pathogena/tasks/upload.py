@@ -323,7 +323,7 @@ def upload_chunks(
 
         except Exception as e:
             logging.error(
-                f"Error uploading chunk {i} of batch {upload_data.batch_pk}: {str(e)}"
+                f"Error uploading chunk {i} for file: {file.upload_id} of batch {upload_data.batch_pk}: {str(e)}"
             )
 
 
