@@ -163,7 +163,8 @@ def build_upload_csv(
         raise ValueError("Invalid instrument platform")
 
     if (
-        upload_data.specimen_organism
+        UploadData.model_fields["specimen_organism"].annotation
+        and upload_data.specimen_organism
         not in UploadData.model_fields["specimen_organism"].annotation.__args__
     ):
         raise ValueError("Invalid pipeline")
