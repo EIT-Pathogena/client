@@ -146,7 +146,7 @@ def mock_httpx_client():
 
 
 @pytest.fixture
-def upload_api_client(mock_httpx_client):
+def upload_api_client(mock_httpx_client, mock_token):
     return UploadAPIClient("test_url", mock_httpx_client, TEST_UPLOAD_SESSION_ID)
 
 
