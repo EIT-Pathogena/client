@@ -8,7 +8,12 @@ from typing import Any
 import httpx
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from pathogena.client.env import get_host, get_protocol, get_upload_host
+from pathogena.client.env import (
+    get_access_token,
+    get_host,
+    get_protocol,
+    get_upload_host,
+)
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
 )
@@ -19,7 +24,6 @@ from pathogena.types import (
     Sample,
     UploadingFile,
 )
-from pathogena.util import get_access_token
 
 
 class UploadAPIClient:

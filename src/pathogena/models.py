@@ -5,8 +5,15 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from pathogena import __version__, util
-from pathogena.util import find_duplicate_entries
+from pathogena import __version__
+from pathogena.constants import PLATFORMS
+from pathogena.util import (
+    count_lines_in_gzip,
+    find_duplicate_entries,
+    hash_file,
+    parse_csv,
+    reads_lines_from_fastq,
+)
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
@@ -32,9 +39,7 @@ class UploadBase(BaseModel):
     batch_name: str | None = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
-    instrument_platform: util.PLATFORMS = Field(
-        description="Sequencing instrument platform"
-    )
+    instrument_platform: PLATFORMS = Field(description="Sequencing instrument platform")
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
     country: str = Field(
         min_length=3, max_length=3, description="ISO 3166-2 alpha-3 country code"
@@ -224,9 +229,9 @@ class UploadSample(UploadBase):
         for read in reads:
             logging.info(f"Calculating read count in: {read}")
             if read.suffix == ".gz":
-                line_count = util.count_lines_in_gzip(file_path=read)
+                line_count = count_lines_in_gzip(file_path=read)
             else:
-                line_count = util.reads_lines_from_fastq(file_path=read)
+                line_count = reads_lines_from_fastq(file_path=read)
             if line_count % valid_lines_per_read != 0:
                 raise ValueError(
                     f"FASTQ file {read.name} does not have a multiple of 4 lines"
@@ -417,29 +422,25 @@ class UploadBatch(BaseModel):
             )  # Assume no change in default
 
             if sample.reads_1_resolved_path is not None:
-                sample.reads_1_dirty_checksum = util.hash_file(
-                    sample.reads_1_resolved_path
-                )
+                sample.reads_1_dirty_checksum = hash_file(sample.reads_1_resolved_path)
             else:
                 sample.reads_1_dirty_checksum = ""
             if self.ran_through_hostile:
                 sample.reads_1_cleaned_path = Path(
                     cleaned_sample_data.get("fastq1_out_path")
                 )
-                sample.reads_1_pre_upload_checksum = util.hash_file(
+                sample.reads_1_pre_upload_checksum = hash_file(
                     sample.reads_1_cleaned_path
                 )
             else:
                 sample.reads_1_pre_upload_checksum = sample.reads_1_dirty_checksum
             if sample.is_illumina() and sample.reads_2_resolved_path:
-                sample.reads_2_dirty_checksum = util.hash_file(
-                    sample.reads_2_resolved_path
-                )
+                sample.reads_2_dirty_checksum = hash_file(sample.reads_2_resolved_path)
                 if self.ran_through_hostile:
                     sample.reads_2_cleaned_path = Path(
                         cleaned_sample_data.get("fastq2_out_path")
                     )
-                    sample.reads_2_pre_upload_checksum = util.hash_file(
+                    sample.reads_2_pre_upload_checksum = hash_file(
                         sample.reads_2_cleaned_path
                     )
                 else:
@@ -490,7 +491,7 @@ def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> Upload
     Returns:
         UploadBatch: The created UploadBatch instance.
     """
-    records = util.parse_csv(upload_csv)
+    records = parse_csv(upload_csv)
     samples = [UploadSample(**r, **{"upload_csv": upload_csv}) for r in records]
     specimen_organism = samples[0].specimen_organism if len(samples) > 0 else None
 

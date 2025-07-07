@@ -3,8 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Generic, Literal, TypedDict, TypeVar
 
+from pathogena.constants import PLATFORMS
 from pathogena.models import UploadSample
-from pathogena.util import PLATFORMS
 
 
 class PreparedFile:

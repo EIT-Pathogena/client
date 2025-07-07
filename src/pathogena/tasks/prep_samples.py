@@ -6,7 +6,8 @@ import httpx
 from hostile.lib import clean_fastqs, clean_paired_fastqs
 from hostile.util import choose_default_thread_count
 
-from pathogena import models, util
+from pathogena import models
+from pathogena.client.env import get_access_token
 from pathogena.constants import (
     CPU_COUNT,
     HOSTILE_INDEX_NAME,
@@ -96,7 +97,7 @@ def validate_upload_permissions(batch: UploadBatch, protocol: str, host: str) ->
             }
         )
     logging.debug(f"Validating {data=}")
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),

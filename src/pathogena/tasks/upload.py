@@ -12,7 +12,12 @@ import hostile
 
 import pathogena
 from pathogena import models, util
-from pathogena.client.env import get_host, get_protocol, get_upload_host
+from pathogena.client.env import (
+    get_access_token,
+    get_host,
+    get_protocol,
+    get_upload_host,
+)
 from pathogena.client.upload_client import UploadAPIClient
 from pathogena.constants import (
     DEFAULT_APP_HOST,
@@ -163,7 +168,7 @@ def upload_batch(
     )
 
     upload_file_type = UploadData(
-        access_token=util.get_access_token(get_host(None)),
+        access_token=get_access_token(get_host(None)),
         batch_pk=batch_id,
         env=get_upload_host(),
         samples=batch.samples,

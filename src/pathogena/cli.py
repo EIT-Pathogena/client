@@ -42,8 +42,8 @@ def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
     """Authenticate with EIT Pathogena."""
     host = env.get_host(host)
     if check_expiry:
-        expiry = util.get_token_expiry(host)
-        if expiry and util.is_auth_token_live(host):
+        expiry = env.get_token_expiry(host)
+        if expiry and env.is_auth_token_live(host):
             logging.info(f"Current token for {host} expires at {expiry}")
             return
         else:
@@ -179,7 +179,7 @@ def upload(
         skip_fastq_check = False
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
 
-    if util.is_auth_token_live(host):
+    if env.is_auth_token_live(host):
         tasks.get_credit_balance(host=host)
         tasks.validate_upload_permissions(batch, protocol=env.get_protocol(), host=host)
         if skip_decontamination:
@@ -235,7 +235,7 @@ def download(
     That are created during upload.
     """
     host = env.get_host(host)
-    if util.is_auth_token_live(host):
+    if env.is_auth_token_live(host):
         if util.validate_guids(util.parse_comma_separated_string(samples)):
             tasks.download(
                 samples=samples,

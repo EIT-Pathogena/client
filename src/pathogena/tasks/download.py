@@ -8,7 +8,7 @@ from hostile.util import BUCKET_URL, CACHE_DIR
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from pathogena import models, util
-from pathogena.client.env import get_protocol
+from pathogena.client.env import get_access_token, get_protocol
 from pathogena.constants import DEFAULT_HOST, HOSTILE_INDEX_NAME
 from pathogena.errors import MissingError
 from pathogena.log_utils import httpx_hooks
@@ -40,7 +40,7 @@ def download(
         host (str): The host server. Defaults to DEFAULT_HOST.
     """
     check_version_compatibility(host)
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
@@ -173,7 +173,7 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
     Returns:
         dict[str, models.RemoteFile]: The latest input files.
     """
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),

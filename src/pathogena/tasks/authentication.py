@@ -5,11 +5,9 @@ from getpass import getpass
 
 import httpx
 
-from pathogena import util
-from pathogena.client.env import get_protocol
+from pathogena.client.env import get_access_token, get_protocol, get_token_path
 from pathogena.constants import DEFAULT_HOST
 from pathogena.log_utils import httpx_hooks
-from pathogena.util import get_token_path
 
 
 def authenticate(host: str = DEFAULT_HOST) -> None:
@@ -54,7 +52,7 @@ def check_authentication(host: str) -> None:
     with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{host}/api/v1/batches",
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            headers={"Authorization": f"Bearer {get_access_token(host)}"},
             follow_redirects=True,
         )
     if response.is_error:

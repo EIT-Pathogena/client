@@ -8,7 +8,7 @@ from packaging.version import Version
 
 import pathogena
 from pathogena import models, util
-from pathogena.client.env import get_host, get_protocol
+from pathogena.client.env import get_access_token, get_host, get_protocol
 from pathogena.constants import DEFAULT_HOST
 from pathogena.errors import UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
@@ -166,7 +166,7 @@ def fetch_output_files(
     Returns:
         dict[str, models.RemoteFile]: The output files.
     """
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
@@ -224,7 +224,7 @@ def get_credit_balance(host: str) -> None:
     ) as client:
         response = client.get(
             f"{get_protocol()}://{host}/api/v1/credits/balance",
-            headers={"Authorization": f"Bearer {util.get_access_token(host)}"},
+            headers={"Authorization": f"Bearer {get_access_token(host)}"},
             follow_redirects=True,
         )
         if response.status_code == 200:
@@ -245,7 +245,7 @@ def fetch_sample(sample_id: str, host: str) -> dict:
     Returns:
         dict: The sample data.
     """
-    headers = {"Authorization": f"Bearer {util.get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
