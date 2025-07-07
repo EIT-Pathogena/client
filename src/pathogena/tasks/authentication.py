@@ -5,7 +5,7 @@ from getpass import getpass
 
 import httpx
 
-from pathogena.client.env import get_access_token, get_protocol, get_token_path
+from pathogena.client import env
 from pathogena.constants import DEFAULT_HOST
 from pathogena.log_utils import httpx_hooks
 
@@ -21,13 +21,13 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     password = getpass(prompt="Enter your password (hidden): ")
     with httpx.Client(event_hooks=httpx_hooks) as client:
         response = client.post(
-            f"{get_protocol()}://{host}/api/v1/auth/token",
+            f"{env.get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
             follow_redirects=True,
         )
     data = response.json()
 
-    token_path = get_token_path(host)
+    token_path = env.get_token_path(host)
 
     # Convert the expiry in seconds into a readable date, default token should be 7 days.
     one_week_in_seconds = 604800
@@ -51,8 +51,8 @@ def check_authentication(host: str) -> None:
     """
     with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
-            f"{get_protocol()}://{host}/api/v1/batches",
-            headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            f"{env.get_protocol()}://{host}/api/v1/batches",
+            headers={"Authorization": f"Bearer {env.get_access_token(host)}"},
             follow_redirects=True,
         )
     if response.is_error:

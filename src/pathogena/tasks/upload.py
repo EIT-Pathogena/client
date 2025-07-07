@@ -12,12 +12,7 @@ import hostile
 
 import pathogena
 from pathogena import models, util
-from pathogena.client.env import (
-    get_access_token,
-    get_host,
-    get_protocol,
-    get_upload_host,
-)
+from pathogena.client import env
 from pathogena.client.upload_client import UploadAPIClient
 from pathogena.constants import (
     DEFAULT_APP_HOST,
@@ -168,9 +163,9 @@ def upload_batch(
     )
 
     upload_file_type = UploadData(
-        access_token=get_access_token(get_host(None)),
+        access_token=env.get_access_token(env.get_host(None)),
         batch_pk=batch_id,
-        env=get_upload_host(),
+        env=env.get_upload_host(),
         samples=batch.samples,
         upload_session_id=upload_session.session_id,
     )
@@ -193,7 +188,7 @@ def upload_batch(
     logging.info(f"The mapping file {batch_name}.mapping.csv has been created.")
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
+        f"{env.get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
 
     upload_fastq_files(
@@ -288,7 +283,7 @@ def upload_chunks(
 
         chunk_upload = client.upload_chunk(
             batch_pk=upload_data.batch_pk,
-            protocol=get_protocol(),
+            protocol=env.get_protocol(),
             chunk=file_chunk,
             chunk_index=i,
             upload_id=file.upload_id,

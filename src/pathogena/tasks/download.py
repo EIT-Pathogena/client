@@ -8,7 +8,7 @@ from hostile.util import BUCKET_URL, CACHE_DIR
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from pathogena import models, util
-from pathogena.client.env import get_access_token, get_protocol
+from pathogena.client import env
 from pathogena.constants import DEFAULT_HOST, HOSTILE_INDEX_NAME
 from pathogena.errors import MissingError
 from pathogena.log_utils import httpx_hooks
@@ -40,7 +40,7 @@ def download(
         host (str): The host server. Defaults to DEFAULT_HOST.
     """
     check_version_compatibility(host)
-    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {env.get_access_token(host)}"}
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
@@ -68,7 +68,7 @@ def download(
                 if prefixed_filename in output_files:
                     output_file = output_files[prefixed_filename]
                     url = (
-                        f"{get_protocol()}://{host}/api/v1/"
+                        f"{env.get_protocol()}://{host}/api/v1/"
                         f"samples/{output_file.sample_id}/"
                         f"runs/{output_file.run_id}/"
                         f"files/{prefixed_filename}"
@@ -99,7 +99,7 @@ def download(
                     else:
                         filename_fmt = input_file.filename
                     url = (
-                        f"{get_protocol()}://{host}/api/v1/"
+                        f"{env.get_protocol()}://{host}/api/v1/"
                         f"samples/{input_file.sample_id}/"
                         f"runs/{input_file.run_id}/"
                         f"input-files/{input_file.filename}"
@@ -173,13 +173,13 @@ def fetch_latest_input_files(sample_id: str, host: str) -> dict[str, models.Remo
     Returns:
         dict[str, models.RemoteFile]: The latest input files.
     """
-    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {env.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
+            f"{env.get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/input-files",
             headers=headers,
             follow_redirects=True,
         )

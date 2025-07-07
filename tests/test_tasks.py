@@ -80,14 +80,14 @@ def test_fail_check_version_compatibility(
 
 
 @patch("httpx.Client.get")
-@patch("pathogena.util.get_access_token")
+@patch("pathogena.client.env.get_access_token")
 def test_get_balance(
     mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test successfully getting the balance for a given account.
 
     Args:
-        mock_token (MagicMock): Mocked `pathogena.util.get_access_token` method.
+        mock_token (MagicMock): Mocked `pathogena.client.env.get_access_token` method.
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
         caplog (pytest.LogCaptureFixture): Pytest fixture to capture log output.
     """
@@ -99,14 +99,14 @@ def test_get_balance(
 
 
 @patch("httpx.Client.get")
-@patch("pathogena.util.get_access_token")
+@patch("pathogena.client.env.get_access_token")
 def test_get_balance_failure(
     mock_token: MagicMock, mock_client_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test failure to get the account balance.
 
     Args:
-        mock_token (MagicMock): Mocked `pathogena.util.get_access_token` method.
+        mock_token (MagicMock): Mocked `pathogena.client.env.get_access_token` method.
         mock_client_get (MagicMock): Mocked `httpx.Client.get` method.
         caplog (pytest.LogCaptureFixture): Pytest fixture to capture log output.
     """

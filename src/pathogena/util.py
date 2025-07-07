@@ -16,8 +16,6 @@ import pathogena
 
 load_dotenv()
 
-PLATFORMS = Literal["illumina", "ont"]
-
 
 def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
     """Wrapper for running shell command subprocesses.

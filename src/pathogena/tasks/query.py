@@ -8,7 +8,7 @@ from packaging.version import Version
 
 import pathogena
 from pathogena import models, util
-from pathogena.client.env import get_access_token, get_host, get_protocol
+from pathogena.client import env
 from pathogena.constants import DEFAULT_HOST
 from pathogena.errors import UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
@@ -115,7 +115,7 @@ def check_version_compatibility(host: str) -> None:
         timeout=10,
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/cli-version", follow_redirects=True
+            f"{env.get_protocol()}://{host}/cli-version", follow_redirects=True
         )
     lowest_cli_version = response.json()["version"]
     logging.debug(
@@ -166,13 +166,13 @@ def fetch_output_files(
     Returns:
         dict[str, models.RemoteFile]: The output files.
     """
-    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {env.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
+            f"{env.get_protocol()}://{host}/api/v1/samples/{sample_id}/latest/files",
             headers=headers,
             follow_redirects=True,
         )
@@ -200,12 +200,14 @@ def get_amplicon_schemes(host: str | None = None) -> list[str]:
     """
     with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
-            f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
+            f"{env.get_protocol()}://{env.get_host(host)}/api/v1/amplicon_schemes",
         )
     if response.is_error:
-        logging.error(f"Amplicon schemes could not be fetched from {get_host(host)}")
+        logging.error(
+            f"Amplicon schemes could not be fetched from {env.get_host(host)}"
+        )
         raise RuntimeError(
-            f"Amplicon schemes could not be fetched from the {get_host(host)}. Please try again later."
+            f"Amplicon schemes could not be fetched from the {env.get_host(host)}. Please try again later."
         )
     return [val for val in response.json()["amplicon_schemes"] if val is not None]
 
@@ -223,8 +225,8 @@ def get_credit_balance(host: str) -> None:
         timeout=15,
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/api/v1/credits/balance",
-            headers={"Authorization": f"Bearer {get_access_token(host)}"},
+            f"{env.get_protocol()}://{host}/api/v1/credits/balance",
+            headers={"Authorization": f"Bearer {env.get_access_token(host)}"},
             follow_redirects=True,
         )
         if response.status_code == 200:
@@ -245,13 +247,13 @@ def fetch_sample(sample_id: str, host: str) -> dict:
     Returns:
         dict: The sample data.
     """
-    headers = {"Authorization": f"Bearer {get_access_token(host)}"}
+    headers = {"Authorization": f"Bearer {env.get_access_token(host)}"}
     with httpx.Client(
         event_hooks=httpx_hooks,
         transport=httpx.HTTPTransport(retries=5),
     ) as client:
         response = client.get(
-            f"{get_protocol()}://{host}/api/v1/samples/{sample_id}",
+            f"{env.get_protocol()}://{host}/api/v1/samples/{sample_id}",
             headers=headers,
             follow_redirects=True,
         )
