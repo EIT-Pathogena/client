@@ -12,6 +12,7 @@
 
 ### Fixed
 
+- [EV-1960](https://eit-oxford.atlassian.net/browse/EV-1960): refactor lib into tasks, fix mypy issues plus many more QoL fixes.
 - [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): fix mapping csv to use correct batch and sample names with rows per sample
 
 ## 2.2.0-RC2 (2025-06-18)
