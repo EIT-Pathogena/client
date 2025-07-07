@@ -217,7 +217,6 @@ class TestPrepareFile(TestUploadBase):
             },
         )
 
-        # call
         uploading_file = upload_api_client.start_file_upload(
             file=prepared_file,
             batch_id=self.batch_id,

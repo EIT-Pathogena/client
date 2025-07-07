@@ -8,12 +8,7 @@ from typing import Any
 import httpx
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from pathogena.client.env import (
-    get_access_token,
-    get_host,
-    get_protocol,
-    get_upload_host,
-)
+from pathogena.client import env
 from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
 )
@@ -36,7 +31,7 @@ class UploadAPIClient:
 
     def __init__(
         self,
-        base_url: str = get_upload_host(),
+        base_url: str = env.get_upload_host(),
         client: httpx.Client | None = None,
         upload_session_id: int | None = None,
     ):
@@ -48,7 +43,7 @@ class UploadAPIClient:
         """
         self.base_url = base_url
         self.client = client or httpx.Client()
-        self.token = get_access_token(get_host())
+        self.token = env.get_access_token(env.get_host())
         self.upload_session_id = upload_session_id
 
     def batches_create(
@@ -66,7 +61,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches"
         response = httpx.Response(httpx.codes.OK)
         try:
             response = self.client.post(
@@ -99,7 +94,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
         try:
             response = self.client.post(
                 url,
@@ -154,7 +149,7 @@ class UploadAPIClient:
             "sample_id": sample_id,
         }
 
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_id}/uploads/start/"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_id}/uploads/start/"
         try:
             response = self.client.post(
                 url,
@@ -200,7 +195,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
         try:
             response = self.client.post(
                 url,
@@ -233,9 +228,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = (
-            f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
-        )
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
         try:
             response = self.client.post(
                 url,
@@ -273,7 +266,7 @@ class UploadAPIClient:
         elif self.upload_session is not None:
             data = {"upload_session": self.upload_session}
 
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/end-upload-session/"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/end-upload-session/"
         try:
             response = self.client.post(
                 url,
@@ -352,7 +345,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/state"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/state"
         try:
             response = self.client.get(
                 url,
