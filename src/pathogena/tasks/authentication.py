@@ -5,6 +5,7 @@ from getpass import getpass
 
 import httpx
 
+from pathogena import __version__
 from pathogena.client import env
 from pathogena.constants import DEFAULT_HOST
 from pathogena.log_utils import httpx_hooks
@@ -19,12 +20,31 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
     logging.info(f"Authenticating with {host}")
     username = input("Enter your username: ")
     password = getpass(prompt="Enter your password (hidden): ")
+
+    request_headers = {"X-CLIENT-VERSION": __version__}
+
     with httpx.Client(event_hooks=httpx_hooks) as client:
         response = client.post(
             f"{env.get_protocol()}://{host}/api/v1/auth/token",
             json={"username": username, "password": password},
             follow_redirects=True,
+            headers=request_headers,
         )
+
+    # Handle the specific 426 status code
+    if response.status_code == httpx.codes.UPGRADE_REQUIRED:
+        logging.error(
+            "Client update required: Your client version is too old. "
+            "Please update your client to continue using the service."
+        )
+        logging.error(response.text)
+        raise ValueError("Client update required.")
+
+    # Raise an exception for any other HTTP errors (4xx or 5xx)
+    else:
+        response.raise_for_status()
+
+    # Continue with normal processing if the status is 2xx
     data = response.json()
 
     token_path = env.get_token_path(host)

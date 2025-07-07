@@ -48,7 +48,10 @@ def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
             return
         else:
             logging.info(f"You do not have a valid token for {host}")
-    tasks.authenticate(host=host)
+    try:
+        tasks.authenticate(host=host)
+    except Exception as e:
+        logging.exception(e)
 
 
 @main.command()
