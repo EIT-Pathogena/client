@@ -181,6 +181,18 @@ def test_validate_fail_invalid_specimen_organism(
         models.create_batch_from_csv(invalid_specimen_organism_csv)
 
 
+def test_validate_fail_empty_specimen_organism(
+    empty_specimen_organism_csv: Path,
+) -> None:
+    """Test validation failure for empty specimen organism values.
+
+    Args:
+        empty_specimen_organism_csv (Path): Path to the CSV file with empty specimen organism values.
+    """
+    with pytest.raises(ValidationError):
+        models.create_batch_from_csv(empty_specimen_organism_csv)
+
+
 def test_validate_fail_mixed_instrument_platform(
     invalid_mixed_platform_csv: Path,
 ) -> None:

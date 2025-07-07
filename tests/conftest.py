@@ -201,6 +201,11 @@ def invalid_instrument_platform_csv() -> Path:
     return Path("tests/data/invalid/invalid-instrument-platform.csv")
 
 
+@pytest.fixture
+def empty_specimen_organism_csv() -> Path:
+    return Path("tests/data/invalid/empty-specimen-organism.csv")
+
+
 # Batches
 @pytest.fixture
 def ont_sample_batch(ont_sample_csv: Path) -> UploadBatch:

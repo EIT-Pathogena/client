@@ -1,5 +1,19 @@
 ## Unreleased
 
+## 2.2.1-RC1 (2025-06-27)
+
+### Fixed
+
+- [EV-2152](https://eit-oxford.atlassian.net/browse/EV-2152): do not allow empty specimen organism
+
+## 2.2.0 (2025-06-20)
+
+## 2.2.0-RC3 (2025-06-18)
+
+### Fixed
+
+- [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): fix mapping csv to use correct batch and sample names with rows per sample
+
 ## 2.2.0-RC2 (2025-06-18)
 
 ### Fixed
