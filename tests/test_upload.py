@@ -39,6 +39,17 @@ class TestUploadBase:
         self.file_data = b"\x1f\x8b\x08\x08\x22\x4e\x01"
 
 
+@pytest.fixture(autouse=True)
+def mock_token():
+    get_token_patch = patch("pathogena.client.env.get_token")
+    get_token_mock = get_token_patch.start()
+    get_token_mock.return_value = "test_token"
+
+    yield get_token_mock
+
+    get_token_patch.stop()
+
+
 @pytest.fixture
 def upload_sample_1() -> UploadSample:
     return UploadSample(
