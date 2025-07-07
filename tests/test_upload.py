@@ -41,7 +41,7 @@ class TestUploadBase:
 
 @pytest.fixture(autouse=True)
 def mock_token():
-    get_token_patch = patch("pathogena.client.env.get_token")
+    get_token_patch = patch("pathogena.client.env.get_access_token")
     get_token_mock = get_token_patch.start()
     get_token_mock.return_value = "test_token"
 
