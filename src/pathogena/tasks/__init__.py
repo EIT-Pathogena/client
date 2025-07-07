@@ -59,6 +59,7 @@ __all__ = [
     "start_upload_session",
     "prepare_sample",
     "remove_file",
+    "build_upload_csv",
     "decontaminate_samples_with_hostile",
     "validate_upload_permissions",
 ]
