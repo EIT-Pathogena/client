@@ -5,17 +5,21 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from pathogena import __version__, util
-from pathogena.util import find_duplicate_entries
+from pathogena import __version__
+from pathogena.constants import PLATFORMS
+from pathogena.util import (
+    count_lines_in_gzip,
+    find_duplicate_entries,
+    hash_file,
+    parse_csv,
+    reads_lines_from_fastq,
+)
 
 ALLOWED_EXTENSIONS = (".fastq", ".fq", ".fastq.gz", ".fq.gz")
 
 
 def is_valid_file_extension(
     filename: str,
-    allowed_extensions: tuple[
-        Literal[".fastq"], Literal[".fq"], Literal[".fastq.gz"], Literal[".fq.gz"]
-    ] = ALLOWED_EXTENSIONS,
 ) -> bool:
     """Check if the file has a valid extension.
 
@@ -26,7 +30,7 @@ def is_valid_file_extension(
     Returns:
         bool: True if the file has a valid extension, False otherwise.
     """
-    return filename.endswith(allowed_extensions)
+    return filename.endswith(ALLOWED_EXTENSIONS)
 
 
 class UploadBase(BaseModel):
@@ -35,9 +39,7 @@ class UploadBase(BaseModel):
     batch_name: str | None = Field(
         default=None, description="Batch name (anonymised prior to upload)"
     )
-    instrument_platform: util.PLATFORMS = Field(
-        description="Sequencing instrument platform"
-    )
+    instrument_platform: PLATFORMS = Field(description="Sequencing instrument platform")
     collection_date: date = Field(description="Collection date in yyyy-mm-dd format")
     country: str = Field(
         min_length=3, max_length=3, description="ISO 3166-2 alpha-3 country code"
@@ -45,7 +47,7 @@ class UploadBase(BaseModel):
     subdivision: str | None = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
-    district: str = Field(default=None, description="Granular location")
+    district: str = Field(default="", description="Granular location")
     specimen_organism: Literal["mycobacteria", "sars-cov-2"] = Field(
         default="mycobacteria", description="Target specimen organism scientific name"
     )
@@ -55,6 +57,23 @@ class UploadBase(BaseModel):
     amplicon_scheme: str | None = Field(
         default=None,
         description="If a batch of SARS-CoV-2 samples, provides the amplicon scheme",
+    )
+
+
+class UploadData(UploadBase):
+    """Model for upload data with additional fields for read suffixes and batch size."""
+
+    ont_read_suffix: str = Field(
+        default=".fastq.gz", description="Suffix for ONT reads"
+    )
+    illumina_read1_suffix: str = Field(
+        default="_1.fastq.gz", description="Suffix for Illumina reads (first of pair)"
+    )
+    illumina_read2_suffix: str = Field(
+        default="_2.fastq.gz", description="Suffix for Illumina reads (second of pair)"
+    )
+    max_batch_size: int = Field(
+        default=50, description="Maximum number of samples per batch"
     )
 
 
@@ -210,9 +229,9 @@ class UploadSample(UploadBase):
         for read in reads:
             logging.info(f"Calculating read count in: {read}")
             if read.suffix == ".gz":
-                line_count = util.reads_lines_from_gzip(file_path=read)
+                line_count = count_lines_in_gzip(file_path=read)
             else:
-                line_count = util.reads_lines_from_fastq(file_path=read)
+                line_count = reads_lines_from_fastq(file_path=read)
             if line_count % valid_lines_per_read != 0:
                 raise ValueError(
                     f"FASTQ file {read.name} does not have a multiple of 4 lines"
@@ -230,13 +249,13 @@ class UploadSample(UploadBase):
             case None, None:
                 return []
             case x, None:
-                return [x]
+                return [x]  # type: ignore
             case None, x:
-                return [x]
+                return [x]  # type: ignore
             case x, y if self.is_illumina():
-                return [x, y]
+                return [x, y]  # type: ignore
             case x, y if self.is_ont():  # ont only one file
-                return [x]
+                return [x]  # type: ignore
             case _:
                 return []
 
@@ -255,6 +274,18 @@ class UploadSample(UploadBase):
             bool: True if the instrument platform is Illumina, False otherwise.
         """
         return self.instrument_platform == "illumina"
+
+    def read_file1_data(self):
+        """Read the contents of the first fastq file."""
+        if self.reads_1_resolved_path:
+            with open(self.reads_1_resolved_path, "rb") as file:
+                return file.read()
+
+    def read_file2_data(self):
+        """Read the contents of the second fastq file."""
+        if self.reads_2_resolved_path:
+            with open(self.reads_2_resolved_path, "rb") as file:
+                return file.read()
 
 
 class UploadBatch(BaseModel):
@@ -372,7 +403,7 @@ class UploadBatch(BaseModel):
             )
         return self
 
-    def update_sample_metadata(self, metadata: dict[str, Any] = None) -> None:
+    def update_sample_metadata(self, metadata: dict[str, Any] | None = None) -> None:
         """Updates the sample metadata.
 
         Update sample metadata with output from decontamination process, or defaults if
@@ -391,29 +422,25 @@ class UploadBatch(BaseModel):
             )  # Assume no change in default
 
             if sample.reads_1_resolved_path is not None:
-                sample.reads_1_dirty_checksum = util.hash_file(
-                    sample.reads_1_resolved_path
-                )
+                sample.reads_1_dirty_checksum = hash_file(sample.reads_1_resolved_path)
             else:
                 sample.reads_1_dirty_checksum = ""
             if self.ran_through_hostile:
                 sample.reads_1_cleaned_path = Path(
                     cleaned_sample_data.get("fastq1_out_path")
                 )
-                sample.reads_1_pre_upload_checksum = util.hash_file(
+                sample.reads_1_pre_upload_checksum = hash_file(
                     sample.reads_1_cleaned_path
                 )
             else:
                 sample.reads_1_pre_upload_checksum = sample.reads_1_dirty_checksum
             if sample.is_illumina() and sample.reads_2_resolved_path:
-                sample.reads_2_dirty_checksum = util.hash_file(
-                    sample.reads_2_resolved_path
-                )
+                sample.reads_2_dirty_checksum = hash_file(sample.reads_2_resolved_path)
                 if self.ran_through_hostile:
                     sample.reads_2_cleaned_path = Path(
                         cleaned_sample_data.get("fastq2_out_path")
                     )
-                    sample.reads_2_pre_upload_checksum = util.hash_file(
+                    sample.reads_2_pre_upload_checksum = hash_file(
                         sample.reads_2_cleaned_path
                     )
                 else:
@@ -464,7 +491,7 @@ def create_batch_from_csv(upload_csv: Path, skip_checks: bool = False) -> Upload
     Returns:
         UploadBatch: The created UploadBatch instance.
     """
-    records = util.parse_csv(upload_csv)
+    records = parse_csv(upload_csv)
     samples = [UploadSample(**r, **{"upload_csv": upload_csv}) for r in records]
     specimen_organism = samples[0].specimen_organism if len(samples) > 0 else None
 

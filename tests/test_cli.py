@@ -30,14 +30,6 @@ def test_cli_version(cli_main) -> None:
     assert version in result.output
 
 
-# Github Action currently exits 143 with this test, likely what the previous comment meant by "Slow"
-# def test_cli_decontaminate_ont(ont_sample_csv):
-#     runner = CliRunner()
-#     result = runner.invoke(cli_main, ["decontaminate", str(ont_sample_csv)])
-#     assert result.exit_code == 0
-#     [os.remove(f) for f in os.listdir(".") if f.endswith("clean.fastq.gz")]
-
-
 @pytest.mark.slow
 def test_cli_decontaminate_illumina(cli_main, illumina_sample_csv: Path) -> None:
     """Test the CLI decontaminate command for Illumina samples.
@@ -48,7 +40,9 @@ def test_cli_decontaminate_illumina(cli_main, illumina_sample_csv: Path) -> None
     runner = CliRunner()
     result = runner.invoke(cli_main, ["decontaminate", str(illumina_sample_csv)])
     assert result.exit_code == 0
-    [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
+    for f in os.listdir("."):
+        if f.endswith(".fastq.gz"):
+            os.remove(f)
 
 
 @pytest.mark.slow
@@ -65,7 +59,9 @@ def test_cli_decontaminate_illumina_with_output_dir(
         cli_main, ["decontaminate", str(illumina_sample_csv), "--output-dir", "."]
     )
     assert result.exit_code == 0
-    [os.remove(f) for f in os.listdir(".") if f.endswith(".fastq.gz")]
+    for f in os.listdir("."):
+        if f.endswith(".fastq.gz"):
+            os.remove(f)
 
 
 @pytest.mark.slow
@@ -128,6 +124,7 @@ def test_validation_fail_control(cli_main, invalid_control_csv: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(cli_main, ["validate", str(invalid_control_csv)])
     assert result.exit_code == 1
+    assert result.exc_info is not None
     assert result.exc_info[0] == ValidationError
     assert "Input should be 'positive', 'negative' or ''" in str(result.exc_info)
 
