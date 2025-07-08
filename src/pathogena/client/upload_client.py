@@ -1,4 +1,3 @@
-# upload_all chunks of a file
 import logging
 import math
 import sys
@@ -40,13 +39,14 @@ class UploadAPIClient:
         Args:
             base_url (str): The base URL for the API, e.g api.upload-dev.eit-pathogena.com
             client (httpx.Client | None): A custom HTTP client (Client) for making requests.
+            upload_session_id (int): The upload session id.
         """
         self.base_url = base_url
         self.client = client or httpx.Client()
         self.token = env.get_access_token(env.get_host())
         self.upload_session_id = upload_session_id
 
-    def batches_create(
+    def create_batches(
         self,
         data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -75,41 +75,6 @@ class UploadAPIClient:
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to create: {response.text}", response.status_code
-            ) from e
-
-    def batches_samples_start_upload_session_create(
-        self,
-        batch_pk: str,
-        data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Starts a sample upload session by making a POST request to the backend.
-
-        Args:
-            batch_pk (str): The primary key of the batch.
-            data (dict[str, Any] | None): Data to include in the POST request body.
-
-        Returns:
-            dict[str, Any]: The response JSON from the API.
-
-        Raises:
-            APIError: If the API returns a non-2xx status code.
-        """
-        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
-        try:
-            response = self.client.post(
-                url,
-                json=data,
-                headers={"Authorization": f"Bearer {self.token}"},
-                follow_redirects=True,
-            )
-            self.upload_session = response.json().get("upload_session")
-
-            response.raise_for_status()  # Raise an HTTPError for bad responses
-            return response.json()
-        except httpx.HTTPError as e:
-            raise APIError(
-                f"Failed to start upload session: {response.text}",
-                response.status_code,
             ) from e
 
     def start_file_upload(
@@ -175,39 +140,6 @@ class UploadAPIClient:
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to start batch upload: {response.text}",
-                response.status_code,
-            ) from e
-
-    def batches_uploads_upload_chunk(
-        self,
-        batch_pk: int,
-        data: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Starts a batch chunk upload session by making a POST request.
-
-        Args:
-            batch_pk (int): The primary key of the batch.
-            data (dict[str, Any] | None): Data to include in the POST request body.
-
-        Returns:
-            dict[str, Any]: The response JSON from the API.
-
-        Raises:
-            APIError: If the API returns a non-2xx status code.
-        """
-        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/upload-chunk/"
-        try:
-            response = self.client.post(
-                url,
-                json=data,
-                headers={"Authorization": f"Bearer {self.token}"},
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError as e:
-            raise APIError(
-                f"Failed to start batch chunk upload: {response.text}",
                 response.status_code,
             ) from e
 
@@ -305,15 +237,31 @@ class UploadAPIClient:
             for file in files
         ]
 
-        form_details = {
+        json_data = {
             "files_to_upload": files_to_upload,
             "specimen_organism": files_to_upload[0].get("specimen_organism"),
         }
 
-        session_response = self.batches_samples_start_upload_session_create(
-            batch_pk=batch_pk, data=form_details
-        )
-        if not session_response["upload_session"]:
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/sample-files/start-upload-session/"
+        try:
+            session_response = self.client.post(
+                url,
+                json=json_data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
+            )
+            self.upload_session = session_response.json().get("upload_session")
+            if session_response.status_code != 200:
+                raise httpx.HTTPError("Session response status code was not 200")
+
+        except httpx.HTTPError as e:
+            raise APIError(
+                f"Failed to start upload session: {session_response.text}",
+                session_response.status_code,
+            ) from e
+
+        response_json = session_response.json()
+        if not response_json["upload_session"]:
             # Log if the upload session could not be resumed
             logging.exception(
                 "Upload session cannot be resumed. Please create a new batch."
@@ -323,9 +271,9 @@ class UploadAPIClient:
                 httpx.codes.INTERNAL_SERVER_ERROR,
             )
 
-        upload_session_id = session_response["upload_session"]
-        upload_session_name = session_response["name"]
-        sample_summaries = session_response["sample_summaries"]
+        upload_session_id = response_json["upload_session"]
+        upload_session_name = response_json["name"]
+        sample_summaries = response_json["sample_summaries"]
 
         return (upload_session_id, upload_session_name, sample_summaries)
 

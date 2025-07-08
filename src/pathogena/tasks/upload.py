@@ -117,7 +117,7 @@ def create_batch_on_server(
     }
 
     try:
-        response = client.batches_create(data)
+        response = client.create_batches(data)
         if validate_only:
             # Don't attempt to return data if just validating (as there's none there)
             return None, None, None  # type: ignore
