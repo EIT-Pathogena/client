@@ -15,13 +15,13 @@ from pathogena.tasks.prep_samples import (
 from pathogena.tasks.query import (
     check_for_newer_version,
     check_version_compatibility,
+    fetch_amplicon_schemes,
+    fetch_credit_balance,
     fetch_output_files,
     fetch_sample,
-    get_amplicon_schemes,
-    get_credit_balance,
+    fetch_sample_metadata,
+    fetch_sample_status,
     parse_csv,
-    query,
-    status,
 )
 from pathogena.tasks.upload import (
     create_batch_on_server,
@@ -35,14 +35,14 @@ from pathogena.tasks.upload import (
 )
 
 __all__ = [
-    "query",
-    "status",
+    "fetch_sample_metadata",
+    "fetch_sample_status",
     "parse_csv",
     "check_version_compatibility",
     "check_for_newer_version",
     "fetch_output_files",
-    "get_amplicon_schemes",
-    "get_credit_balance",
+    "fetch_amplicon_schemes",
+    "fetch_credit_balance",
     "authenticate",
     "check_authentication",
     "download",

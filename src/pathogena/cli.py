@@ -64,7 +64,7 @@ def balance(
 ) -> None:
     """Check your EIT Pathogena account balance."""
     host = env.get_host(host)
-    tasks.get_credit_balance(host=host)
+    tasks.fetch_credit_balance(host=host)
 
 
 @main.command()
@@ -180,7 +180,7 @@ def upload(
     batch = models.create_batch_from_csv(upload_csv, skip_fastq_check)
 
     if env.is_auth_token_live(host):
-        tasks.get_credit_balance(host=host)
+        tasks.fetch_credit_balance(host=host)
         tasks.validate_upload_permissions(batch, protocol=env.get_protocol(), host=host)
         if skip_decontamination:
             batch.validate_all_sample_fastqs()
@@ -191,7 +191,7 @@ def upload(
             )
             batch.update_sample_metadata(metadata=cleaned_batch_metadata)
         tasks.upload_batch(batch=batch, save=save)
-        tasks.get_credit_balance(host=host)
+        tasks.fetch_credit_balance(host=host)
     else:
         raise AuthorizationError()
 
@@ -271,9 +271,9 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
     """
     host = env.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
-        result = tasks.query(samples=samples, host=host)
+        result = tasks.fetch_sample_metadata(samples=samples, host=host)
     elif (sample_path := Path(samples)).is_file():
-        result = tasks.query(mapping_csv=sample_path, host=host)
+        result = tasks.fetch_sample_metadata(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
@@ -294,9 +294,9 @@ def query_status(
     """
     host = env.get_host(host)
     if util.validate_guids(util.parse_comma_separated_string(samples)):
-        result = tasks.status(samples=samples, host=host)
+        result = tasks.fetch_sample_status(samples=samples, host=host)
     elif (sample_path := Path(samples)).is_file():
-        result = tasks.status(mapping_csv=sample_path, host=host)
+        result = tasks.fetch_sample_status(mapping_csv=sample_path, host=host)
     else:
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
@@ -389,7 +389,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 )
 @click.option(
     "--amplicon-scheme",
-    type=click.Choice(tasks.get_amplicon_schemes()),
+    type=click.Choice(tasks.fetch_amplicon_schemes()),
     help="Amplicon scheme, use only when SARS-CoV-2 is the specimen organism",
     default=None,
     show_default=True,
@@ -471,7 +471,7 @@ def build_csv(
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def get_amplicon_schemes(*, host: str | None = None) -> None:
     """Get valid amplicon schemes from the server."""
-    schemes = tasks.get_amplicon_schemes(host=host)
+    schemes = tasks.fetch_amplicon_schemes(host=host)
     logging.info("Valid amplicon schemes:")
     for scheme in schemes:
         logging.info(scheme)

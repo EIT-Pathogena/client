@@ -14,78 +14,6 @@ from pathogena.errors import UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 
 
-def query(
-    samples: str | None = None,
-    mapping_csv: Path | None = None,
-    host: str = DEFAULT_HOST,
-) -> dict[str, dict]:
-    """Query sample metadata returning a dict of metadata keyed by sample ID.
-
-    Args:
-        query_string (str): The query string.
-        host (str): The host server.
-        protocol (str): The protocol to use. Defaults to DEFAULT_PROTOCOL.
-
-    Returns:
-        dict: The query result.
-    """
-    check_version_compatibility(host)
-    if samples:
-        guids = util.parse_comma_separated_string(samples)
-        guids_samples = dict.fromkeys(guids)
-        logging.info(f"Using guids {guids}")
-    elif mapping_csv:
-        csv_records = parse_csv(Path(mapping_csv))
-        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
-        logging.info(f"Using samples in {mapping_csv}")
-        logging.debug(f"{guids_samples=}")
-    else:
-        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
-    samples_metadata = {}
-    for guid, sample in tqdm(
-        guids_samples.items(), desc="Querying samples", leave=False
-    ):
-        name = sample if mapping_csv else guid
-        samples_metadata[name] = fetch_sample(sample_id=guid, host=host)
-    return samples_metadata
-
-
-def status(
-    samples: str | None = None,
-    mapping_csv: Path | None = None,
-    host: str = DEFAULT_HOST,
-) -> dict[str, str]:
-    """Get the status of samples from the server.
-
-    Args:
-        samples (str | None): A comma-separated list of sample IDs.
-        mapping_csv (Path | None): The path to a CSV file containing sample mappings.
-        host (str): The host server. Defaults to DEFAULT_HOST.
-
-    Returns:
-        dict[str, str]: A dictionary with sample IDs as keys and their statuses as values.
-    """
-    check_version_compatibility(host)
-    if samples:
-        guids = util.parse_comma_separated_string(samples)
-        guids_samples = dict.fromkeys(guids)
-        logging.info(f"Using guids {guids}")
-    elif mapping_csv:
-        csv_records = parse_csv(Path(mapping_csv))
-        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
-        logging.info(f"Using samples in {mapping_csv}")
-        logging.debug(guids_samples)
-    else:
-        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
-    samples_status = {}
-    for guid, sample in tqdm(
-        guids_samples.items(), desc="Querying samples", leave=False
-    ):
-        name = sample if mapping_csv else guid
-        samples_status[name] = fetch_sample(sample_id=guid, host=host).get("status")
-    return samples_status  # type: ignore
-
-
 def parse_csv(path: Path) -> list[dict]:
     """Parse a CSV file.
 
@@ -153,6 +81,78 @@ def check_for_newer_version() -> None:
         pass
 
 
+def fetch_sample_status(
+    samples: str | None = None,
+    mapping_csv: Path | None = None,
+    host: str = DEFAULT_HOST,
+) -> dict[str, str]:
+    """Get the status of samples from the server.
+
+    Args:
+        samples (str | None): A comma-separated list of sample IDs.
+        mapping_csv (Path | None): The path to a CSV file containing sample mappings.
+        host (str): The host server. Defaults to DEFAULT_HOST.
+
+    Returns:
+        dict[str, str]: A dictionary with sample IDs as keys and their statuses as values.
+    """
+    check_version_compatibility(host)
+    if samples:
+        guids = util.parse_comma_separated_string(samples)
+        guids_samples = dict.fromkeys(guids)
+        logging.info(f"Using guids {guids}")
+    elif mapping_csv:
+        csv_records = parse_csv(Path(mapping_csv))
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
+        logging.info(f"Using samples in {mapping_csv}")
+        logging.debug(guids_samples)
+    else:
+        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
+    samples_status = {}
+    for guid, sample in tqdm(
+        guids_samples.items(), desc="Querying samples", leave=False
+    ):
+        name = sample if mapping_csv else guid
+        samples_status[name] = fetch_sample(sample_id=guid, host=host).get("status")
+    return samples_status  # type: ignore
+
+
+def fetch_sample_metadata(
+    samples: str | None = None,
+    mapping_csv: Path | None = None,
+    host: str = DEFAULT_HOST,
+) -> dict[str, dict]:
+    """Query sample metadata returning a dict of metadata keyed by sample ID.
+
+    Args:
+        query_string (str): The query string.
+        host (str): The host server.
+        protocol (str): The protocol to use. Defaults to DEFAULT_PROTOCOL.
+
+    Returns:
+        dict: The query result.
+    """
+    check_version_compatibility(host)
+    if samples:
+        guids = util.parse_comma_separated_string(samples)
+        guids_samples = dict.fromkeys(guids)
+        logging.info(f"Using guids {guids}")
+    elif mapping_csv:
+        csv_records = parse_csv(Path(mapping_csv))
+        guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}
+        logging.info(f"Using samples in {mapping_csv}")
+        logging.debug(f"{guids_samples=}")
+    else:
+        raise RuntimeError("Specify either a list of sample IDs or a mapping CSV")
+    samples_metadata = {}
+    for guid, sample in tqdm(
+        guids_samples.items(), desc="Querying samples", leave=False
+    ):
+        name = sample if mapping_csv else guid
+        samples_metadata[name] = fetch_sample(sample_id=guid, host=host)
+    return samples_metadata
+
+
 def fetch_output_files(
     sample_id: str, host: str, latest: bool = True
 ) -> dict[str, models.RemoteFile]:
@@ -192,7 +192,7 @@ def fetch_output_files(
     return output_files
 
 
-def get_amplicon_schemes(host: str | None = None) -> list[str]:
+def fetch_amplicon_schemes(host: str | None = None) -> list[str]:
     """Fetch valid amplicon schemes from the server.
 
     Returns:
@@ -212,7 +212,7 @@ def get_amplicon_schemes(host: str | None = None) -> list[str]:
     return [val for val in response.json()["amplicon_schemes"] if val is not None]
 
 
-def get_credit_balance(host: str) -> None:
+def fetch_credit_balance(host: str) -> None:
     """Get the credit balance for the user.
 
     Args:
