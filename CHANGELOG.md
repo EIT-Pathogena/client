@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Added
+
+- [EV-2149](https://eit-oxford.atlassian.net/browse/EV-2149): minimum cli version enforcement.
+
 ## 2.2.1 (2025-07-03)
 
 ## 2.2.1-RC1 (2025-06-27)
