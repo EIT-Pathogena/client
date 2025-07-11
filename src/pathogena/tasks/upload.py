@@ -229,9 +229,8 @@ def upload_fastq_files(
     with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
         futures = []
         for sample in upload_session.samples:
-            for file in sample.files:
-                future = executor.submit(upload_chunks, client, upload_data, file)
-                futures.append(future)
+            future = executor.submit(upload_sample, client, upload_data, sample)
+            futures.append(future)
 
         # Need to tie halves of the samples together here
         # And call end sample when a sample is finished uploading
@@ -250,6 +249,34 @@ def upload_fastq_files(
         logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
     else:
         logging.info(f"All uploads complete.")
+
+
+def upload_sample(
+    client: UploadAPIClient,
+    upload_data: UploadData,
+    sample: Sample[UploadingFile],
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+) -> None:
+    """Uploads chunks for a sample.
+
+    Args:
+        client (UploadAPIClient): The upload API client to use.
+        upload_data (UploadData): The upload data including batch_id, session info, etc.
+        file (SelectedFile): The file to upload (with file data, total chunks, etc.)
+        chunk_size (int): Default size of file chunk to upload (5mb)
+
+    Returns:
+        None: This function does not return anything, but calls the provided
+            `on_progress` and `on_complete` callback functions.
+    """
+    for file in sample.files:
+        upload_chunks(client, upload_data, file, chunk_size)
+
+    client.end_sample_upload(
+        upload_data.batch_pk,
+        data={"upload_id": sample.files[0].upload_id},
+    )
+    return None
 
 
 def upload_chunks(
