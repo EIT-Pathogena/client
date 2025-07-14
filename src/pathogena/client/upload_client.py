@@ -361,7 +361,6 @@ class UploadAPIClient:
         self,
         batch_id: str,
         file_name: str,
-        token: str,
     ):
         """Log a mapping file was downloaded in portal.
 
