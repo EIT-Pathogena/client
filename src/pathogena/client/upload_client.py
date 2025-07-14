@@ -367,7 +367,6 @@ class UploadAPIClient:
         Args:
             batch_id (str): batch_id for which we are logging mapping file download
             file_name (str): file name we are logging download of
-            token (str): The access token
         """
         try:
             with httpx.Client(
