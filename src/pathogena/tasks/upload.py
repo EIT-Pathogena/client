@@ -197,7 +197,6 @@ def upload_batch(
         client.log_download_mapping_file_to_portal(
             str(batch_id),
             batch_name,
-            token,
         )
     except Exception as e:
         logging.warning("Could not log mapping-file download to portal: %s", e)
