@@ -598,7 +598,7 @@ class TestLogDownloadMappingCSV:
             self.session_id = session_id
             self.samples = samples
 
-    @patch("pathogena.tasks.upload.httpx.Client")
+    @patch("pathogena.client.upload_client.httpx.Client")
     def test_log_download_mapping_file_success(self, mock_client: MagicMock):
         """Test download csv logging called as expected"""
 
@@ -612,12 +612,11 @@ class TestLogDownloadMappingCSV:
         mock_client.return_value.__exit__.return_value = None
 
         # call
-        upload.log_download_mapping_file_to_portal(
-            batch_id=batch_id, file_name=file_name, token=token
-        )
+        client = UploadAPIClient()
+        client.log_download_mapping_file_to_portal(batch_id, file_name, token)
 
-        # check called once
-        assert mock_client.call_count == 1
+        # check called twice - init of UploadAPIClient() and loggig call
+        assert mock_client.call_count == 2
 
         # check kwargs as expected
         _, kwargs = mock_client.call_args
@@ -626,7 +625,9 @@ class TestLogDownloadMappingCSV:
         assert kwargs["timeout"] == 60
 
     @patch("pathogena.tasks.upload.upload_fastq_files")
-    @patch("pathogena.tasks.upload.log_download_mapping_file_to_portal")
+    @patch(
+        "pathogena.client.upload_client.UploadAPIClient.log_download_mapping_file_to_portal"
+    )
     @patch("pathogena.tasks.upload.util.write_csv")
     @patch("pathogena.tasks.upload.env.get_access_token", return_value="tok-123")
     @patch("pathogena.tasks.upload.start_upload_session")
@@ -685,7 +686,7 @@ class TestLogDownloadMappingCSV:
 
     @patch("pathogena.tasks.upload.upload_fastq_files")
     @patch(
-        "pathogena.tasks.upload.log_download_mapping_file_to_portal",
+        "pathogena.client.upload_client.UploadAPIClient.log_download_mapping_file_to_portal",
         side_effect=Exception("noooooo!"),
     )
     @patch("pathogena.tasks.upload.util.write_csv")

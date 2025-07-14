@@ -136,41 +136,6 @@ def create_batch_on_server(
         exit(1)
 
 
-def log_download_mapping_file_to_portal(
-    batch_id: str,
-    file_name: str,
-    token: str,
-):
-    """Log a mapping file was downloaded in portal.
-
-    Args:
-        batch_id (str): batch_id for which we are logging mapping file download
-        file_name (str): file name we are logging download of
-        token (str): The access token
-    """
-    try:
-        with httpx.Client(
-            event_hooks=httpx_hooks,
-            transport=httpx.HTTPTransport(retries=5),
-            timeout=60,
-        ) as client:
-            response = client.post(
-                f"{env.get_host()}/kpi_events/download-mapping-file",
-                json={
-                    "batch_id": batch_id,
-                    "file_name": f"{file_name}.mapping.csv",
-                },
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                timeout=5,
-            )
-        response.raise_for_status()
-    except Exception as e:
-        logging.warning("Could not log mapping-file download to portal: %s", e)
-
-
 def upload_batch(
     batch: models.UploadBatch,
     save: bool = False,
@@ -229,7 +194,7 @@ def upload_batch(
     )
     token = env.get_access_token(env.get_host(None))
     try:
-        log_download_mapping_file_to_portal(
+        client.log_download_mapping_file_to_portal(
             str(batch_id),
             batch_name,
             token,
