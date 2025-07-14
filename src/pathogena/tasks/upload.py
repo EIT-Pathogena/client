@@ -192,14 +192,10 @@ def upload_batch(
         "You can monitor the progress of your batch in EIT Pathogena here: "
         f"{env.get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
-    token = env.get_access_token(env.get_host(None))
-    try:
-        client.log_download_mapping_file_to_portal(
-            str(batch_id),
-            batch_name,
-        )
-    except Exception as e:
-        logging.warning("Could not log mapping-file download to portal: %s", e)
+    client.log_download_mapping_file_to_portal(
+        str(batch_id),
+        batch_name,
+    )
 
     upload_fastq_files(
         client, upload_data=upload_file_type, upload_session=upload_session

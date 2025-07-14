@@ -613,7 +613,7 @@ class TestLogDownloadMappingCSV:
 
         # call
         client = UploadAPIClient()
-        client.log_download_mapping_file_to_portal(batch_id, file_name, token)
+        client.log_download_mapping_file_to_portal(batch_id, file_name)
 
         # check called twice - init of UploadAPIClient() and loggig call
         assert mock_client.call_count == 2
@@ -677,7 +677,6 @@ class TestLogDownloadMappingCSV:
         mock_logger.assert_called_once_with(
             str(batch_id),
             batch_name,
-            "tok-123",
         )
         mock_upload_fastq.assert_called_once()
 
@@ -686,8 +685,11 @@ class TestLogDownloadMappingCSV:
 
     @patch("pathogena.tasks.upload.upload_fastq_files")
     @patch(
-        "pathogena.client.upload_client.UploadAPIClient.log_download_mapping_file_to_portal",
-        side_effect=Exception("noooooo!"),
+        "pathogena.client.upload_client.httpx.Client",
+        side_effect=[
+            MagicMock(),  # init
+            Exception("noooooo!"),  # portal‐upload
+        ],
     )
     @patch("pathogena.tasks.upload.util.write_csv")
     @patch("pathogena.tasks.upload.env.get_access_token", return_value="tok-123")
@@ -699,7 +701,7 @@ class TestLogDownloadMappingCSV:
         mock_upload_session,
         mock_token,
         mock_write_csv,
-        mock_logger,
+        mock_httpx_client,
         mock_upload_fastq,
         caplog,
     ):
@@ -734,13 +736,6 @@ class TestLogDownloadMappingCSV:
                 }
             ],
             f"{batch_name}.mapping.csv",
-        )
-
-        # assert called the logger
-        mock_logger.assert_called_once_with(
-            str(batch_id),
-            batch_name,
-            "tok-123",
         )
 
         # assert logged that failed to log in portal
