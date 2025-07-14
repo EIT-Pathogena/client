@@ -383,7 +383,7 @@ class UploadAPIClient:
                         "file_name": f"{file_name}.mapping.csv",
                     },
                     headers={
-                        "Authorization": f"Bearer {token}",
+                        "Authorization": f"Bearer {self.token}",
                         "Content-Type": "application/json",
                     },
                     timeout=5,
