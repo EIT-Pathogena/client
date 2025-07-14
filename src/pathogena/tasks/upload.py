@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import hostile
+import httpx
 
 import pathogena
 from pathogena import models, util
@@ -18,6 +19,7 @@ from pathogena.constants import (
     DEFAULT_APP_HOST,
     DEFAULT_CHUNK_SIZE,
 )
+from pathogena.log_utils import httpx_hooks
 from pathogena.types import (
     OnComplete,
     OnProgress,
@@ -189,6 +191,10 @@ def upload_batch(
     logging.info(
         "You can monitor the progress of your batch in EIT Pathogena here: "
         f"{env.get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
+    )
+    client.log_download_mapping_file_to_portal(
+        str(batch_id),
+        batch_name,
     )
 
     upload_fastq_files(

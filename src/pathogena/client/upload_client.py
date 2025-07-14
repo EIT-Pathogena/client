@@ -12,6 +12,7 @@ from pathogena.constants import (
     DEFAULT_CHUNK_SIZE,
 )
 from pathogena.errors import APIError
+from pathogena.log_utils import httpx_hooks
 from pathogena.types import (
     BatchUploadStatus,
     PreparedFile,
@@ -355,3 +356,36 @@ class UploadAPIClient:
                 f"Failed to upload chunk {chunk_index} of batch {batch_pk}: {str(e), chunk[:10]} RESPONSE {response.status_code, response.headers, response.content}",
                 response.status_code,
             ) from e
+
+    def log_download_mapping_file_to_portal(
+        self,
+        batch_id: str,
+        file_name: str,
+    ):
+        """Log a mapping file was downloaded in portal.
+
+        Args:
+            batch_id (str): batch_id for which we are logging mapping file download
+            file_name (str): file name we are logging download of
+        """
+        try:
+            with httpx.Client(
+                event_hooks=httpx_hooks,
+                transport=httpx.HTTPTransport(retries=5),
+                timeout=60,
+            ) as client:
+                response = client.post(
+                    f"{env.get_host()}/kpi_events/download-mapping-file",
+                    json={
+                        "batch_id": batch_id,
+                        "file_name": f"{file_name}.mapping.csv",
+                    },
+                    headers={
+                        "Authorization": f"Bearer {self.token}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=5,
+                )
+            response.raise_for_status()
+        except Exception as e:
+            logging.warning("Could not log mapping-file download to portal: %s", e)
