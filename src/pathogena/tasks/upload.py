@@ -28,9 +28,6 @@ from pathogena.types import (
     UploadSession,
 )
 
-if TYPE_CHECKING:
-    from httpx import Response
-
 
 def prepare_upload_files(
     target_filepath: Path, sample_id: str, read_num: int, decontaminated: bool = False
@@ -233,12 +230,12 @@ def upload_fastq_files(
             futures.append(future)
 
         # Need to tie halves of the samples together here
-        # And call end sample when a sample is finished uploading
+        # And call end session when all samples are uploaded
         for future in as_completed(futures):
             try:
                 future.result()
             except Exception as e:
-                logging.error(f"Error uploading file: {e}")
+                logging.error(f"Error uploading sample: {e}")
 
     # end the upload session
     end_session = client.end_upload_session(
@@ -256,7 +253,7 @@ def upload_sample(
     upload_data: UploadData,
     sample: Sample[UploadingFile],
     chunk_size: int = DEFAULT_CHUNK_SIZE,
-) -> None:
+) -> Response:
     """Uploads chunks for a sample.
 
     Args:
@@ -269,14 +266,26 @@ def upload_sample(
         None: This function does not return anything, but calls the provided
             `on_progress` and `on_complete` callback functions.
     """
-    for file in sample.files:
-        upload_chunks(client, upload_data, file, chunk_size)
+    with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
+        futures = []
+        for file in sample.files:
+            future = executor.submit(
+                upload_chunks, client, upload_data, file, chunk_size
+            )
+            futures.append(future)
 
-    client.end_sample_upload(
+        # Need to tie halves of the samples together here
+        # And call end sample when a sample is finished uploading
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logging.error(f"Error uploading file: {e}")
+
+    return client.end_sample_upload(
         upload_data.batch_pk,
         data={"upload_id": sample.files[0].upload_id},
     )
-    return None
 
 
 def upload_chunks(
