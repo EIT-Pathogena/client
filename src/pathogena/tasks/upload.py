@@ -18,7 +18,6 @@ from pathogena.constants import (
     DEFAULT_APP_HOST,
     DEFAULT_CHUNK_SIZE,
 )
-from pathogena.log_utils import httpx_hooks
 from pathogena.types import (
     OnComplete,
     OnProgress,
@@ -250,7 +249,7 @@ def upload_fastq_files(
     if end_session.status_code != 200:
         logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
     else:
-        logging.info(f"All uploads complete.")
+        logging.info("All uploads complete.")
 
 
 def upload_sample(

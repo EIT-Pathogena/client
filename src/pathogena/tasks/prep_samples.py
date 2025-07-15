@@ -223,7 +223,7 @@ def _write_csv(
     use_amplicon_scheme = upload_data.specimen_organism == "sars-cov-2"
     if upload_data.amplicon_scheme is None:
         logging.warning(
-            f"No amplicon scheme has been specified, automatic detection will be used."
+            "No amplicon scheme has been specified, automatic detection will be used."
         )
         logging.warning(
             "Note that selecting automatic detection may occasionally result in misclassification "

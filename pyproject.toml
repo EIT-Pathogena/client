@@ -44,7 +44,7 @@ dev = [
 ]
 
 [tool.ruff.lint]
-select = ["A", "B", "C", "D", "DJ", "E", "I", "N", "SIM", "T20", "TCH", "TD", "UP"]
+select = ["A", "B", "C", "D", "DJ", "E", "F", "I", "N", "SIM", "T20", "TCH", "TD", "UP"]
 
 ignore = ["C901", "D107", "D100", "DJ001", "PD901", "UP007", "UP017", "D206", "E501", "S101", "PT027", "DTZ005", "ARG002", "B026", "D417", "N999", "S603", "S607", "UP017", "SIM103"]
 

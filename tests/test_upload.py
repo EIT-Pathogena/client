@@ -604,7 +604,6 @@ class TestLogDownloadMappingCSV:
 
         batch_id = "batch123"
         file_name = "mapping"
-        token = "tok-xyz"
         fake_client = MagicMock()
 
         # mock the context‐manager

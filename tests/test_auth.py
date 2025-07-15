@@ -91,5 +91,5 @@ def test_authenticate_success(mock_httpx_client, mock_user_input, caplog):
         headers={"X-CLIENT-VERSION": __version__},
     )
 
-    assert f"Authenticating with test.example.com" in caplog.text
-    assert f"Authenticated" in caplog.text
+    assert "Authenticating with test.example.com" in caplog.text
+    assert "Authenticated" in caplog.text
