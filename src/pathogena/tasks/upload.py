@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import hostile
+from httpx import Response
 
 import pathogena
 from pathogena import models, util
