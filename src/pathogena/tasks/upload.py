@@ -192,9 +192,7 @@ def upload_batch(
         batch_name,
     )
 
-    upload_fastq_files(
-        client, upload_data=upload_file_type, upload_session=upload_session
-    )
+    upload_samples(client, upload_data=upload_file_type, upload_session=upload_session)
 
     if not save:
         for sample in upload_session.samples:
@@ -205,12 +203,12 @@ def upload_batch(
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
-def upload_fastq_files(
+def upload_samples(
     client: UploadAPIClient,
     upload_data: UploadData,
     upload_session: UploadSession,
 ) -> None:
-    """Uploads files in chunks and manages the upload process.
+    """Uploads samples once the upload session has been created.
 
     This function first prepares the files for upload, then uploads them in chunks
     using a thread pool executor for concurrent uploads. It finishes by ending the
@@ -258,7 +256,7 @@ def upload_sample(
     sample: Sample[UploadingFile],
     chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> Response:
-    """Uploads chunks for a sample.
+    """Uploads files in a sample, chunk by chunk.
 
     Args:
         client (UploadAPIClient): The upload API client to use.
@@ -273,9 +271,7 @@ def upload_sample(
     with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
         futures = []
         for file in sample.files:
-            future = executor.submit(
-                upload_chunks, client, upload_data, file, chunk_size
-            )
+            future = executor.submit(upload_file, client, upload_data, file, chunk_size)
             futures.append(future)
 
         # Need to tie halves of the samples together here
@@ -292,7 +288,7 @@ def upload_sample(
     )
 
 
-def upload_chunks(
+def upload_file(
     client: UploadAPIClient,
     upload_data: UploadData,
     file: UploadingFile,

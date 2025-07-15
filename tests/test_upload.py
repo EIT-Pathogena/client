@@ -15,8 +15,8 @@ from pathogena.models import UploadSample
 from pathogena.tasks import upload
 from pathogena.tasks.upload import (
     start_upload_session,
-    upload_chunks,
-    upload_fastq_files,
+    upload_file,
+    upload_samples,
 )
 from pathogena.types import (
     OnComplete,
@@ -423,7 +423,7 @@ class TestUploadChunks:
         mock_client.end_file_upload = mock_end_file_upload
 
         client = UploadAPIClient()
-        upload_chunks(client, upload_data, uploading_file)
+        upload_file(client, upload_data, uploading_file)
 
         assert upload_data.on_complete == OnComplete(
             uploading_file.upload_id, upload_data.batch_pk
@@ -463,7 +463,7 @@ class TestUploadChunks:
         client = UploadAPIClient("", mock_httpx_client, 1)
 
         # call
-        upload_chunks(client, upload_data, uploading_file)
+        upload_file(client, upload_data, uploading_file)
 
         assert upload_data.on_progress == OnProgress(
             upload_id=uploading_file.upload_id,
@@ -519,7 +519,7 @@ class TestUploadFiles:
         )
         mock_end_upload_session = patch_end_upload_session.start()
 
-        upload_fastq_files(
+        upload_samples(
             upload_api_client,
             upload_data,
             upload_session,
@@ -558,7 +558,7 @@ class TestUploadFiles:
         patch_logging = patch("logging.error")
         mock_logging = patch_logging.start()
 
-        upload_fastq_files(upload_api_client, upload_data, upload_session)
+        upload_samples(upload_api_client, upload_data, upload_session)
 
         for sample in upload_session.samples:
             for file in sample.files:
