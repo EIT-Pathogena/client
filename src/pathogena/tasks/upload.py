@@ -1,12 +1,11 @@
 import logging
 import os
 import shutil
-import time
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from json import JSONDecodeError
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import hostile
 from httpx import Response
