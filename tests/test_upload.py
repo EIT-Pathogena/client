@@ -596,7 +596,7 @@ class TestLogDownloadMappingCSV:
         assert isinstance(kwargs["transport"], httpx.HTTPTransport)
         assert kwargs["timeout"] == 60
 
-    @patch("pathogena.tasks.upload.upload_fastq_files")
+    @patch("pathogena.tasks.upload.upload_samples")
     @patch(
         "pathogena.client.upload_client.UploadAPIClient.log_download_mapping_file_to_portal"
     )
@@ -611,7 +611,7 @@ class TestLogDownloadMappingCSV:
         mock_token,
         mock_write_csv,
         mock_logger,
-        mock_upload_fastq,
+        mock_upload_samples,
         caplog,
     ):
         batch_id = uuid4()
@@ -646,12 +646,12 @@ class TestLogDownloadMappingCSV:
             str(batch_id),
             batch_name,
         )
-        mock_upload_fastq.assert_called_once()
+        mock_upload_samples.assert_called_once()
 
         # no log levels of warning or higher
         assert not [rec for rec in caplog.records if rec.levelno >= logging.WARNING]
 
-    @patch("pathogena.tasks.upload.upload_fastq_files")
+    @patch("pathogena.tasks.upload.upload_samples")
     @patch(
         "pathogena.client.upload_client.httpx.Client",
         side_effect=[
@@ -670,7 +670,7 @@ class TestLogDownloadMappingCSV:
         mock_token,
         mock_write_csv,
         mock_httpx_client,
-        mock_upload_fastq,
+        mock_upload_samples,
         caplog,
     ):
         batch_id = uuid4()
