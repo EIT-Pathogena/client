@@ -35,7 +35,6 @@ TEST_UPLOAD_SESSION_ID = 123
 class TestUploadBase:
     @pytest.fixture(autouse=True)
     def setup(self):
-        # Set values for the batch and instrument
         self.batch_id = "00000000-0000-0000-0000-000000000000"
         self.sample_id = "11111111-1111-1111-1111-111111111111"
         self.instrument_code = "INST001"
@@ -86,11 +85,9 @@ def upload_sample_2() -> UploadSample:
     )
 
 
-# fixture for mock_upload_data
 @pytest.fixture(autouse=True)
 def upload_data(upload_sample_1, upload_sample_2):
     """Fixture for mocked upload data."""
-    # mocking UploadFileType with required attributes
     samples = [upload_sample_1, upload_sample_2]
     return UploadData(
         access_token="access_token",
@@ -136,7 +133,7 @@ def uploading_file(prepared_file):
 def sample_file_metadata() -> SampleFileMetadata:
     return SampleFileMetadata(
         name="file1.txt",
-        size=1024,  # 1 KB
+        size=1024,
         content_type="text/plain",
         specimen_organism="mycobacteria",
         resolved_path=None,
@@ -211,7 +208,6 @@ class TestPrepareFile(TestUploadBase):
     ):
         prepared_file = PreparedFile(upload_sample=upload_sample_1, file_side=1)
 
-        # mock successful api response
         mock_httpx_client.post.return_value = httpx.Response(
             status_code=httpx.codes.OK,
             json={
@@ -245,7 +241,6 @@ class TestPrepareFile(TestUploadBase):
         prepared_file: PreparedFile,
         mock_httpx_client: MagicMock,
     ):
-        # mock api response with 400 code
         mock_httpx_client.post.return_value = httpx.Response(
             status_code=httpx.codes.BAD_REQUEST, json={"error": "Bad Request"}
         )
@@ -265,7 +260,6 @@ class TestPrepareFile(TestUploadBase):
         prepared_file: PreparedFile,
         mock_httpx_client: MagicMock,
     ):
-        # mock api error with 500 code
         mock_httpx_client.post.side_effect = APIError("API request failed", 500)
 
         with pytest.raises(APIError):
@@ -281,7 +275,6 @@ class TestPrepareFile(TestUploadBase):
 class TestPrepareFiles:
     @pytest.fixture(autouse=True)
     def setup(self):
-        # Set up multiple files as dictionaries
         self.upload_sample1 = UploadSample(
             sample_name="sample1",
             upload_csv=Path("tests/data/illumina.csv"),
@@ -308,7 +301,6 @@ class TestPrepareFiles:
             is_ont=True,
         )
 
-        # Set values for the batch and instrument
         self.batch_pk = 1
         self.instrument_code = "INST001"
         self.upload_session_id = 123
@@ -319,12 +311,10 @@ class TestPrepareFiles:
     def test_prepare_files_success(
         self,
     ):
-        # list of files to pass to prepare_files
         upload_samples = [self.upload_sample1]
 
         mock_api_client = MagicMock(spec=UploadAPIClient)
 
-        # mock a successful start upload session  response
         mock_api_client.start_upload_session.return_value = [
             self.upload_session_id,
             "test_name",
@@ -360,39 +350,28 @@ class TestPrepareFiles:
 
         assert len(upload_session.samples) == 1
         assert len(upload_session.samples[0].files) == 2
-        assert (
-            upload_session.samples[0].files[0].upload_id == "test_upload_id_1"
-        )  # file2 (in progress)
-        assert (
-            upload_session.samples[0].files[1].upload_id == "test_upload_id_2"
-        )  # file2 (in progress)
+        assert upload_session.samples[0].files[0].upload_id == "test_upload_id_1"
+        assert upload_session.samples[0].files[1].upload_id == "test_upload_id_2"
 
 
 class TestUploadChunks:
     @pytest.fixture(autouse=True)
     def setup(self):
-        # Set values for the batch, instrument, and upload session
         self.batch_pk = 123
         self.instrument_code = "INST001"
         self.upload_session = 123
 
-        # mock as_completed to simulate completed futures
         self.mock_future = MagicMock(spec=Future)
         self.mock_future.result.return_value = MagicMock(
             status_code=200, text="OK", data={"metrics": "some_metrics"}
         )
-        patch(
-            "concurrent.futures.as_completed", return_value=[self.mock_future] * 4
-        )  # 4 completed chunks to match mock file
+        patch("concurrent.futures.as_completed", return_value=[self.mock_future] * 4)
 
-        # Mock process_queue to prevent it from blocking the test
         patch("pathogena.upload_utils.process_queue", return_value=None)
 
-        # Mock access_token
         dummy_token = "dummy-token"
         patch("pathogena.upload_utils.get_access_token", return_value=dummy_token)
 
-        # mock as_completed to simulate completed futures
         self.mock_end_upload = patch.object(
             UploadAPIClient,
             "end_file_upload",
@@ -427,13 +406,13 @@ class TestUploadChunks:
 
         assert upload_data.on_complete == OnComplete(
             uploading_file.upload_id, upload_data.batch_pk
-        )  # all 4 chunks uploaded
+        )
         assert (
             upload_data.on_progress is not None
             and upload_data.on_progress.progress == 100
         )
 
-        assert self.mock_end_upload.calledonce  # end_file_upload called once
+        assert self.mock_end_upload.calledonce
         patch_upload_chunk.stop()
         patch_client.stop()
 
@@ -462,7 +441,6 @@ class TestUploadChunks:
         ]
         client = UploadAPIClient("", mock_httpx_client, 1)
 
-        # call
         upload_file(client, upload_data, uploading_file)
 
         assert upload_data.on_progress == OnProgress(
@@ -476,7 +454,6 @@ class TestUploadChunks:
 class TestUploadFiles:
     @pytest.fixture(autouse=True)
     def setup(self):
-        # Set up multiple files as dictionaries
         self.upload_sample1 = UploadSample(
             sample_name="sample1",
             upload_csv=Path("tests/data/illumina.csv"),
@@ -606,18 +583,14 @@ class TestLogDownloadMappingCSV:
         file_name = "mapping"
         fake_client = MagicMock()
 
-        # mock the context‐manager
         mock_client.return_value.__enter__.return_value = fake_client
         mock_client.return_value.__exit__.return_value = None
 
-        # call
         client = UploadAPIClient()
         client.log_download_mapping_file_to_portal(batch_id, file_name)
 
-        # check called twice - init of UploadAPIClient() and loggig call
         assert mock_client.call_count == 2
 
-        # check kwargs as expected
         _, kwargs = mock_client.call_args
         assert kwargs["event_hooks"] is httpx_hooks
         assert isinstance(kwargs["transport"], httpx.HTTPTransport)
@@ -641,13 +614,11 @@ class TestLogDownloadMappingCSV:
         mock_upload_fastq,
         caplog,
     ):
-        # mock create_batch_on_server to return dummy IDs
         batch_id = uuid4()
         batch_name = "remote"
         legacy_id = uuid4()
         mock_create.return_value = (batch_id, batch_name, legacy_id)
 
-        # mock the upload session
         fake_file = TestLogDownloadMappingCSV.DummyFile("f1", "/tmp/f1", "sid1")
         sample_obj = MagicMock(files=[fake_file])
         fake_session = TestLogDownloadMappingCSV.DummySession(
@@ -657,10 +628,8 @@ class TestLogDownloadMappingCSV:
 
         batch = TestLogDownloadMappingCSV.make_dummy_batch()
 
-        # call upload batch
         upload.upload_batch(batch=batch, save=True, validate_only=False)
 
-        # assert expected calls made once
         mock_write_csv.assert_called_once_with(
             [
                 {
@@ -686,8 +655,8 @@ class TestLogDownloadMappingCSV:
     @patch(
         "pathogena.client.upload_client.httpx.Client",
         side_effect=[
-            MagicMock(),  # init
-            Exception("noooooo!"),  # portal‐upload
+            MagicMock(),
+            Exception("noooooo!"),
         ],
     )
     @patch("pathogena.tasks.upload.util.write_csv")
@@ -704,13 +673,11 @@ class TestLogDownloadMappingCSV:
         mock_upload_fastq,
         caplog,
     ):
-        # mock create_batch_on_server to return dummy IDs
         batch_id = uuid4()
         batch_name = "remote"
         legacy_id = uuid4()
         mock_create.return_value = (batch_id, batch_name, legacy_id)
 
-        # mock the upload session
         fake_file = TestLogDownloadMappingCSV.DummyFile("f1", "/tmp/f1", "sid1")
         sample_obj = MagicMock(files=[fake_file])
         fake_session = TestLogDownloadMappingCSV.DummySession(
@@ -720,10 +687,8 @@ class TestLogDownloadMappingCSV:
 
         batch = TestLogDownloadMappingCSV.make_dummy_batch()
 
-        # call upload batch
         upload.upload_batch(batch=batch, save=True, validate_only=False)
 
-        # assert expected calls made once
         mock_write_csv.assert_called_once_with(
             [
                 {
@@ -737,7 +702,7 @@ class TestLogDownloadMappingCSV:
             f"{batch_name}.mapping.csv",
         )
 
-        # assert logged that failed to log in portal
+        # assert logged warning that failed to log mapping-file download in portal
         warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert any(
             "Could not log mapping-file download to portal" in r.message
