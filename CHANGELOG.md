@@ -1,5 +1,11 @@
 ## Unreleased
 
+### Added
+
+- [EV-2149](https://eit-oxford.atlassian.net/browse/EV-2149): minimum cli version enforcement.
+
+## 2.2.1 (2025-07-03)
+
 ## 2.2.1-RC1 (2025-06-27)
 
 ### Fixed
@@ -42,6 +48,7 @@
 
 ### Added
 
+- [EV-1909](https://eit-oxford.atlassian.net/browse/EV-1909): Added calls to log mapping csv as downloaded in portal
 - Minimum upload chunk size is increased to 10MB
 - Support for the SARS-CoV-2 pipeline.
 
