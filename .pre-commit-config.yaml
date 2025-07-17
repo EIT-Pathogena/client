@@ -6,7 +6,7 @@ repos:
       - exclude: (.git/)
         id: remove-tabs
     repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.1.9
+    rev: v1.5.5
   - hooks:
       - id: trailing-whitespace
         exclude: ^test_files/
@@ -16,15 +16,15 @@ repos:
       - id: check-merge-conflict
       - id: check-docstring-first
     repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v5.0.0
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.6.9
+    rev: v0.12.3
     hooks:
       - id: ruff-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.6.9
+    rev: v0.12.3
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-check
+        args: [--fix]

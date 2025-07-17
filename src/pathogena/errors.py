@@ -91,3 +91,11 @@ class APIError(Exception):
     def __init__(self, message: str, status_code: int):
         super().__init__(message)
         self.status_code = status_code
+
+
+class UpgradeRequiredError(Exception):
+    """Custom exception for upgrade required (HTTP Status 426)."""
+
+    def __init__(self):
+        self.message = "Please upgrade your client to the latest supported version"
+        super().__init__(self.message)

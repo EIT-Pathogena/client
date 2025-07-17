@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+.mise.toml
+mise.*.toml
 __pycache__/
 *.py[cod]
 *$py.class
