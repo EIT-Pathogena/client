@@ -385,6 +385,7 @@ class UploadAPIClient:
                         "Content-Type": "application/json",
                     },
                     timeout=5,
+                    follow_redirects=True,
                 )
             response.raise_for_status()
         except Exception as e:

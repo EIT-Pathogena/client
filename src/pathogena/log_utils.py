@@ -77,16 +77,18 @@ def raise_for_status(response: httpx.Response) -> None:
     """
     if response.is_error:
         response.read()
-        if response.status_code == 401:
+        if response.status_code == httpx.codes.UNAUTHORIZED:
             logging.error("Have you tried running `pathogena auth`?")
             raise AuthorizationError()
-        elif response.status_code == 402:
+        elif response.status_code == httpx.codes.PAYMENT_REQUIRED:
             raise InsufficientFundsError()
-        elif response.status_code == 403:
+        elif response.status_code == httpx.codes.FORBIDDEN:
             raise PermissionError()
-        elif response.status_code == 404:
+        elif response.status_code == httpx.codes.NOT_FOUND:
             raise MissingError()
-        elif response.status_code // 100 == 5:
+        elif response.status_code == httpx.codes.UPGRADE_REQUIRED:
+            return None
+        elif response.status_code >= 500:
             raise ServerSideError()
 
     # Default to httpx errors in other cases
