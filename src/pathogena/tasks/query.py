@@ -3,8 +3,8 @@ import logging
 from pathlib import Path
 
 import httpx
-import tqdm
 from packaging.version import Version
+from tqdm import tqdm
 
 import pathogena
 from pathogena import models, util

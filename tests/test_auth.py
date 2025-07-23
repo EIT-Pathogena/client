@@ -41,7 +41,6 @@ def test_authenticate_upgrade_required(mock_httpx_client, mock_user_input, caplo
         authenticate()
 
     assert "Client update required: Your client version is too old." in caplog.text
-    assert "Please update your client." in caplog.text
 
     mock_client_instance = httpx.Client.return_value  # type: ignore
     mock_client_instance.post.assert_called_once()

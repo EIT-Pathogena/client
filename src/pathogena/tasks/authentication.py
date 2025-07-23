@@ -37,7 +37,6 @@ def authenticate(host: str = DEFAULT_HOST) -> None:
             "Client update required: Your client version is too old. "
             "Please update your client to continue using the service."
         )
-        logging.error(response.text)
         raise ValueError("Client update required.")
 
     # Raise an exception for any other HTTP errors (4xx or 5xx)
