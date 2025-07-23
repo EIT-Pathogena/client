@@ -2,10 +2,10 @@ import logging
 from pathlib import Path
 
 import httpx
-import tqdm
 from hostile.lib import ALIGNER
 from hostile.util import BUCKET_URL, CACHE_DIR
 from tenacity import retry, stop_after_attempt, wait_random_exponential
+from tqdm import tqdm
 
 from pathogena import models, util
 from pathogena.client import env
