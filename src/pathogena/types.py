@@ -15,7 +15,7 @@ class PreparedFile:
     path: Path | None
     control: str
     content_type: str
-    specimen_organism: Literal["mycobacteria", "sars-cov-2", ""]
+    specimen_organism: Literal["mycobacteria", "sars-cov-2", "influenza-a", ""]
     data: bytes
 
     def __init__(self, upload_sample: UploadSample, file_side: Literal[1, 2]):
