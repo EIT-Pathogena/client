@@ -149,7 +149,7 @@ class UploadAPIClient:
         batch_pk: int,
         data: dict[str, Any] | None = None,
     ) -> httpx.Response:
-        """End a batch upload by making a POST request.
+        """End a file upload by making a POST request.
 
         Args:
             batch_pk (int): The primary key of the batch.
@@ -161,7 +161,7 @@ class UploadAPIClient:
         Raises:
             APIError: If the API returns a non-2xx status code.
         """
-        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end/"
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end-file-upload/"
         try:
             response = self.client.post(
                 url,
@@ -174,6 +174,42 @@ class UploadAPIClient:
         except httpx.HTTPError as e:
             raise APIError(
                 f"Failed to end batch upload: {response.text}", response.status_code
+            ) from e
+
+    def end_sample_upload(
+        self,
+        batch_pk: int,
+        data: dict[str, Any] | None = None,
+    ) -> httpx.Response:
+        """End a sample upload by making a POST request.
+
+        Args:
+            batch_pk (int): The primary key of the batch.
+            data (dict[str, Any] | None): Data to include in the POST request body.
+
+        Returns:
+            dict[str, Any]: The response JSON from the API.
+
+        Raises:
+            APIError: If the API returns a non-2xx status code.
+        """
+        url = f"{env.get_protocol()}://{self.base_url}/api/v1/batches/{batch_pk}/uploads/end-sample-upload/"
+        try:
+            response = self.client.post(
+                url,
+                json=data,
+                headers={"Authorization": f"Bearer {self.token}"},
+                follow_redirects=True,
+            )
+            if response.status_code != 204:
+                raise APIError(
+                    f"Failed to end sample upload: {response.text}",
+                    response.status_code,
+                )
+            return response
+        except httpx.HTTPError as e:
+            raise APIError(
+                f"Failed to end sample upload: {response.text}", response.status_code
             ) from e
 
     def end_upload_session(

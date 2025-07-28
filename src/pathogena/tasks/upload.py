@@ -1,15 +1,14 @@
 import logging
 import os
 import shutil
-import time
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from json import JSONDecodeError
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import hostile
-import httpx
+from httpx import Response
 
 import pathogena
 from pathogena import models, util
@@ -19,7 +18,6 @@ from pathogena.constants import (
     DEFAULT_APP_HOST,
     DEFAULT_CHUNK_SIZE,
 )
-from pathogena.log_utils import httpx_hooks
 from pathogena.types import (
     OnComplete,
     OnProgress,
@@ -29,9 +27,6 @@ from pathogena.types import (
     UploadingFile,
     UploadSession,
 )
-
-if TYPE_CHECKING:
-    from httpx import Response
 
 
 def prepare_upload_files(
@@ -197,9 +192,7 @@ def upload_batch(
         batch_name,
     )
 
-    upload_fastq_files(
-        client, upload_data=upload_file_type, upload_session=upload_session
-    )
+    upload_samples(client, upload_data=upload_file_type, upload_session=upload_session)
 
     if not save:
         for sample in upload_session.samples:
@@ -210,12 +203,12 @@ def upload_batch(
     logging.info(f"Upload complete. Created {batch_name}.mapping.csv (keep this safe)")
 
 
-def upload_fastq_files(
+def upload_samples(
     client: UploadAPIClient,
     upload_data: UploadData,
     upload_session: UploadSession,
 ) -> None:
-    """Uploads files in chunks and manages the upload process.
+    """Uploads samples once the upload session has been created.
 
     This function first prepares the files for upload, then uploads them in chunks
     using a thread pool executor for concurrent uploads. It finishes by ending the
@@ -235,17 +228,16 @@ def upload_fastq_files(
     with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
         futures = []
         for sample in upload_session.samples:
-            for file in sample.files:
-                future = executor.submit(upload_chunks, client, upload_data, file)
-                futures.append(future)
+            future = executor.submit(upload_sample, client, upload_data, sample)
+            futures.append(future)
 
         # Need to tie halves of the samples together here
-        # And call end sample when a sample is finished uploading
+        # And call end session when all samples are uploaded
         for future in as_completed(futures):
             try:
                 future.result()
             except Exception as e:
-                logging.error(f"Error uploading file: {e}")
+                logging.error(f"Error uploading sample: {e}")
 
     # end the upload session
     end_session = client.end_upload_session(
@@ -255,10 +247,48 @@ def upload_fastq_files(
     if end_session.status_code != 200:
         logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
     else:
-        logging.info(f"All uploads complete.")
+        logging.info("All uploads complete.")
 
 
-def upload_chunks(
+def upload_sample(
+    client: UploadAPIClient,
+    upload_data: UploadData,
+    sample: Sample[UploadingFile],
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+) -> Response:
+    """Uploads files in a sample, chunk by chunk.
+
+    Args:
+        client (UploadAPIClient): The upload API client to use.
+        upload_data (UploadData): The upload data including batch_id, session info, etc.
+        file (SelectedFile): The file to upload (with file data, total chunks, etc.)
+        chunk_size (int): Default size of file chunk to upload (5mb)
+
+    Returns:
+        None: This function does not return anything, but calls the provided
+            `on_progress` and `on_complete` callback functions.
+    """
+    with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
+        futures = []
+        for file in sample.files:
+            future = executor.submit(upload_file, client, upload_data, file, chunk_size)
+            futures.append(future)
+
+        # Need to tie halves of the samples together here
+        # And call end sample when a sample is finished uploading
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logging.error(f"Error uploading file: {e}")
+
+    return client.end_sample_upload(
+        upload_data.batch_pk,
+        data={"upload_id": sample.files[0].upload_id},
+    )
+
+
+def upload_file(
     client: UploadAPIClient,
     upload_data: UploadData,
     file: UploadingFile,

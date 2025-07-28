@@ -30,8 +30,8 @@ from pathogena.tasks.upload import (
     remove_file,
     start_upload_session,
     upload_batch,
-    upload_chunks,
-    upload_fastq_files,
+    upload_file,
+    upload_samples,
 )
 
 __all__ = [
@@ -54,8 +54,8 @@ __all__ = [
     "prepare_upload_files",
     "upload_batch",
     "create_batch_on_server",
-    "upload_fastq_files",
-    "upload_chunks",
+    "upload_samples",
+    "upload_file",
     "start_upload_session",
     "prepare_sample",
     "remove_file",

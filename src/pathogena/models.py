@@ -5,7 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from pathogena import __version__
 from pathogena.constants import PLATFORMS
 from pathogena.util import (
     count_lines_in_gzip,
