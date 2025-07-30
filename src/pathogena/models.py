@@ -42,8 +42,8 @@ class UploadBase(BaseModel):
     subdivision: str = Field(
         default=None, description="ISO 3166-2 principal subdivision"
     )
-    district: str = Field(default=None, description="Granular location")
-    specimen_organism: Literal["mycobacteria", "sars-cov-2", ""] = Field(
+    district: str = Field(default="", description="Granular location")
+    specimen_organism: Literal["mycobacteria", "sars-cov-2", "influenza-a"] = Field(
         default="mycobacteria", description="Target specimen organism scientific name"
     )
     host_organism: str = Field(

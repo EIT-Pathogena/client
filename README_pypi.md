@@ -33,20 +33,23 @@ In a terminal console, install Miniconda with the following instructions and acc
 The client requires the Conda platform to be using `x86_64` when creating the environment.
 
 - If your Mac has an Apple processor, using Terminal, firstly run:
-    ```bash
-    mkdir -p ~/miniconda3
-    curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
-    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-    rm -rf ~/miniconda3/miniconda.sh
-    ```
+
+  ```bash
+  mkdir -p ~/miniconda3
+  curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+  rm -rf ~/miniconda3/miniconda.sh
+  ```
 
 - Initialise Miniconda using either of the following commands depending on your Shell (Bash|ZSH)
-    ```bash
-    ~/miniconda3/bin/conda init bash
-    ~/miniconda3/bin/conda init zsh
-    ```
+  ```bash
+  ~/miniconda3/bin/conda init bash
+  ~/miniconda3/bin/conda init zsh
+  ```
 
 ### Installing or updating the client with Miniconda
+
+<a id="installing-or-updating-the-client-with-miniconda"></a>
 
 The client has at least one dependency that requires `bioconda`, which itself
 depends on `conda-forge`. Note that for the `conda create` step (see below), installation can be very slow,
@@ -76,7 +79,10 @@ A simple test to verify installation would be to run a version check:
 ```bash
 pathogena --version
 ```
+
 ## `pathogena auth`
+
+<a id="pathogena-auth"></a>
 
 ```text
 Usage: pathogena auth [OPTIONS]
@@ -155,6 +161,8 @@ $ pathogena auth --check-expiry
 ```
 ## `pathogena balance`
 
+<a id="pathogena-balance"></a>
+
 ```bash balance help
 pathogena balance -h
 15:55:36 INFO: EIT Pathogena client version 2.0.0
@@ -180,6 +188,8 @@ pathogena balance
 ```
 ## `pathogena upload`
 
+<a id="pathogena-upload"></a>
+
 ```text
 Usage: pathogena upload [OPTIONS] UPLOAD_CSV
 
@@ -199,7 +209,7 @@ Options:
 ```
 
 > Where samples may contain human reads we strongly recommend using the provided decontamination functionality. This is
-best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
+> best practice to minimise the risk of personally identifiable information being uploaded to the cloud.
 
 The upload command performs metadata validation and client-side removal of human reads for each of your samples,
 before uploading sequences to EIT Pathogena for analysis.
@@ -280,7 +290,78 @@ pathogena upload --skip-decontamination my-first-batch.csv
 15:49:21 INFO: Getting credit balance for portal.eit-pathogena.com
 15:49:23 INFO: Your remaining account balance is 990 credits
 ```
+
+## `pathogena build-csv`
+
+<a id="pathogena-build-csv"></a>
+
+```text
+Usage: pathogena build-csv [OPTIONS] SAMPLES_FOLDER
+
+  Command to create upload csv from SAMPLES_FOLDER containing sample fastqs.
+
+  Use max_batch_size to split into multiple separate upload csvs.
+
+  Adjust the read_suffix parameters to match the file endings for your read
+  files.
+
+Options:
+  --output-csv FILE               Path to output CSV file  [required]
+  --batch-name TEXT               Batch name  [required]
+  --collection-date [%Y-%m-%d]    Collection date (YYYY-MM-DD)  [default:
+                                  2025-07-03; required]
+  --country TEXT                  3-letter Country Code  [required]
+  --instrument-platform [illumina|ont]
+                                  Sequencing technology
+  --subdivision TEXT              Subdivision  [default: ""]
+  --district TEXT                 District  [default: ""]
+  --specimen-organism [mycobacteria|sars-cov-2|influenza-a]
+                                  Specimen organism  [default: mycobacteria]
+  --amplicon-scheme [|Automatic Detection|COVID-AMPLISEQ-V1|COVID-ARTIC-V3|COVID-ARTIC-V4.1|COVID-ARTIC-V5.0-5.2.0_1200|COVID-ARTIC-V5.0-5.3.2_400|COVID-MIDNIGHT-1200|COVID-VARSKIP-V1a-2b]
+                                  Amplicon scheme, use only when SARS-CoV-2 is
+                                  the specimen organism
+  --ont_read_suffix TEXT          Read file ending for ONT fastq files
+                                  [default: .fastq.gz]
+  --illumina_read1_suffix TEXT    Read file ending for Illumina read 1 files
+                                  [default: _1.fastq.gz]
+  --illumina_read2_suffix TEXT    Read file ending for Illumina read 2 files
+                                  [default: _2.fastq.gz]
+  --max-batch-size INTEGER        [default: 50]
+  -h, --help                      Show this message and exit.
+```
+
+This command generates a CSV from a given directory of fastq sample files. An [example](https://github.com/EIT-Pathogena/client/tree/2.2.1/docs/assets) of such a CSV file is given in the assets directory. A CSV file in this format is required to run the [pathogena upload](#pathogena-upload) command.
+
+Note: the CSV file must be located in the same directory as the sample.fastq files to be used with the upload command.
+
+### Usage
+
+```sh
+pathogena build-csv ~/Downloads/samples --batch-name <batch-name> --country <three-letter-country-code>
+```
+
+for ex:
+
+```sh
+pathogena build-csv ~/Downloads/samples --batch-name mybatch123 --country GBR
+```
+
+This will generate a CSV file in the samples folder named upload.csv, prompting users to manually fill in optional fields later (like instrument-platform, amplicon-scheme, etc.). Alternatively, these optional parameters can be passed directly via the CLI rather than filling them in manually later; the example below shows how to include some of these, but for the full list of available options, refer to `pathogena build-csv --help`.
+
+for ex:
+
+```sh
+pathogena build-csv ~/Downloads/samples \
+  --batch-name mybatch123 \
+  --country GBR \
+  --instrument-platform illumina \
+  --specimen-organism sars-cov-2 \
+  --amplicon-scheme "Automatic Detection"
+```
+
 ## `pathogena decontaminate`
+
+<a id="pathogena-decontaminate"></a>
 
 ```text
 Usage: pathogena decontaminate [OPTIONS] INPUT_CSV
@@ -319,6 +400,8 @@ $ pathogena decontaminate tests/data/illumina.csv
 15:24:39 INFO: Human reads removed from input samples and can be found here: /Users/jdhillon/code/pathogena/client
 ```
 ## `pathogena download`
+
+<a id="pathogena-download"></a>
 
 ```text
 $ pathogena download -h
@@ -371,6 +454,8 @@ The complete list of `--filenames` available for download varies by sample, and 
 sample view pages in EIT Pathogena.
 ## `pathogena validate`
 
+<a id="pathogena-validate"></a>
+
 ```text
 $ pathogena validate -h
 16:00:13 INFO: EIT Pathogena client version 2.0.0rc1
@@ -388,6 +473,8 @@ to upload the samples, the individual FastQ files are then checked for validity.
 by default with the `upload` command but using this can ensure validity without commiting to the subsequent upload
 if you're looking to check a CSV during writing it.
 ## `pathogena query-raw`
+
+<a id="pathogena-query-raw"></a>
 
 ```text
 pathogena query-raw -h
@@ -412,6 +499,8 @@ generated during upload, or one or more sample GUIDs.
 pathogena query-raw a5w2e8.mapping.csv
 ```
 ## `pathogena query-status`
+
+<a id="pathogena-query-status"></a>
 
 ```text
 pathogena query-status -h
@@ -439,6 +528,17 @@ pathogena query-status a5w2e8.mapping.csv
 pathogena query-status 3bf7d6f9-c883-4273-adc0-93bb96a499f6
 ```
 ## `pathogena autocomplete`
+
+<a id="pathogena-autocomplete"></a>
+
+```text
+Usage: pathogena autocomplete [OPTIONS]
+
+  Enable shell autocompletion.
+
+Options:
+  -h, --help  Show this message and exit.
+```
 
 This command will output the steps required to enable auto-completion in either a Bash or ZSH shell, follow the output
 to enable autocompletion, this will need to be executed on every new shell session, instructions are provided on how to

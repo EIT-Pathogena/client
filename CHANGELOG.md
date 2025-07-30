@@ -1,5 +1,50 @@
 ## Unreleased
 
+### Added
+
+- [EV-2249](https://eit-oxford.atlassian.net/browse/EV-2249): influenza-a pipeline
+- [EV-2149](https://eit-oxford.atlassian.net/browse/EV-2149): minimum cli version enforcement.
+
+## 2.2.1 (2025-07-03)
+
+## 2.2.1-RC1 (2025-06-27)
+
+### Fixed
+
+- [EV-2152](https://eit-oxford.atlassian.net/browse/EV-2152): do not allow empty specimen organism
+
+## 2.2.0 (2025-06-20)
+
+## 2.2.0-RC3 (2025-06-18)
+
+### Fixed
+
+- [EV-1960](https://eit-oxford.atlassian.net/browse/EV-1960): refactor lib into tasks, fix mypy issues plus many more QoL fixes.
+- [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): fix mapping csv to use correct batch and sample names with rows per sample
+
+## 2.2.0-RC2 (2025-06-18)
+
+### Fixed
+
+- [EV-2132](https://eit-oxford.atlassian.net/browse/EV-2132): update app link in upload completion message
+- [EV-2131](https://eit-oxford.atlassian.net/browse/EV-2131): cli uploading same file for both Illumina read files in a pair
+
+## 2.2.0-RC1 (2025-06-10)
+
+### Fixed
+
+- [EV-1787](https://eit-oxford.atlassian.net/browse/EV-1787): Update client to make compliant with upload API sample modelling
+
+### Changed
+
+- [EV-2089](https://eit-oxford.atlassian.net/browse/EV-2089): Do not pass control for validation at start of upload session
+
+## 2.1.1 (2025-05-27)
+
+### Chore
+
+- Updated cli documentations and fixed broken links.
+
 ## 2.1.0 (2025-01-22)
 
 ### Added
