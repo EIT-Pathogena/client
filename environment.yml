@@ -1,5 +1,5 @@
 ---
-name: pathogena
+name: gpas
 channels:
   - conda-forge
   - bioconda
@@ -9,4 +9,4 @@ dependencies:
   - pip
   - hostile~=1.1.0
   - pip:
-      - pathogena>=2.0.1
+      - gpas>=2.0.1

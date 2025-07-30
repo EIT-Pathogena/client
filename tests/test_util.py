@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pathogena import util
+from gpas import util
 
 
 def test_reads_lines_from_gzip() -> None:

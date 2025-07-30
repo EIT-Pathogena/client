@@ -24,7 +24,7 @@ class UnsupportedClientError(Exception):
         self.message = (
             f"\n\nThe installed client version ({this_version}) is no longer supported."
             " To update the client, please run:\n\n"
-            "conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0 && conda activate pathogena && pip install --upgrade pathogena"
+            "conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0 && conda activate gpas && pip install --upgrade gpas"
         )
         super().__init__(self.message)
 
@@ -35,8 +35,8 @@ class AuthorizationError(Exception):
 
     def __init__(self):
         """Initialize the AuthorizationError with a custom message."""
-        self.message = "Authorization checks failed! Please re-authenticate with `pathogena auth` and try again.\n"
-        "If the problem persists please contact support (pathogena.support@eit.org)."
+        self.message = "Authorization checks failed! Please re-authenticate with `gpas auth` and try again.\n"
+        "If the problem persists please contact support (gpas.support@eit.org)."
         super().__init__(self.message)
 
 
@@ -47,7 +47,7 @@ class PermissionError(Exception):  # noqa: A001
         """Initialize the PermissionError with a custom message."""
         self.message = (
             "You don't have access to this resource! Check logs for more details.\n"
-            "Please contact support if you think you should be able to access this resource (pathogena.support@eit.org)."
+            "Please contact support if you think you should be able to access this resource (gpas.support@eit.org)."
         )
         super().__init__(self.message)
 
@@ -69,7 +69,7 @@ class ServerSideError(Exception):
     def __init__(self):
         self.message = (
             "We had some trouble with the server, please double check your command and try again in a moment.\n"
-            "If the problem persists, please contact support (pathogena.support@eit.org)."
+            "If the problem persists, please contact support (gpas.support@eit.org)."
         )
         super().__init__(self.message)
 
@@ -80,7 +80,7 @@ class InsufficientFundsError(Exception):
     def __init__(self):
         self.message = (
             "Your account doesn't have enough credits to fulfil the number of Samples in your Batch. "
-            "You can request more credits by contacting support (pathogena.support@eit.org)."
+            "You can request more credits by contacting support (gpas.support@eit.org)."
         )
         super().__init__(self.message)
 

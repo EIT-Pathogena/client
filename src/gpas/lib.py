@@ -16,25 +16,25 @@ from packaging.version import Version
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from tqdm import tqdm
 
-import pathogena
-from pathogena import batch_upload_apis, models, upload_utils, util
-from pathogena.constants import (
+import gpas
+from gpas import batch_upload_apis, models, upload_utils, util
+from gpas.constants import (
     CPU_COUNT,
     DEFAULT_APP_HOST,
     DEFAULT_HOST,
     DEFAULT_PROTOCOL,
     HOSTILE_INDEX_NAME,
 )
-from pathogena.errors import APIError, MissingError, UnsupportedClientError
-from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadBatch, UploadSample
-from pathogena.upload_utils import (
+from gpas.errors import APIError, MissingError, UnsupportedClientError
+from gpas.log_utils import httpx_hooks
+from gpas.models import UploadBatch, UploadSample
+from gpas.upload_utils import (
     PreparedFiles,
     UploadData,
     get_upload_host,
     prepare_files,
 )
-from pathogena.util import get_access_token, get_token_path
+from gpas.util import get_access_token, get_token_path
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -49,9 +49,7 @@ def get_host(cli_host: str | None = None) -> str:
         str: The resolved hostname.
     """
     return (
-        cli_host
-        if cli_host is not None
-        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
+        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
     )
 
 
@@ -61,15 +59,15 @@ def get_protocol() -> str:
     Returns:
         str: The protocol (e.g., 'http', 'https').
     """
-    if "PATHOGENA_PROTOCOL" in os.environ:
-        protocol = os.environ["PATHOGENA_PROTOCOL"]
+    if "GPAS_PROTOCOL" in os.environ:
+        protocol = os.environ["GPAS_PROTOCOL"]
         return protocol
     else:
         return DEFAULT_PROTOCOL
 
 
 def authenticate(host: str = DEFAULT_HOST) -> None:
-    """Requests a user auth token, writes to ~/.config/pathogena/tokens/<host>.json.
+    """Requests a user auth token, writes to ~/.config/gpas/tokens/<host>.json.
 
     Args:
         host (str): The host server. Defaults to DEFAULT_HOST.
@@ -116,7 +114,7 @@ def check_authentication(host: str) -> None:
     if response.is_error:
         logging.error(f"Authentication failed for host {host}")
         raise RuntimeError(
-            "Authentication failed. You may need to re-authenticate with `pathogena auth`"
+            "Authentication failed. You may need to re-authenticate with `gpas auth`"
         )
 
 
@@ -189,8 +187,8 @@ def create_batch_on_server(
     country = batch.samples[0].country
     telemetry_data = {
         "client": {
-            "name": "pathogena-client",
-            "version": pathogena.__version__,
+            "name": "gpas-client",
+            "version": gpas.__version__,
         },
         "decontamination": {
             "name": "hostile",
@@ -424,8 +422,8 @@ def upload_batch(
     util.write_csv(mapping_csv_records, f"{remote_batch_name}.mapping.csv")
     logging.info(f"The mapping file {remote_batch_name}.mapping.csv has been created.")
     logging.info(
-        "You can monitor the progress of your batch in EIT Pathogena here: "
-        f"{get_protocol()}://{os.environ.get('PATHOGENA_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
+        "You can monitor the progress of your batch in GPAS here: "
+        f"{get_protocol()}://{os.environ.get('GPAS_APP_HOST', DEFAULT_APP_HOST)}/batches/{legacy_batch_id}"
     )
 
     upload_utils.upload_fastq(
@@ -680,32 +678,30 @@ def check_version_compatibility(host: str) -> None:
         )
     lowest_cli_version = response.json()["version"]
     logging.debug(
-        f"Client version {pathogena.__version__}, server version: {lowest_cli_version})"
+        f"Client version {gpas.__version__}, server version: {lowest_cli_version})"
     )
-    if Version(pathogena.__version__) < Version(lowest_cli_version):
-        raise UnsupportedClientError(pathogena.__version__, lowest_cli_version)
+    if Version(gpas.__version__) < Version(lowest_cli_version):
+        raise UnsupportedClientError(gpas.__version__, lowest_cli_version)
 
 
 # noinspection PyBroadException
 def check_for_newer_version() -> None:
     """Check whether there is a new version of the CLI available on Pypi and advise the user to upgrade."""
     try:
-        pathogena_pypi_url = "https://pypi.org/pypi/pathogena/json"
+        gpas_pypi_url = "https://pypi.org/pypi/gpas/json"
         with httpx.Client(transport=httpx.HTTPTransport(retries=2)) as client:
             response = client.get(
-                pathogena_pypi_url,
+                gpas_pypi_url,
                 headers={"Accept": "application/json"},
                 follow_redirects=True,
             )
             if response.status_code == 200:
                 latest_version = Version(
-                    response.json()
-                    .get("info", {})
-                    .get("version", pathogena.__version__)
+                    response.json().get("info", {}).get("version", gpas.__version__)
                 )
-                if Version(pathogena.__version__) < latest_version:
+                if Version(gpas.__version__) < latest_version:
                     logging.info(
-                        f"A new version of the EIT Pathogena CLI ({latest_version}) is available to install,"
+                        f"A new version of the GPAS CLI ({latest_version}) is available to install,"
                         f" please follow the installation steps in the README.md file to upgrade."
                     )
     except (httpx.ConnectError, httpx.NetworkError, httpx.TimeoutException):
