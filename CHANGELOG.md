@@ -1,5 +1,9 @@
 ## Unreleased
 
+### Changed
+
+- [EV-2285](https://eit-oxford.atlassian.net/browse/EV-2285): update package and all references of pathogena to gpas
+
 ## 2.2.1 (2025-07-03)
 
 ## 2.2.1-RC1 (2025-06-27)
