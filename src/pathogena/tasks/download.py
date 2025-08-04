@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 import httpx
 from hostile.lib import ALIGNER
@@ -41,6 +42,7 @@ def download(
     """
     check_version_compatibility(host)
     headers = {"Authorization": f"Bearer {env.get_access_token(host)}"}
+    guids_samples: dict[str, Any | None]
     if mapping_csv:
         csv_records = parse_csv(Path(mapping_csv))
         guids_samples = {s["remote_sample_name"]: s["sample_name"] for s in csv_records}

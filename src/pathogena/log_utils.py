@@ -2,6 +2,7 @@ import logging
 import sys
 from collections.abc import Callable, Mapping
 from types import TracebackType
+from typing import Any
 
 import httpx
 
@@ -95,7 +96,7 @@ def raise_for_status(response: httpx.Response) -> None:
     response.raise_for_status()
 
 
-httpx_hooks: Mapping[str, list[Callable]] = {
+httpx_hooks: Mapping[str, list[Callable[..., Any]]] = {
     "request": [log_request],
     "response": [log_response, raise_for_status],
 }

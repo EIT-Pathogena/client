@@ -1,6 +1,7 @@
 import csv
 import logging
 from pathlib import Path
+from typing import Any
 
 import httpx
 from hostile.lib import clean_fastqs, clean_paired_fastqs
@@ -22,7 +23,7 @@ def decontaminate_samples_with_hostile(
     batch: models.UploadBatch,
     threads: int,
     output_dir: Path = Path("."),
-) -> dict:
+) -> dict[str, Any]:
     """Run Hostile to remove human reads from a given CSV file of FastQ files and return metadata related to the batch.
 
     Args:
@@ -196,7 +197,7 @@ def build_upload_csv(
     )
 
 
-def chunks(lst: list, n: int) -> list[list]:
+def chunks(lst: list[Any], n: int) -> list[list[Any]]:
     """Yield successive n-sized chunks from provided list.
 
     Args:

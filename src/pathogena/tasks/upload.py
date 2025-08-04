@@ -1,8 +1,8 @@
 import logging
 import os
 import shutil
-from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Generator, Iterable
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
@@ -167,7 +167,7 @@ def upload_batch(
         upload_session_id=upload_session.session_id,
     )
 
-    mapping_csv_records = []
+    mapping_csv_records: list[dict[str, Any]] = []
 
     for sample in upload_session.samples:
         for file in sample.files:
@@ -315,7 +315,13 @@ def upload_file(
         # chunk the files
         start = i * chunk_size  # 5 MB chunk size default
         end = start + chunk_size
-        file_chunk = file.prepared_file.data[start:end]
+        data = file.prepared_file.data
+        file_chunk = data[start:end] if data is not None else None
+        if file_chunk is None:
+            logging.warning(
+                f"Skipping empty chunk {i} for file: {file.upload_id} of batch {upload_data.batch_pk}"
+            )
+            continue
 
         chunk_upload = client.upload_chunk(
             batch_pk=upload_data.batch_pk,
@@ -363,7 +369,7 @@ def upload_file(
             )
 
 
-def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[Any]:
+def process_queue(chunk_queue: list[Any], max_concurrent_chunks: int) -> Generator[Any]:
     """Processes a queue of chunks concurrently to ensure tno more than 'max_concurrent_chunks' are processed at the same time.
 
     Args:

@@ -22,6 +22,7 @@ def main(*, debug: bool = False) -> None:
     """EIT Pathogena command line interface."""
     tasks.check_for_newer_version()
     util.display_cli_version()
+
     configure_debug_logging(debug)
 
 
@@ -305,7 +306,7 @@ def query_status(
         print(json.dumps(result, indent=4))  # noqa: T201
     else:
         for name, status in result.items():
-            print(f"{name} \t{status}")  # noqa: T201
+            print(f"{name} 	{status}")  # noqa: T201
 
 
 @main.command()

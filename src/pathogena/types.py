@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Literal, TypedDict, TypeVar
+from typing import Any, Generic, Literal, TypedDict, TypeVar
 
 from pathogena.constants import PLATFORMS
 from pathogena.models import UploadSample
@@ -16,7 +17,7 @@ class PreparedFile:
     control: str
     content_type: str
     specimen_organism: Literal["mycobacteria", "sars-cov-2", "influenza-a", ""]
-    data: bytes
+    data: bytes | None
 
     def __init__(self, upload_sample: UploadSample, file_side: Literal[1, 2]):
         if file_side == 1:
@@ -45,17 +46,6 @@ class PreparedFile:
 class UploadingFile:
     """A file which is being uploaded (post `start-file-upload` call)."""
 
-    id: int
-    upload_id: str
-    sample_id: str
-    batch_id: str
-    upload_session_id: int
-
-    prepared_file: PreparedFile
-
-    status: Literal["IN_PROGRESS", "COMPLETE", "FAILED"]
-    total_chunks: int
-
     def __init__(
         self,
         file_id: int,
@@ -65,7 +55,7 @@ class UploadingFile:
         upload_session_id: int,
         total_chunks: int,
         prepared_file: PreparedFile,
-        status="IN_PROGRESS",
+        status: Literal["IN_PROGRESS", "COMPLETE", "FAILED"] = "IN_PROGRESS",
     ):
         self.id = file_id
         self.upload_id = upload_id
@@ -206,13 +196,13 @@ class OnProgress:
 
     Args:
         upload_id (str): The ID of the uploading file.
-        batch_pk (int): The batch ID associated with the file upload.
+        batch_pk (str): The batch ID associated with the file upload.
         progress (float): The percentage of upload completion.
         metrics (UploadMetrics): The metrics associated with the upload.
     """
 
     upload_id: str
-    batch_pk: int
+    batch_pk: str
     progress: float
     metrics: UploadMetrics
 
@@ -223,51 +213,37 @@ class OnComplete:
 
     Args:
         upload_id (str): The ID of the uploading file.
-        batch_pk (int): The batch ID associated with the file upload.
+        batch_pk (str): The batch ID associated with the file upload.
     """
 
     upload_id: str
-    batch_pk: int
+    batch_pk: str
 
 
 @dataclass
 class UploadData:
-    """A class representing the parameters related to uploading files."""
+    """A class representing the parameters related to uploading files.
 
-    def __init__(
-        self,
-        access_token,
-        batch_pk,
-        env,
-        samples: list[UploadSample],
-        on_complete: OnComplete | None = None,
-        on_progress: OnProgress | None = None,
-        max_concurrent_chunks: int = 5,
-        max_concurrent_files: int = 3,
-        upload_session_id=None,
-        abort_controller=None,
-    ):
-        """Initializes the UploadFileType instance.
+    Attributes:
+        access_token (str): The access token for authentication.
+        batch_pk (str): The batch ID for the upload.
+        env (str): The environment for the upload endpoint.
+        samples (list[UploadSample]): A list of samples to upload.
+        on_complete (Callable[[OnComplete], None] | None): A callback function to call when the upload is complete.
+        on_progress (Callable[[OnProgress], None] | None): A callback function to call during the upload progress.
+        max_concurrent_chunks (int): The maximum number of chunks to upload concurrently.
+        max_concurrent_files (int): The maximum number of files to upload concurrently.
+        upload_session_id (int | None): The upload session ID.
+        abort_controller (Any | None): An optional controller to abort the upload.
+    """
 
-        Args:
-            access_token (str): The access token for authentication.
-            batch_pk (str): The batch ID for the upload.
-            env (str): The environment for the upload endpoint.
-            samples (list[UploadSample]): A list of samples to upload. Defaults to an empty list.
-            on_complete (Callable[[OnComplete], None]): A callback function to call when the upload is complete.
-            on_progress (Callable[[OnProgress], None]): A callback function to call during the upload progress.
-            max_concurrent_chunks (int): The maximum number of chunks to upload concurrently. Defaults to 5.
-            max_concurrent_files (int): The maximum number of files to upload concurrently. Defaults to 3.
-            upload_session (int | None): The upload session ID.
-            abort_controller (Any | None): An optional controller to abort the upload.
-        """
-        self.access_token = access_token
-        self.batch_pk = batch_pk
-        self.env = env
-        self.samples = samples
-        self.on_complete = on_complete
-        self.on_progress = on_progress
-        self.max_concurrent_chunks = max_concurrent_chunks
-        self.max_concurrent_files = max_concurrent_files
-        self.upload_session_id = upload_session_id
-        self.abort_controller = abort_controller
+    access_token: str
+    batch_pk: str
+    env: str
+    samples: list[UploadSample] = field(default_factory=list)
+    on_complete: OnComplete | None = None
+    on_progress: OnProgress | None = None
+    max_concurrent_chunks: int = 5
+    max_concurrent_files: int = 3
+    upload_session_id: int | None = None
+    abort_controller: Any | None = None

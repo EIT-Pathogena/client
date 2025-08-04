@@ -29,6 +29,7 @@ dependencies = [
   "click>=8.1.7",
   "python-dotenv>=1.0",
   "pytest-mock>=3.14.0",
+  "types-tqdm>=4.67.0.20250516",
 ]
 
 [project.scripts]
@@ -37,10 +38,11 @@ pathogena = "pathogena.cli:main"
 [project.optional-dependencies]
 dev = [
     "flit>=3.9.0",
+    "mypy>=1.17.1",
     "pre-commit>=4.0.1",
+    "pytest-mock>=3.14.0",
     "pytest>=8.3.3",
-    "ruff>=0.7.1",
-    "pytest-mock>=3.14.0"
+    "ruff>=0.7.1"
 ]
 
 [tool.ruff.lint]
@@ -82,15 +84,35 @@ convention = "google"
 [tool.uv]
 dev-dependencies = [
     "flit>=3.9.0",
+    "mypy>=1.17.1",
     "pre-commit>=4.0.1",
-    "pytest>=8.3.3",
-    "ruff>=0.7.1",
     "pytest-mock>=3.14.0",
+    "pytest>=8.3.3",
+    "ruff>=0.7.1"
 ]
 
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+exclude = "hostile"
+
+
+follow_imports = "silent"
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+no_implicit_reexport = true
+disallow_untyped_defs = true
+
 [[tool.mypy.overrides]]
-module = ["hostile.*", "httpx.*", "tenacity.*", "click.*", "tqdm.*", "dotenv.*"]
+module = "hostile.*"
 ignore_missing_imports = true
+
+
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 markers = [

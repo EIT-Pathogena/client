@@ -15,7 +15,7 @@ import pathogena
 load_dotenv()
 
 
-def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
+def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess[str]:
     """Wrapper for running shell command subprocesses.
 
     Args:
@@ -30,7 +30,7 @@ def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
     )
 
 
-def parse_csv(csv_path: Path) -> list[dict]:
+def parse_csv(csv_path: Path) -> list[dict[str, str]]:
     """Parse a CSV file into a list of dictionaries.
 
     Args:
@@ -44,7 +44,7 @@ def parse_csv(csv_path: Path) -> list[dict]:
         return list(reader)
 
 
-def write_csv(records: list[dict], file_name: Path | str) -> None:
+def write_csv(records: list[dict[str, str]], file_name: Path | str) -> None:
     """Write a list of dictionaries to a CSV file.
 
     Args:

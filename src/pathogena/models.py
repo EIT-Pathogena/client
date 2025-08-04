@@ -1,7 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -129,11 +129,11 @@ class UploadSample(UploadBase):
         description="Number of reads removed during decontamination", default=0
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_fastq_files(self):
+    def validate_fastq_files(self: "UploadSample") -> "UploadSample":
         """Validate the FASTQ files.
 
         Returns:
@@ -187,7 +187,7 @@ class UploadSample(UploadBase):
         )
 
     @property
-    def file2_size(self):
+    def file2_size(self) -> int:
         """Get the size of the second reads file in bytes.
 
         Returns:
@@ -200,7 +200,7 @@ class UploadSample(UploadBase):
             else 0
         )
 
-    def check_fastq_paths_are_different(self):
+    def check_fastq_paths_are_different(self) -> "UploadSample":
         """Check that the FASTQ paths are different.
 
         Returns:
@@ -274,17 +274,19 @@ class UploadSample(UploadBase):
         """
         return self.instrument_platform == "illumina"
 
-    def read_file1_data(self):
+    def read_file1_data(self) -> bytes | None:
         """Read the contents of the first fastq file."""
         if self.reads_1_resolved_path:
             with open(self.reads_1_resolved_path, "rb") as file:
                 return file.read()
+        return None
 
-    def read_file2_data(self):
+    def read_file2_data(self) -> bytes | None:
         """Read the contents of the second fastq file."""
         if self.reads_2_resolved_path:
             with open(self.reads_2_resolved_path, "rb") as file:
                 return file.read()
+        return None
 
 
 class UploadBatch(BaseModel):
@@ -299,11 +301,11 @@ class UploadBatch(BaseModel):
     amplicon_scheme: str | None = None
     specimen_organism: str | None = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     @model_validator(mode="after")
-    def validate_unique_sample_names(self):
+    def validate_unique_sample_names(self) -> "UploadBatch":
         """Validate that sample names are unique.
 
         Returns:
@@ -319,7 +321,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_unique_file_names(self):
+    def validate_unique_file_names(self) -> "UploadBatch":
         """Validate that file names are unique.
 
         Returns:
@@ -343,7 +345,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_single_instrument_platform(self):
+    def validate_single_instrument_platform(self) -> "UploadBatch":
         """Validate that all samples have the same instrument platform.
 
         Returns:
@@ -362,7 +364,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_single_amplicon_scheme(self):
+    def validate_single_amplicon_scheme(self) -> "UploadBatch":
         """Validate that all samples have the same amplicon scheme, or no amplicon scheme.
 
         Returns:
@@ -381,7 +383,7 @@ class UploadBatch(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_no_amplicon_scheme_myco(self):
+    def validate_no_amplicon_scheme_myco(self) -> "UploadBatch":
         """Validate that if the mycobacteria is the specimen organism, amplicon scheme is not specified.
 
         Returns:

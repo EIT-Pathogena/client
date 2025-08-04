@@ -1,6 +1,7 @@
 import csv
 import logging
 from pathlib import Path
+from typing import Any
 
 import httpx
 from packaging.version import Version
@@ -14,7 +15,7 @@ from pathogena.errors import UnsupportedClientError
 from pathogena.log_utils import httpx_hooks
 
 
-def parse_csv(path: Path) -> list[dict]:
+def parse_csv(path: Path) -> list[dict[str, str]]:
     """Parse a CSV file.
 
     Args:
@@ -121,7 +122,7 @@ def fetch_sample_metadata(
     samples: str | None = None,
     mapping_csv: Path | None = None,
     host: str = DEFAULT_HOST,
-) -> dict[str, dict]:
+) -> dict[Any, Any]:
     """Query sample metadata returning a dict of metadata keyed by sample ID.
 
     Args:
@@ -238,7 +239,7 @@ def fetch_credit_balance(host: str) -> None:
             )
 
 
-def fetch_sample(sample_id: str, host: str) -> dict:
+def fetch_sample(sample_id: str, host: str) -> dict[str, Any]:
     """Fetch sample data from the server.
 
     Args:

@@ -146,13 +146,13 @@ class UploadAPIClient:
 
     def end_file_upload(
         self,
-        batch_pk: int,
+        batch_pk: str,
         data: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """End a file upload by making a POST request.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
         Returns:
@@ -178,13 +178,13 @@ class UploadAPIClient:
 
     def end_sample_upload(
         self,
-        batch_pk: int,
+        batch_pk: str,
         data: dict[str, Any] | None = None,
     ) -> httpx.Response:
         """End a sample upload by making a POST request.
 
         Args:
-            batch_pk (int): The primary key of the batch.
+            batch_pk (str): The primary key of the batch.
             data (dict[str, Any] | None): Data to include in the POST request body.
 
         Returns:
@@ -253,7 +253,7 @@ class UploadAPIClient:
 
     def start_upload_session(
         self, batch_pk: str, prepared_samples: list[Sample[PreparedFile]]
-    ):
+    ) -> tuple[int, str, Any]:
         """Start upload session.
 
         Args:
@@ -308,9 +308,9 @@ class UploadAPIClient:
                 httpx.codes.INTERNAL_SERVER_ERROR,
             )
 
-        upload_session_id = response_json["upload_session"]
-        upload_session_name = response_json["name"]
-        sample_summaries = response_json["sample_summaries"]
+        upload_session_id: int = response_json["upload_session"]
+        upload_session_name: str = response_json["name"]
+        sample_summaries: Any = response_json["sample_summaries"]
 
         return (upload_session_id, upload_session_name, sample_summaries)
 
@@ -348,7 +348,7 @@ class UploadAPIClient:
     @retry(wait=wait_fixed(1), stop=stop_after_attempt(10))
     def upload_chunk(
         self,
-        batch_pk: int,
+        batch_pk: str,
         protocol: str,
         chunk: bytes,
         chunk_index: int,
@@ -357,7 +357,7 @@ class UploadAPIClient:
         """Upload a single file chunk.
 
         Args:
-            batch_pk (int): ID of sample to upload
+            batch_pk (str): ID of sample to upload
             host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
             protocol (str): protocol, default https
             chunk (bytes): File chunk to be uploaded
@@ -397,7 +397,7 @@ class UploadAPIClient:
         self,
         batch_id: str,
         file_name: str,
-    ):
+    ) -> None:
         """Log a mapping file was downloaded in portal.
 
         Args:

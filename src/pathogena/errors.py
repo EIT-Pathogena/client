@@ -1,7 +1,7 @@
 class InvalidPathError(Exception):
     """Custom exception for giving nice user errors around missing paths."""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         """Constructor, used to pass a custom message to user.
 
         Args:
@@ -14,7 +14,7 @@ class InvalidPathError(Exception):
 class UnsupportedClientError(Exception):
     """Exception raised for unsupported client versions."""
 
-    def __init__(self, this_version: str, current_version: str):
+    def __init__(self, this_version: str, current_version: str) -> None:
         """Raise this exception with a sensible message.
 
         Args:
@@ -33,7 +33,7 @@ class UnsupportedClientError(Exception):
 class AuthorizationError(Exception):
     """Custom exception for authorization issues. 401."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the AuthorizationError with a custom message."""
         self.message = "Authorization checks failed! Please re-authenticate with `pathogena auth` and try again.\n"
         "If the problem persists please contact support (pathogena.support@eit.org)."
@@ -43,7 +43,7 @@ class AuthorizationError(Exception):
 class PermissionError(Exception):  # noqa: A001
     """Custom exception for permission issues. 403."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the PermissionError with a custom message."""
         self.message = (
             "You don't have access to this resource! Check logs for more details.\n"
@@ -55,7 +55,7 @@ class PermissionError(Exception):  # noqa: A001
 class MissingError(Exception):
     """Custom exception for missing issues. (HTTP Status 404)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.message = (
             "Resource not found! It's possible you asked for something which doesn't exist. "
             "Please double check that the resource exists."
@@ -66,7 +66,7 @@ class MissingError(Exception):
 class ServerSideError(Exception):
     """Custom exception for all other server side errors. (HTTP Status 5xx)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.message = (
             "We had some trouble with the server, please double check your command and try again in a moment.\n"
             "If the problem persists, please contact support (pathogena.support@eit.org)."
@@ -77,7 +77,7 @@ class ServerSideError(Exception):
 class InsufficientFundsError(Exception):
     """Custom exception for insufficient funds."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.message = (
             "Your account doesn't have enough credits to fulfil the number of Samples in your Batch. "
             "You can request more credits by contacting support (pathogena.support@eit.org)."
@@ -88,7 +88,7 @@ class InsufficientFundsError(Exception):
 class APIError(Exception):
     """Custom exception for API errors."""
 
-    def __init__(self, message: str, status_code: int):
+    def __init__(self, message: str, status_code: int) -> None:
         super().__init__(message)
         self.status_code = status_code
 
@@ -96,6 +96,6 @@ class APIError(Exception):
 class UpgradeRequiredError(Exception):
     """Custom exception for upgrade required (HTTP Status 426)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.message = "Please upgrade your client to the latest supported version"
         super().__init__(self.message)
