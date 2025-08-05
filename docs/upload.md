@@ -43,8 +43,8 @@ gpas upload my-first-batch.csv
 15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com
 15:41:59 INFO: Your remaining account balance is 1000 credits
 15:41:59 INFO: Performing FastQ checks and gathering total reads
-15:41:59 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_1.fastq.gz
-15:42:00 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_2.fastq.gz
+15:41:59 INFO: Calculating read count in: /Users/<user>/samples/ERR4809187_1.fastq.gz
+15:42:00 INFO: Calculating read count in: /Users/<user>/samples/ERR4809187_2.fastq.gz
 15:42:02 INFO: 3958206.0 reads in FASTQ file
 15:42:02 INFO: Removing human reads from ILLUMINA FastQ files and storing in /Users/<user>/code/gpas/client
 15:42:02 INFO: Hostile version 1.1.0. Mode: paired short read (Bowtie2)
@@ -68,8 +68,8 @@ gpas upload --skip-decontamination my-first-batch.csv
 15:41:57 INFO: Getting credit balance for portal.eit-pathogena.com
 15:41:59 INFO: Your remaining account balance is 1000 credits
 15:41:59 INFO: Performing FastQ checks and gathering total reads
-15:41:59 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_1.fastq.gz
-15:42:00 INFO: Calculating read count in: /Users/jdhillon/samples/ERR4809187_2.fastq.gz
+15:41:59 INFO: Calculating read count in: /Users/<user>/samples/ERR4809187_1.fastq.gz
+15:42:00 INFO: Calculating read count in: /Users/<user>/samples/ERR4809187_2.fastq.gz
 15:42:02 INFO: 3958206.0 reads in FASTQ file
 15:42:02 INFO: Removing human reads from ILLUMINA FastQ files and storing in /Users/<user>/code/gpas/client
 15:43:39 INFO: The mapping file gx5y5p.mapping.csv has been created.

@@ -12,8 +12,8 @@ different directory with the `--output-dir` argument.
 $ gpas decontaminate tests/data/illumina.csv
 15:24:39 INFO: GPAS client version 2.0.0rc1
 15:24:39 INFO: Performing FastQ checks and gathering total reads
-15:24:39 INFO: Calculating read count in: /Users/jdhillon/code/gpas/client/tests/data/reads/tuberculosis_1_1.fastq
-15:24:39 INFO: Calculating read count in: /Users/jdhillon/code/gpas/client/tests/data/reads/tuberculosis_1_2.fastq
+15:24:39 INFO: Calculating read count in: /Users/<user>/code/gpas/client/tests/data/reads/tuberculosis_1_1.fastq
+15:24:39 INFO: Calculating read count in: /Users/<user>/code/gpas/client/tests/data/reads/tuberculosis_1_2.fastq
 15:24:39 INFO: 2.0 reads in FASTQ file
 15:24:39 INFO: Removing human reads from ILLUMINA FastQ files and storing in /Users/<user>/code/gpas/client
 15:24:39 INFO: Hostile version 1.1.0. Mode: paired short read (Bowtie2)
