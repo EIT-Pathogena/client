@@ -4,7 +4,7 @@ from types import TracebackType
 
 import httpx
 
-from pathogena.errors import (
+from gpas.errors import (
     AuthorizationError,
     InsufficientFundsError,
     MissingError,
@@ -75,7 +75,7 @@ def raise_for_status(response: httpx.Response) -> None:
     if response.is_error:
         response.read()
         if response.status_code == 401:
-            logging.error("Have you tried running `pathogena auth`?")
+            logging.error("Have you tried running `gpas auth`?")
             raise AuthorizationError()
         elif response.status_code == 402:
             raise InsufficientFundsError()

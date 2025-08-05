@@ -3,35 +3,33 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "pathogena"
-authors = [
-    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"}
-]
-maintainers = [
-    {name = "EIT Pathogena Devs", email = "pathogena.support@eit.org"}
-]
-license = {file = "LICENSE"}
+name = "gpas"
+authors = [{ name = "GPAS Devs", email = "gpas.support@eit.org" }]
+maintainers = [{ name = "GPAS Devs", email = "gpas.support@eit.org" }]
+license = { file = "LICENSE" }
 readme = "README_pypi.md"
 dynamic = ["version", "description"]
 requires-python = ">=3.10"
 keywords = [
+    "gpas",
+    "global pathogen analysis service",
     "pathogen",
     "pathogena",
-    "eit"
+    "eit",
 ]
 dependencies = [
-  "httpx>=0.27.0",
-  "packaging>=23.2",
-  "platformdirs>=3.9.1,<=4.2.0",
-  "tqdm==4.66.3",
-  "pydantic>=2.6.2,<3",
-  "tenacity==8.2.3",
-  "click>=8.1.7",
-  "python-dotenv>=1.0",
+    "httpx>=0.27.0",
+    "packaging>=23.2",
+    "platformdirs>=3.9.1,<=4.2.0",
+    "tqdm==4.66.3",
+    "pydantic>=2.6.2,<3",
+    "tenacity==8.2.3",
+    "click>=8.1.7",
+    "python-dotenv>=1.0",
 ]
 
 [project.scripts]
-pathogena = "pathogena.cli:main"
+gpas = "gpas.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -39,13 +37,48 @@ dev = [
     "pre-commit>=4.0.1",
     "pytest>=8.3.3",
     "ruff>=0.7.1",
-    "pytest-mock>=3.14.0"
+    "pytest-mock>=3.14.0",
 ]
 
 [tool.ruff.lint]
-select = ["A", "B", "C", "D", "DJ", "E", "I", "N", "SIM", "T20", "TCH", "TD", "UP"]
+select = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "DJ",
+    "E",
+    "I",
+    "N",
+    "SIM",
+    "T20",
+    "TCH",
+    "TD",
+    "UP",
+]
 
-ignore = ["C901", "D107", "D100", "DJ001", "PD901", "UP007", "UP017", "D206", "E501", "S101", "PT027", "DTZ005", "ARG002", "B026", "D417", "N999", "S603", "S607", "UP017", "SIM103"]
+ignore = [
+    "C901",
+    "D107",
+    "D100",
+    "DJ001",
+    "PD901",
+    "UP007",
+    "UP017",
+    "D206",
+    "E501",
+    "S101",
+    "PT027",
+    "DTZ005",
+    "ARG002",
+    "B026",
+    "D417",
+    "N999",
+    "S603",
+    "S607",
+    "UP017",
+    "SIM103",
+]
 
 [tool.ruff]
 target-version = "py310"
@@ -89,6 +122,4 @@ dev-dependencies = [
 
 
 [tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

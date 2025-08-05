@@ -7,19 +7,19 @@ from pathlib import Path
 
 import click
 
-from pathogena import constants, lib, models, util
-from pathogena.create_upload_csv import UploadData, build_upload_csv
-from pathogena.errors import AuthorizationError
-from pathogena.log_utils import configure_debug_logging
+from gpas import constants, lib, models, util
+from gpas.create_upload_csv import UploadData, build_upload_csv
+from gpas.errors import AuthorizationError
+from gpas.log_utils import configure_debug_logging
 
 
-@click.group(name="Pathogena", context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(name="GPAS", context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option()
 @click.option(
     "--debug", is_flag=True, default=False, help="Enable verbose debug messages"
 )
 def main(*, debug: bool = False) -> None:
-    """EIT Pathogena command line interface."""
+    """GPAS command line interface."""
     lib.check_for_newer_version()
     util.display_cli_version()
     configure_debug_logging(debug)
@@ -39,7 +39,7 @@ def main(*, debug: bool = False) -> None:
     help="Check for a current token and print the expiry if exists",
 )
 def auth(*, host: str | None = None, check_expiry: bool = False) -> None:
-    """Authenticate with EIT Pathogena."""
+    """Authenticate with GPAS."""
     host = lib.get_host(host)
     if check_expiry:
         expiry = util.get_token_expiry(host)
@@ -62,7 +62,7 @@ def balance(
     *,
     host: str | None = None,
 ) -> None:
-    """Check your EIT Pathogena account balance."""
+    """Check your GPAS account balance."""
     host = lib.get_host(host)
     lib.get_credit_balance(host=host)
 
@@ -71,11 +71,11 @@ def balance(
 def autocomplete() -> None:
     """Enable shell autocompletion."""
     shell = environ.get("SHELL", "/bin/bash").split("/")[-1]
-    single_use_command = f'eval "$(_PATHOGENA_COMPLETE={shell}_source pathogena)"'
+    single_use_command = f'eval "$(_GPAS_COMPLETE={shell}_source gpas)"'
     print(f"Run this command to enable autocompletion:\n    {single_use_command}")  # noqa: T201
     print(  # noqa: T201
         f"Add this to your ~/.{shell}rc file to enable this permanently:\n"
-        f"    command -v pathogena > /dev/null 2>&1 && {single_use_command}"
+        f"    command -v gpas > /dev/null 2>&1 && {single_use_command}"
     )
 
 
@@ -164,7 +164,7 @@ def upload(
     skip_fastq_check: bool = False,
     output_dir: Path = Path("."),
 ) -> None:
-    """Validate, decontaminate and upload reads to EIT Pathogena.
+    """Validate, decontaminate and upload reads to GPAS.
 
     Creates a mapping CSV file which can be used to download output
     files with original sample names.

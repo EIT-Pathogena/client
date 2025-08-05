@@ -14,8 +14,8 @@ import httpx
 from httpx import Response, codes
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from pathogena.batch_upload_apis import APIError, UploadAPIClient
-from pathogena.constants import (
+from gpas.batch_upload_apis import APIError, UploadAPIClient
+from gpas.constants import (
     DEFAULT_CHUNK_SIZE,
     DEFAULT_HOST,
     DEFAULT_MAX_UPLOAD_RETRIES,
@@ -23,9 +23,9 @@ from pathogena.constants import (
     DEFAULT_RETRY_DELAY,
     DEFAULT_UPLOAD_HOST,
 )
-from pathogena.log_utils import httpx_hooks
-from pathogena.models import UploadSample
-from pathogena.util import get_access_token
+from gpas.log_utils import httpx_hooks
+from gpas.models import UploadSample
+from gpas.util import get_access_token
 
 
 def get_protocol() -> str:
@@ -34,7 +34,7 @@ def get_protocol() -> str:
     Returns:
         str: The protocol (e.g., 'http', 'https').
     """
-    protocol = os.environ.get("PATHOGENA_PROTOCOL")
+    protocol = os.environ.get("GPAS_PROTOCOL")
     if protocol is not None:
         return protocol
     else:
@@ -51,9 +51,7 @@ def get_host(cli_host: str | None = None) -> str:
         str: The resolved hostname.
     """
     return (
-        cli_host
-        if cli_host is not None
-        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
+        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
     )
 
 
@@ -275,7 +273,7 @@ def get_upload_host(cli_host: str | None = None) -> str:
     return (
         cli_host
         if cli_host is not None
-        else os.environ.get("PATHOGENA_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
+        else os.environ.get("GPAS_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
     )
 
 
@@ -326,9 +324,11 @@ def get_file_data_from_resolved_path(reads_resolved_path: Path | None):
 
     return (
         reads_resolved_path.name,
-        "application/gzip"
-        if reads_resolved_path.suffix in ("gzip", "gz")
-        else "text/plain",
+        (
+            "application/gzip"
+            if reads_resolved_path.suffix in ("gzip", "gz")
+            else "text/plain"
+        ),
         reads_resolved_path,
     )
 
@@ -747,7 +747,7 @@ def upload_chunk(
 
     Args:
         batch_pk (int): ID of sample to upload
-        host (str): pathogena host, e.g api.upload-dev.eit-pathogena.com
+        host (str): gpas host, e.g api.upload-dev.eit-pathogena.com
         protocol (str): protocol, default https
         chunk (bytes): File chunk to be uploaded
         chunk_index (int): Index representing what chunk of the whole

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from pathogena.create_upload_csv import UploadData, build_upload_csv
+from gpas.create_upload_csv import UploadData, build_upload_csv
 
 
 def test_build_csv_illumina(
@@ -35,7 +35,7 @@ def test_build_csv_illumina(
 
     assert "Created 1 CSV files: output.csv" in caplog.text
     assert (
-        "You can use `pathogena validate` to check the CSV files before uploading."
+        "You can use `gpas validate` to check the CSV files before uploading."
         in caplog.text
     )
 
@@ -69,7 +69,7 @@ def test_build_csv_illumina_sars_cov_2_amp(
 
     assert "Created 1 CSV files: output.csv" in caplog.text
     assert (
-        "You can use `pathogena validate` to check the CSV files before uploading."
+        "You can use `gpas validate` to check the CSV files before uploading."
         in caplog.text
     )
 

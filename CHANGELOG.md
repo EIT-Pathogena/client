@@ -1,4 +1,8 @@
-## Unreleased
+## 2.2.2-RC1 (2025-08-05)
+
+### Changed
+
+- [EV-2285](https://eit-oxford.atlassian.net/browse/EV-2285): update package and all references of pathogena to gpas
 
 ## 2.2.1 (2025-07-03)
 
@@ -73,10 +77,10 @@
 - Number of samples it passed to the server on batch creation.
 - Refactor documentation so make it easier to manage going forward.
 - Token expiry date is now added to the token file as an offline method of checking validity.
-- `pathogena auth --check-expiry` will get the new expiry value from the token file or prompt login
+- `gpas auth --check-expiry` will get the new expiry value from the token file or prompt login
   if the token is expired.
 - Give the user a link to their batch when sample upload is finished.
-- Update default host to be Pathogena production URL.
+- Update default host to be GPAS production URL.
 
 ### Fix
 

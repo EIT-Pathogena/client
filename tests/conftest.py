@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from pathogena.create_upload_csv import UploadData
-from pathogena.models import UploadBatch, UploadSample, create_batch_from_csv
+from gpas.create_upload_csv import UploadData
+from gpas.models import UploadBatch, UploadSample, create_batch_from_csv
 
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_amplicon_scheme():
-    with patch("pathogena.lib.get_amplicon_schemes") as get_amplicon_schemes_mock:
+    with patch("gpas.lib.get_amplicon_schemes") as get_amplicon_schemes_mock:
         get_amplicon_schemes_mock.return_value = []
         yield
 
@@ -18,7 +18,7 @@ def mock_amplicon_scheme():
 @pytest.fixture
 def cli_main():
     # Required to be a fixture to ensure it is patched before use
-    from pathogena.cli import main
+    from gpas.cli import main
 
     return main
 

@@ -8,8 +8,8 @@ import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from pathogena.batch_upload_apis import APIError, UploadAPIClient
-from pathogena.upload_utils import (
+from gpas.batch_upload_apis import APIError, UploadAPIClient
+from gpas.upload_utils import (
     OnComplete,
     OnProgress,
     PreparedFiles,
@@ -202,7 +202,7 @@ class TestPrepareFiles:
         }
         # mock prepare_file with successful preparation of new files
         mocker.patch(
-            "pathogena.upload_utils.prepare_file",
+            "gpas.upload_utils.prepare_file",
             side_effect=[
                 {
                     "file": {
@@ -296,13 +296,11 @@ class TestUploadChunks:
         )  # 4 completed chunks to match mock file
 
         # Mock process_queue to prevent it from blocking the test
-        mocker.patch("pathogena.upload_utils.process_queue", return_value=None)
+        mocker.patch("gpas.upload_utils.process_queue", return_value=None)
 
         # Mock access_token
         dummy_token = "dummy-token"
-        mocker.patch(
-            "pathogena.upload_utils.get_access_token", return_value=dummy_token
-        )
+        mocker.patch("gpas.upload_utils.get_access_token", return_value=dummy_token)
 
         # mock as_completed to simulate completed futures
         self.mock_end_upload = mocker.patch.object(
@@ -376,12 +374,12 @@ class TestUploadChunks:
         mock_upload_success = httpx.Response(200, json={"metrics": "some_metrics"})
 
         mocker.patch(
-            "pathogena.upload_utils.upload_chunk",
+            "gpas.upload_utils.upload_chunk",
             return_value=mock_upload_success,
             # side_effect=mock_upload_success,
         )
         mock_client = mocker.patch(
-            "pathogena.upload_utils.UploadAPIClient",
+            "gpas.upload_utils.UploadAPIClient",
         )
         mock_batches_uploads_end_file_upload = mocker.MagicMock()
         mock_batches_uploads_end_file_upload.side_effect = httpx.Response(
@@ -437,7 +435,7 @@ class TestUploadChunks:
 
         # mock upload_chunk to return the above mocks
         mock_upload_chunk = mocker.patch(
-            "pathogena.upload_utils.upload_chunk",
+            "gpas.upload_utils.upload_chunk",
             side_effect=[
                 mock_upload_success,
                 mock_upload_fail,
@@ -487,7 +485,7 @@ class TestUploadChunks:
 
         # mock upload_chunk to return the above mock
         mocker.patch(
-            "pathogena.upload_utils.upload_chunk",
+            "gpas.upload_utils.upload_chunk",
             side_effect=[mock_upload_1, mock_upload_2, mock_upload_3],
         )
 
@@ -612,7 +610,7 @@ class TestUploadFiles:
 
         # mock successful upload_chunks
         mock_upload_chunks = mocker.patch(
-            "pathogena.upload_utils.upload_chunks", return_value=None
+            "gpas.upload_utils.upload_chunks", return_value=None
         )
 
         # mock successful API client response
@@ -668,7 +666,7 @@ class TestUploadFiles:
 
         # mock upload_chunks with exception
         mock_upload_chunks = mocker.patch(
-            "pathogena.upload_utils.upload_chunks",
+            "gpas.upload_utils.upload_chunks",
             side_effect=Exception("Chunk upload error"),
         )
 
