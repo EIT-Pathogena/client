@@ -23,4 +23,4 @@ all subcommand documentation.
 
 ## Support
 
-For technical support, please open an issue or contact [pathogena.support@eit.org](mailto:pathogena.support@eit.org)
+For technical support, please open an issue or contact [gpas.support@eit.org](mailto:gpas.support@eit.org)

@@ -4,8 +4,8 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "gpas"
-authors = [{ name = "GPAS Devs", email = "pathogena.support@eit.org" }]
-maintainers = [{ name = "GPAS Devs", email = "pathogena.support@eit.org" }]
+authors = [{ name = "GPAS Devs", email = "gpas.support@eit.org" }]
+maintainers = [{ name = "GPAS Devs", email = "gpas.support@eit.org" }]
 license = { file = "LICENSE" }
 readme = "README_pypi.md"
 dynamic = ["version", "description"]

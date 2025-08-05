@@ -30,7 +30,7 @@ Creating a Personal Account:
 Navigate to GPAS and click on “Sign Up”. Follow the instructions to create a user account.
 
 Shortly after filling out the form you'll receive a verification email. Click the link in the email to verify your
-account and email address. If you don’t receive the email, please contact pathogena.support@eit.org.
+account and email address. If you don’t receive the email, please contact gpas.support@eit.org.
 
 You are now ready to start using GPAS.
 
