@@ -246,7 +246,7 @@ gpas upload --skip-decontamination my-first-batch.csv
 
 **help**
 
-This command generates a CSV from a given directory of fastq sample files. An [example](https://github.com/EIT-Pathogena/client/tree/2.2.1/docs/assets) of such a CSV file is given in the assets directory. A CSV file in this format is required to run the [gpas upload](#gpas-upload) command.
+This command generates a CSV from a given directory of fastq sample files. An [example](https://github.com/EIT-Pathogena/client/tree/2.2.2rc1/docs/assets) of such a CSV file is given in the assets directory. A CSV file in this format is required to run the [gpas upload](#gpas-upload) command.
 
 Note: the CSV file must be located in the same directory as the sample.fastq files to be used with the upload command.
 
@@ -278,7 +278,7 @@ gpas build-csv ~/Downloads/samples \
 **help**
 
 This command will attempt to remove human reads from a given input CSV file, in the same structure as the input CSV that
-would be used for uploading to GPAS, an [example can be found here](https://github.com/EIT-Pathogena/client/tree/2.2.1/docs/assets).
+would be used for uploading to GPAS, an [example can be found here](https://github.com/EIT-Pathogena/client/tree/2.2.2rc1/docs/assets).
 
 By default, the processed files will be output in the same directory that the command is run in, but you can choose a
 different directory with the `--output-dir` argument.

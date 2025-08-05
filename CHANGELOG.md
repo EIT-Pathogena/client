@@ -1,4 +1,4 @@
-## Unreleased
+## 2.2.2-RC1 (2025-08-05)
 
 ### Changed
 
