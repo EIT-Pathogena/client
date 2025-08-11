@@ -20,7 +20,10 @@ from pathogena.log_utils import configure_debug_logging
 )
 def main(*, debug: bool = False) -> None:
     """EIT Pathogena command line interface."""
-    lib.check_for_newer_version()
+    logging.warning(
+        f"⚠️  Deprecated! ⚠️  \n'pathogena' has been renamed to 'gpas' - please use https://pypi.org/project/gpas/. \n"
+        f"The package under this name will no longer be receiving updates."
+    )
     util.display_cli_version()
     configure_debug_logging(debug)
 
