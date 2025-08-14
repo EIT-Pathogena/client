@@ -1,3 +1,9 @@
+## Unreleased
+
+### Changed
+
+- [EV-2139](https://eit-oxford.atlassian.net/browse/EV-2139): added tests for mappings file and batch uploadsg
+
 ## 2.2.2-RC1 (2025-08-05)
 
 ### Changed
