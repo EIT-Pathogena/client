@@ -468,6 +468,162 @@ def prepare_files(
     }
 
 
+def prepare_file(
+    resolved_path: Path | None,
+    file_metadata: SampleFileMetadata,
+    batch_pk: str,
+    upload_session: int,
+    sample_id: str,
+    api_client: UploadAPIClient,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+) -> dict[str, Any]:
+    """Prepares a file for uploading by sending metadata to initialize the process.
+
+    Args:
+        resolved_path (Path): Resolved path of the file.
+        file_metadata (Any): A file object with attributes `name`, `size`, `content_type` and `specimen_oragnism`.
+        batch_pk (str): The batch ID associated with the file.
+        upload_session (int): The current upload session ID.
+        sample_id (str): The ID of the sample that the file will be associated with.
+        chunk_size (int): Size of each file chunk in bytes.
+        api_client (UploadAPIClient): Instance of the APIClient class.
+
+    Returns:
+        dict[str, Any]: File metadata ready for upload or error details.
+    """
+    if resolved_path is None:
+        return {
+            "error": "Could not find any read file data for sample",
+            "status code": 500,
+            "upload_session": upload_session,
+        }
+
+    with resolved_path.open("rb") as file:
+        file_data = file.read()
+
+    original_file_name = file_metadata["name"]
+    total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
+    content_type = file_metadata["content_type"]
+
+    form_data = {
+        "original_file_name": original_file_name,
+        "total_chunks": total_chunks,
+        "content_type": content_type,
+        "sample_id": sample_id,
+    }
+
+    try:
+        start_file_upload_response = api_client.batches_uploads_start_file_upload(
+            batch_pk=batch_pk, data=form_data
+        )
+        start_file_upload_json = start_file_upload_response.json()
+        if start_file_upload_response.status_code == 200:
+            file_ready = {
+                "file": file_metadata,
+                "upload_id": start_file_upload_json.get("upload_id"),
+                "batch_id": batch_pk,
+                "sample_id": start_file_upload_json.get("sample_id"),
+                "sample_file_id": start_file_upload_json.get("sample_file_id"),
+                "total_chunks": total_chunks,
+                "upload_session": upload_session,
+                "file_data": file_data,
+            }
+            return file_ready
+        else:
+            # Include the upload session in the error response
+            start_file_upload_json["upload_session"] = upload_session
+            return start_file_upload_json
+    except APIError as e:
+        return {
+            "error": str(e),
+            "status code": e.status_code,
+            "upload_session": upload_session,
+        }
+
+
+def upload_fastq(
+    upload_data: UploadData,
+    prepared_files: PreparedFiles,
+    api_client: UploadAPIClient,
+) -> None:
+    """Upload a FASTQ file to the server.
+
+    Args:
+        upload_data (UploadData): The upload data including batch_id, session info, etc.
+        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
+        api_client (UploadAPIClient): Client for connecting to the Upload API.
+    """
+    upload_files(upload_data, prepared_files, api_client)
+
+
+def upload_files(
+    upload_data: UploadData,
+    prepared_files: PreparedFiles,
+    api_client: UploadAPIClient,
+) -> None:
+    """Uploads files in chunks and manages the upload process.
+
+    This function first prepares the files for upload, then uploads them in chunks
+    using a thread pool executor for concurrent uploads. It finishes by ending the
+    upload session.
+
+    Args:
+        upload_data (UploadData): An object containing the upload configuration,
+            including the batch ID, access token, environment, and file details.
+        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
+        api_client (UploadAPIClient): Instance of the APIClient class.
+
+    Returns:
+        None
+    """
+    file_status = {}
+
+    # load in prepared files
+    file_preparation = prepared_files
+
+    # If prepare_files returned None, log and return
+    if file_preparation is None:
+        logging.error("Failed to prepare files: no data returned.")
+        return
+
+    # handle any errors during preparation
+    error_keys = [k for k in file_preparation if "API error occurred" in k]
+    if error_keys:
+        error_msg_key = error_keys[0]
+        logging.error(f"Error preparing files: {file_preparation[error_msg_key]}")
+        return
+
+    if "files" not in file_preparation:
+        logging.error("Unexpected response from prepare_files: 'files' key missing.")
+        return
+
+    # files have been sucessfully prepared, extract the prepared file list
+    selected_files = file_preparation["files"]
+
+    # upload the file chunks
+    with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
+        futures = []
+        for file in selected_files:
+            future = executor.submit(upload_chunks, upload_data, file, file_status)
+            futures.append(future)
+
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logging.error(f"Error uploading file: {e}")
+
+    # end the upload session
+    end_session = api_client.batches_samples_end_upload_session_create(
+        upload_data.batch_pk, upload_data.upload_session
+    )
+
+    if end_session.status_code != 200:
+        logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
+    else:
+        logging.info(f"All uploads complete.")
+
+
 # upload_all chunks of a file
 def upload_chunks(
     upload_data: UploadData,
@@ -593,145 +749,21 @@ def upload_chunks(
             break
 
 
-def upload_files(
-    upload_data: UploadData,
-    prepared_files: PreparedFiles,
-    api_client: UploadAPIClient,
-) -> None:
-    """Uploads files in chunks and manages the upload process.
-
-    This function first prepares the files for upload, then uploads them in chunks
-    using a thread pool executor for concurrent uploads. It finishes by ending the
-    upload session.
+def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[Any]:
+    """Processes a queue of chunks concurrently to ensure tno more than 'max_concurrent_chunks' are processed at the same time.
 
     Args:
-        upload_data (UploadData): An object containing the upload configuration,
-            including the batch ID, access token, environment, and file details.
-        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
-        api_client (UploadAPIClient): Instance of the APIClient class.
-
-    Returns:
-        None
+        chunk_queue (list): A collection of futures (generated by thread pool executor)
+        representing the chunks to be processed.
+        max_concurrent_chunks (int): The maximum number of chunks to be processed concurrently.
     """
-    file_status = {}
-
-    # load in prepared files
-    file_preparation = prepared_files
-
-    # If prepare_files returned None, log and return
-    if file_preparation is None:
-        logging.error("Failed to prepare files: no data returned.")
-        return
-
-    # handle any errors during preparation
-    error_keys = [k for k in file_preparation if "API error occurred" in k]
-    if error_keys:
-        error_msg_key = error_keys[0]
-        logging.error(f"Error preparing files: {file_preparation[error_msg_key]}")
-        return
-
-    if "files" not in file_preparation:
-        logging.error("Unexpected response from prepare_files: 'files' key missing.")
-        return
-
-    # files have been sucessfully prepared, extract the prepared file list
-    selected_files = file_preparation["files"]
-
-    # upload the file chunks
-    with ThreadPoolExecutor(max_workers=upload_data.max_concurrent_chunks) as executor:
-        futures = []
-        for file in selected_files:
-            future = executor.submit(upload_chunks, upload_data, file, file_status)
-            futures.append(future)
-
-        for future in as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                logging.error(f"Error uploading file: {e}")
-
-    # end the upload session
-    end_session = api_client.batches_samples_end_upload_session_create(
-        upload_data.batch_pk, upload_data.upload_session
-    )
-
-    if end_session.status_code != 200:
-        logging.error(f"Failed to end upload session for batch {upload_data.batch_pk}.")
-    else:
-        logging.info(f"All uploads complete.")
-
-
-def prepare_file(
-    resolved_path: Path | None,
-    file_metadata: SampleFileMetadata,
-    batch_pk: str,
-    upload_session: int,
-    sample_id: str,
-    api_client: UploadAPIClient,
-    chunk_size: int = DEFAULT_CHUNK_SIZE,
-) -> dict[str, Any]:
-    """Prepares a file for uploading by sending metadata to initialize the process.
-
-    Args:
-        resolved_path (Path): Resolved path of the file.
-        file_metadata (Any): A file object with attributes `name`, `size`, `content_type` and `specimen_oragnism`.
-        batch_pk (str): The batch ID associated with the file.
-        upload_session (int): The current upload session ID.
-        sample_id (str): The ID of the sample that the file will be associated with.
-        chunk_size (int): Size of each file chunk in bytes.
-        api_client (UploadAPIClient): Instance of the APIClient class.
-
-    Returns:
-        dict[str, Any]: File metadata ready for upload or error details.
-    """
-    if resolved_path is None:
-        return {
-            "error": "Could not find any read file data for sample",
-            "status code": 500,
-            "upload_session": upload_session,
-        }
-
-    with resolved_path.open("rb") as file:
-        file_data = file.read()
-
-    original_file_name = file_metadata["name"]
-    total_chunks = math.ceil(sys.getsizeof(file_data) / chunk_size)
-    content_type = file_metadata["content_type"]
-
-    form_data = {
-        "original_file_name": original_file_name,
-        "total_chunks": total_chunks,
-        "content_type": content_type,
-        "sample_id": sample_id,
-    }
-
-    try:
-        start_file_upload_response = api_client.batches_uploads_start_file_upload(
-            batch_pk=batch_pk, data=form_data
-        )
-        start_file_upload_json = start_file_upload_response.json()
-        if start_file_upload_response.status_code == 200:
-            file_ready = {
-                "file": file_metadata,
-                "upload_id": start_file_upload_json.get("upload_id"),
-                "batch_id": batch_pk,
-                "sample_id": start_file_upload_json.get("sample_id"),
-                "sample_file_id": start_file_upload_json.get("sample_file_id"),
-                "total_chunks": total_chunks,
-                "upload_session": upload_session,
-                "file_data": file_data,
-            }
-            return file_ready
-        else:
-            # Include the upload session in the error response
-            start_file_upload_json["upload_session"] = upload_session
-            return start_file_upload_json
-    except APIError as e:
-        return {
-            "error": str(e),
-            "status code": e.status_code,
-            "upload_session": upload_session,
-        }
+    if len(chunk_queue) >= max_concurrent_chunks:
+        completed = []
+        for future in as_completed(chunk_queue):
+            yield future.result()
+            completed.append(future)
+        for future in completed:  # remove completed futures from queue
+            chunk_queue.remove(future)
 
 
 @retry(wait=wait_random_exponential(multiplier=2, max=60), stop=stop_after_attempt(10))
@@ -787,35 +819,3 @@ def upload_chunk(
             f"Exception while uploading chunk {chunk_index} of batch {batch_pk}: {str(e), chunk[:10]} RESPONSE {response.status_code, response.headers, response.content}"
         )
         raise
-
-
-def process_queue(chunk_queue: list, max_concurrent_chunks: int) -> Generator[Any]:
-    """Processes a queue of chunks concurrently to ensure tno more than 'max_concurrent_chunks' are processed at the same time.
-
-    Args:
-        chunk_queue (list): A collection of futures (generated by thread pool executor)
-        representing the chunks to be processed.
-        max_concurrent_chunks (int): The maximum number of chunks to be processed concurrently.
-    """
-    if len(chunk_queue) >= max_concurrent_chunks:
-        completed = []
-        for future in as_completed(chunk_queue):
-            yield future.result()
-            completed.append(future)
-        for future in completed:  # remove completed futures from queue
-            chunk_queue.remove(future)
-
-
-def upload_fastq(
-    upload_data: UploadData,
-    prepared_files: PreparedFiles,
-    api_client: UploadAPIClient,
-) -> None:
-    """Upload a FASTQ file to the server.
-
-    Args:
-        upload_data (UploadData): The upload data including batch_id, session info, etc.
-        prepared_files (PreparedFiles): Set of files together with all the metadata needed for upload.
-        api_client (UploadAPIClient): Client for connecting to the Upload API.
-    """
-    upload_files(upload_data, prepared_files, api_client)
