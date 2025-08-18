@@ -14,7 +14,7 @@ from typing import Literal
 
 from dotenv import load_dotenv
 
-import gpas
+import pathogena
 
 load_dotenv()
 
@@ -37,7 +37,7 @@ def run(cmd: str, cwd: Path = Path()) -> subprocess.CompletedProcess:
 
 
 def get_access_token(host: str) -> str:
-    """Reads token from ~/.config/gpas/tokens/<host>.
+    """Reads token from ~/.config/pathogena/tokens/<host>.
 
     Args:
         host (str): The host for which to retrieve the token.
@@ -147,12 +147,12 @@ def is_dev_mode() -> bool:
     Returns:
         bool: True if running in development mode, False otherwise.
     """
-    return "GPAS_DEV_MODE" in os.environ
+    return "PATHOGENA_DEV_MODE" in os.environ
 
 
 def display_cli_version() -> None:
     """Display the CLI version information."""
-    logging.info(f"GPAS client version {gpas.__version__}")
+    logging.info(f"EIT Pathogena client version {pathogena.__version__}")
 
 
 def command_exists(command: str) -> bool:
@@ -269,7 +269,7 @@ def get_token_path(host: str) -> Path:
     Returns:
         Path: The path to the token file.
     """
-    conf_dir = Path.home() / ".config" / "gpas"
+    conf_dir = Path.home() / ".config" / "pathogena"
     token_dir = conf_dir / "tokens"
     token_dir.mkdir(parents=True, exist_ok=True)
     token_path = token_dir / f"{host}.json"

@@ -6,7 +6,7 @@ import pytest
 from click.testing import CliRunner
 from pydantic import ValidationError
 
-from gpas import __version__ as version
+from pathogena import __version__ as version
 
 
 def test_cli_help_override(cli_main) -> None:

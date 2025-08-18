@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from gpas.models import UploadBase
+from pathogena.models import UploadBase
 
 
 class UploadData(UploadBase):
@@ -102,7 +102,9 @@ def build_upload_csv(
     logging.info(
         f"Created {len(output_csvs)} CSV files: {', '.join([csv.name for csv in output_csvs])}"
     )
-    logging.info("You can use `gpas validate` to check the CSV files before uploading.")
+    logging.info(
+        "You can use `pathogena validate` to check the CSV files before uploading."
+    )
 
 
 def chunks(lst: list, n: int) -> list[list]:
@@ -123,7 +125,7 @@ def _write_csv(
     read_files: list[tuple[str, str, str]],
     upload_data: UploadData,
 ) -> None:
-    """Build a CSV file for upload to GPAS.
+    """Build a CSV file for upload to EIT Pathogena.
 
     Args:
         data (list[dict]): The data to write.

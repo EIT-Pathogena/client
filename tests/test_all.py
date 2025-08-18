@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from gpas import models
-from gpas.models import UploadSample
+from pathogena import models
+from pathogena.models import UploadSample
 
 # Doesn't work because it actually uploads data, need to work out a mock system or break down the function
 # even further, for now, an authenticated used can un-comment and run the tests.

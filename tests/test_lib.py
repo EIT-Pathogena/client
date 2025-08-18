@@ -4,12 +4,12 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from gpas import lib
-from gpas.errors import UnsupportedClientError
+from pathogena import lib
+from pathogena.errors import UnsupportedClientError
 
 
 @patch("httpx.Client.get")
-@patch("gpas.__version__", "1.0.0")
+@patch("pathogena.__version__", "1.0.0")
 def test_check_new_version_available(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -24,11 +24,11 @@ def test_check_new_version_available(
         status_code=200, json={"info": {"version": "1.1.0"}}
     )
     lib.check_for_newer_version()
-    assert "A new version of the GPAS CLI" in caplog.text
+    assert "A new version of the EIT Pathogena CLI" in caplog.text
 
 
 @patch("httpx.Client.get")
-@patch("gpas.__version__", "1.0.0")
+@patch("pathogena.__version__", "1.0.0")
 def test_check_no_new_version_available(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -47,7 +47,7 @@ def test_check_no_new_version_available(
 
 
 @patch("httpx.Client.get")
-@patch("gpas.__version__", "1.0.1")
+@patch("pathogena.__version__", "1.0.1")
 def test_check_version_compatibility(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture, test_host: str
 ) -> None:
@@ -62,7 +62,7 @@ def test_check_version_compatibility(
 
 
 @patch("httpx.Client.get")
-@patch("gpas.__version__", "1.0.0")
+@patch("pathogena.__version__", "1.0.0")
 def test_fail_check_version_compatibility(
     mock_get: MagicMock, caplog: pytest.LogCaptureFixture, test_host: str
 ) -> None:
@@ -80,14 +80,14 @@ def test_fail_check_version_compatibility(
 
 
 @patch("httpx.Client.get")
-@patch("gpas.lib.get_access_token")
+@patch("pathogena.lib.get_access_token")
 def test_get_balance(
     mock_token: MagicMock, mock_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test successfully getting the balance for a given account.
 
     Args:
-        mock_token (MagicMock): Mocked `gpas.lib.get_access_token` method.
+        mock_token (MagicMock): Mocked `pathogena.lib.get_access_token` method.
         mock_get (MagicMock): Mocked `httpx.Client.get` method.
         caplog (pytest.LogCaptureFixture): Pytest fixture to capture log output.
     """
@@ -99,14 +99,14 @@ def test_get_balance(
 
 
 @patch("httpx.Client.get")
-@patch("gpas.lib.get_access_token")
+@patch("pathogena.lib.get_access_token")
 def test_get_balance_failure(
     mock_token: MagicMock, mock_client_get: MagicMock, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test failure to get the account balance.
 
     Args:
-        mock_token (MagicMock): Mocked `gpas.lib.get_access_token` method.
+        mock_token (MagicMock): Mocked `pathogena.lib.get_access_token` method.
         mock_client_get (MagicMock): Mocked `httpx.Client.get` method.
         caplog (pytest.LogCaptureFixture): Pytest fixture to capture log output.
     """

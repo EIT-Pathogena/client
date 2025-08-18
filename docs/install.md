@@ -1,6 +1,6 @@
 ## Install
 
-There are two recommended methods for installing the GPAS Client, either by using the popular package and
+There are two recommended methods for installing the Pathogena Client, either by using the popular package and
 environment manager Conda or by using our publicly available Docker container which we build at release time.
 
 ### Installing Miniconda
@@ -24,22 +24,20 @@ In a terminal console, install Miniconda with the following instructions and acc
 The client requires the Conda platform to be using `x86_64` when creating the environment.
 
 - If your Mac has an Apple processor, using Terminal, firstly run:
-
-  ```bash
-  mkdir -p ~/miniconda3
-  curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
-  bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-  rm -rf ~/miniconda3/miniconda.sh
-  ```
+    ```bash
+    mkdir -p ~/miniconda3
+    curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+    rm -rf ~/miniconda3/miniconda.sh
+    ```
 
 - Initialise Miniconda using either of the following commands depending on your Shell (Bash|ZSH)
-  ```bash
-  ~/miniconda3/bin/conda init bash
-  ~/miniconda3/bin/conda init zsh
-  ```
+    ```bash
+    ~/miniconda3/bin/conda init bash
+    ~/miniconda3/bin/conda init zsh
+    ```
 
 ### Installing or updating the client with Miniconda
-
 <a id="installing-or-updating-the-client-with-miniconda"></a>
 
 The client has at least one dependency that requires `bioconda`, which itself
@@ -50,9 +48,9 @@ it is not recommended to show the full debug output with `-vvv` as this has been
 #### Linux
 
 ```bash
-conda create -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-conda activate gpas
-pip install --upgrade gpas
+conda create -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --upgrade pathogena
 ```
 
 #### MacOS
@@ -60,13 +58,13 @@ pip install --upgrade gpas
 Please note the additional argument `--platform osx-64` in this command, compared to the above.
 
 ```bash
-conda create --platform osx-64 -y -n gpas -c conda-forge -c bioconda hostile==1.1.0
-conda activate gpas
-pip install --upgrade gpas
+conda create --platform osx-64 -y -n pathogena -c conda-forge -c bioconda hostile==1.1.0
+conda activate pathogena
+pip install --upgrade pathogena
 ```
 
 A simple test to verify installation would be to run a version check:
 
 ```bash
-gpas --version
+pathogena --version
 ```

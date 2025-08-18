@@ -3,9 +3,9 @@ from typing import Any
 
 import httpx
 
-from gpas.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
-from gpas.errors import APIError
-from gpas.util import get_access_token
+from pathogena.constants import DEFAULT_HOST, DEFAULT_PROTOCOL, DEFAULT_UPLOAD_HOST
+from pathogena.errors import APIError
+from pathogena.util import get_access_token
 
 
 def get_protocol() -> str:
@@ -14,8 +14,8 @@ def get_protocol() -> str:
     Returns:
         str: The protocol (e.g., 'http', 'https').
     """
-    if "GPAS_PROTOCOL" in os.environ:
-        protocol = os.environ["GPAS_PROTOCOL"]
+    if "PATHOGENA_PROTOCOL" in os.environ:
+        protocol = os.environ["PATHOGENA_PROTOCOL"]
         return protocol
     else:
         return DEFAULT_PROTOCOL
@@ -31,7 +31,9 @@ def get_host(cli_host: str | None = None) -> str:
         str: The resolved hostname.
     """
     return (
-        cli_host if cli_host is not None else os.environ.get("GPAS_HOST", DEFAULT_HOST)
+        cli_host
+        if cli_host is not None
+        else os.environ.get("PATHOGENA_HOST", DEFAULT_HOST)
     )
 
 
@@ -47,7 +49,7 @@ def get_upload_host(cli_host: str | None = None) -> str:
     return (
         cli_host
         if cli_host is not None
-        else os.environ.get("GPAS_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
+        else os.environ.get("PATHOGENA_UPLOAD_HOST", DEFAULT_UPLOAD_HOST)
     )
 
 

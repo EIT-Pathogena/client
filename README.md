@@ -1,6 +1,6 @@
-# GPAS client
+# EIT Pathogena client
 
-The command line interface for the GPAS platform.
+The command line interface for the EIT Pathogena platform.
 
 The client enables privacy-preserving sequence data submission and retrieval of analytical output files. Prior to
 upload, sample identifiers are anonymised and human host sequences are removed. A multicore machine with 16GB of RAM
@@ -23,4 +23,4 @@ all subcommand documentation.
 
 ## Support
 
-For technical support, please open an issue or contact [gpas.support@eit.org](mailto:gpas.support@eit.org)
+For technical support, please open an issue or contact [pathogena.support@eit.org](mailto:pathogena.support@eit.org)
