@@ -162,6 +162,62 @@ def get_credit_balance(host: str) -> None:
                 "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
             )
 
+    
+def validate_csv(host: str, batch: UploadBatch, amplicon_scheme: str | None):
+    instrument_platform = batch.samples[0].instrument_platform
+    collection_date = batch.samples[0].collection_date
+    country = batch.samples[0].country
+    telemetry_data = {
+        "client": {
+            "name": "pathogena-client",
+            "version": pathogena.__version__,
+        },
+        "decontamination": {
+            "name": "hostile",
+            "version": hostile.__version__,
+        },
+        "specimen_organism": batch.samples[0].specimen_organism,
+    }
+
+    local_batch_name = (
+        batch.samples[0].batch_name
+        if batch.samples[0].batch_name not in ["", " ", None]
+        else f"batch_{collection_date}"
+    )
+    data = {
+        "collection_date": str(collection_date),
+        "instrument": instrument_platform,
+        "country": country,
+        "name": local_batch_name,
+        "amplicon_scheme": "amplicon_scheme",
+        "telemetry_data": telemetry_data,
+    }
+    try:
+        with httpx.Client(
+            event_hooks=httpx_hooks,
+            transport=httpx.HTTPTransport(retries=5),
+            timeout=60,
+            follow_redirects=True,
+        ) as client:
+            try:
+                validation_response = client.post(
+                    f"{get_protocol()}://{host}/api/v1/batches/validate_creation",
+                    headers={
+                        "Authorization": f"Bearer {util.get_access_token(host)}",
+                        "accept": "application/json",
+                    },
+                    json=data,
+                    follow_redirects=True,
+                )
+                logging.error(f"RESPONSE: {validation_response}")
+            except Exception as e:
+                logging.error(f"Skibidi error: {e}")
+        assert validation_response.status_code == 200
+    except AssertionError:
+        logging.error(
+            f"Unexpected response code from CSV validation. Response: {validation_response}"
+        )
+        exit(1)
 
 def create_batch_on_server(
     batch: UploadBatch,
@@ -213,9 +269,10 @@ def create_batch_on_server(
         "telemetry_data": telemetry_data,
     }
 
-    url = f"{get_protocol()}://{host}/api/v1/batches"
+    url = f"{get_protocol()}://{get_upload_host()}/api/v1/batches/"
     if validate_only:
-        url += "/validate_creation"
+        url = f"{get_protocol()}://{host}/api/v1/batches/validate_creation"
+
     try:
         with httpx.Client(
             event_hooks=httpx_hooks,
@@ -224,7 +281,7 @@ def create_batch_on_server(
             follow_redirects=True,
         ) as client:
             batch_create_response = client.post(
-                f"{get_protocol()}://{get_upload_host()}/api/v1/batches/",
+                url,
                 headers={
                     "Authorization": f"Bearer {util.get_access_token(host)}",
                     "accept": "application/json",
