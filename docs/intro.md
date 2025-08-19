@@ -1,3 +1,9 @@
+> # ⚠️ Deprecated
+>
+> `pathogena` has been renamed `gpas`. Please use the [GPAS PyPI project](https://pypi.org/project/gpas/) instead.
+>
+> The package under this name will no longer be receiving updates.
+
 # EIT Pathogena Client
 
 The command line interface for the EIT Pathogena platform.
