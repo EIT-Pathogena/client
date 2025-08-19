@@ -163,7 +163,18 @@ def get_credit_balance(host: str) -> None:
             )
 
 
-def validate_csv(host: str, batch: UploadBatch, amplicon_scheme: str | None):
+def validate_csv(host: str, batch: UploadBatch):
+    """Validates the CSV prior to upload.
+
+    Calls `/validate_creation` in Portal to validate payload - endpoint returns 422 if issues are found.
+
+    Args:
+        batch (models.UploadBatch): The batch of samples to decontaminate
+        host (str): The host server.
+
+    Returns:
+        None
+    """
     instrument_platform = batch.samples[0].instrument_platform
     collection_date = batch.samples[0].collection_date
     country = batch.samples[0].country
@@ -209,9 +220,8 @@ def validate_csv(host: str, batch: UploadBatch, amplicon_scheme: str | None):
                     json=data,
                     follow_redirects=True,
                 )
-                logging.error(f"RESPONSE: {validation_response}")
             except Exception as e:
-                logging.error(f"Skibidi error: {e}")
+                logging.error(f"Error validating CSV: {e}")
         assert validation_response.status_code == 200
     except AssertionError:
         logging.error(
@@ -224,7 +234,6 @@ def create_batch_on_server(
     batch: UploadBatch,
     host: str,
     amplicon_scheme: str | None,
-    validate_only: bool = False,
 ) -> tuple[str, str, str, str]:
     """Create batch on server, return batch id.
 
@@ -232,10 +241,9 @@ def create_batch_on_server(
     total samples in the BatchModel.
 
     Args:
+        batch (models.UploadBatch): The batch of samples to decontaminate
         host (str): The host server.
-        number_of_samples (int): The expected number of samples in the batch.
         amplicon_scheme (str | None): The amplicon scheme to use.
-        validate_only (bool): Whether to validate only. Defaults to False.
 
     Returns:
         tuple[str, str]: The batch ID and name.
@@ -271,9 +279,6 @@ def create_batch_on_server(
     }
 
     url = f"{get_protocol()}://{get_upload_host()}/api/v1/batches/"
-    if validate_only:
-        url = f"{get_protocol()}://{host}/api/v1/batches/validate_creation"
-
     try:
         with httpx.Client(
             event_hooks=httpx_hooks,
@@ -290,9 +295,6 @@ def create_batch_on_server(
                 json=data,
                 follow_redirects=True,
             )
-            if validate_only:
-                # Don't attempt to return data if just validating (as there's none there)
-                return None, None, None, None  # type: ignore
 
             created_batch = batch_create_response.json()
             batch_id = created_batch["id"]
