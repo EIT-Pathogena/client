@@ -162,7 +162,7 @@ def get_credit_balance(host: str) -> None:
                 "Your account doesn't have enough credits to fulfil the number of Samples in your Batch."
             )
 
-    
+
 def validate_csv(host: str, batch: UploadBatch, amplicon_scheme: str | None):
     instrument_platform = batch.samples[0].instrument_platform
     collection_date = batch.samples[0].collection_date
@@ -218,6 +218,7 @@ def validate_csv(host: str, batch: UploadBatch, amplicon_scheme: str | None):
             f"Unexpected response code from CSV validation. Response: {validation_response}"
         )
         exit(1)
+
 
 def create_batch_on_server(
     batch: UploadBatch,
