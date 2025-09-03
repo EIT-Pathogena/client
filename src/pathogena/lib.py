@@ -129,6 +129,7 @@ def get_amplicon_schemes(host: str | None = None) -> list[str]:
     with httpx.Client(event_hooks=httpx_hooks):
         response = httpx.get(
             f"{get_protocol()}://{get_host(host)}/api/v1/amplicon_schemes",
+            follow_redirects=True,
         )
     if response.is_error:
         logging.error(f"Amplicon schemes could not be fetched from {get_host(host)}")
