@@ -283,10 +283,10 @@ def query_raw(samples: str, *, host: str | None = None) -> None:
 
 @main.command()
 @click.argument("samples", type=str)
-@click.option("--json", is_flag=True, help="Output status in JSON format")
+@click.option("--output_json", is_flag=True, help="Output status in JSON format")
 @click.option("--host", type=str, default=None, help="API hostname (for development)")
 def query_status(
-    samples: str, *, print_json: bool = False, host: str | None = None
+    samples: str, *, output_json: bool = False, host: str | None = None
 ) -> None:
     """Fetch processing status for one or more SAMPLES.
 
@@ -301,7 +301,7 @@ def query_status(
         raise ValueError(
             f"{samples} is neither a valid mapping CSV path nor a comma-separated list of valid GUIDs"
         )
-    if print_json:
+    if output_json:
         print(json.dumps(result, indent=4))  # noqa: T201
     else:
         for name, status in result.items():
