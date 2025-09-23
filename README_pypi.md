@@ -314,7 +314,7 @@ Options:
   --country TEXT                  3-letter Country Code  [required]
   --instrument-platform [illumina|ont]
                                   Sequencing technology
-  --subdivision TEXT              Subdivision  [default: ""]
+  --subdivision TEXT              3-letter ISO Subdivision Code   [default: ""]
   --district TEXT                 District  [default: ""]
   --specimen-organism [mycobacteria|sars-cov-2|influenza-a]
                                   Specimen organism  [default: mycobacteria]

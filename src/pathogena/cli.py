@@ -368,7 +368,7 @@ def validate(upload_csv: Path, *, host: str | None = None) -> None:
 @click.option(
     "--subdivision",
     type=str,
-    help="Subdivision",
+    help="3-letter ISO Subdivision Code",
     default=constants.DEFAULT_SUBDIVISION,
     show_default=True,
 )
