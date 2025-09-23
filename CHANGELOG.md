@@ -11,6 +11,7 @@
 
 ### Fixed
 
+- [EV-2382](https://eit-oxford.atlassian.net/browse/EV-2382): documentation for build-csv needs to have subdivision as isocode not free text
 - [EV-2152](https://eit-oxford.atlassian.net/browse/EV-2152): do not allow empty specimen organism
 
 ## 2.2.0 (2025-06-20)
