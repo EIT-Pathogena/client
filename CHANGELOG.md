@@ -1,3 +1,5 @@
+## 2.2.2 (2025-12-03)
+
 ## 2.2.2rc1 (2025-08-18)
 
 - [EV-2285](https://eit-oxford.atlassian.net/browse/EV-2285) Add deprecation warnings to client
